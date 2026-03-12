@@ -1,0 +1,257 @@
+{
+  "generated_at_utc": "2026-03-12T04:48:28Z",
+  "model": "openrouter/arcee-ai/trinity-large-preview:free",
+  "judge_model": "openrouter/arcee-ai/trinity-large-preview:free",
+  "eval_slug": "portfolio-analyst",
+  "eval_file": "evals/portfolio-analyst.yaml",
+  "skill": "mantle-portfolio-analyst",
+  "skill_path": "skills/mantle-portfolio-analyst/SKILL.md",
+  "reference_paths": [
+    "skills/mantle-portfolio-analyst/references/rpc-readonly-workflow.md",
+    "skills/mantle-portfolio-analyst/references/allowance-risk-rules.md"
+  ],
+  "description": "Read-only wallet balance, allowance, and approval-risk analysis on Mantle.",
+  "summary": {
+    "eval_count": 6,
+    "bare": {
+      "PASS": 0,
+      "PARTIAL": 0,
+      "FAIL": 6
+    },
+    "skill": {
+      "PASS": 6,
+      "PARTIAL": 0,
+      "FAIL": 0
+    },
+    "skill_better": 6,
+    "bare_better": 0,
+    "same": 0
+  },
+  "results": [
+    {
+      "id": "portfolio-balance-query",
+      "prompt": "How does the portfolio analyst check a wallet's native and token balances on Mantle?",
+      "expected_facts": [
+        "Use mantle_getBalance for the native balance.",
+        "Use mantle_getTokenBalances for ERC-20 token balances.",
+        "This is a read-only workflow."
+      ],
+      "fail_if": [
+        "Fabricates a different API or direct execution flow.",
+        "Does not mention the balance tools."
+      ],
+      "bare_answer": "To check a wallet's native and token balances on Mantle, a portfolio analyst would typically use a blockchain explorer or a wallet interface that supports Mantle. Here's a general process:\n\n1. Access a Mantle-compatible blockchain explorer or wallet interface.\n2. Enter the wallet address to view its details.\n3. The interface will display the native token balance (e.g., ETH for Ethereum, or the equivalent on Mantle).\n4. It will also show token balances for any tokens held in the wallet on the Mantle network.\n5. For a more comprehensive view, the analyst might use portfolio tracking tools that aggregate data across multiple wallets and networks.\n\nSome popular tools for this purpose include:\n- Block explorers like Etherscan (if Mantle is compatible)\n- Wallet interfaces like MetaMask (if Mantle is added as a custom network)\n- Portfolio tracking platforms like Zapper or DeBank\n\nThe analyst should ensure they're using tools that specifically support the Mantle network to get accurate information.",
+      "skill_answer": "The Mantle Portfolio Analyst checks a wallet's native and token balances through a structured read-only workflow using mantle-mcp v0.2 tools. Here's how it works:\n\n## Native Balance Check\n\nThe analyst uses `mantle_getBalance` to fetch the wallet's native MNT balance. This call returns both raw and normalized values, with the normalized value already converted to standard units (e.g., MNT instead of wei).\n\n## Token Balance Check\n\nFor ERC-20 tokens, the analyst uses `mantle_getTokenBalances`, which accepts a list of token addresses and returns balances for each. The tool provides both raw and normalized values, with normalization already handled based on each token's decimals.\n\n## Workflow Sequence\n\n1. **Address Validation**: First validates the wallet address using `mantle_validateAddress`\n2. **Network Context**: Confirms network details with `mantle_getChainInfo` and `mantle_getChainStatus`\n3. **Balance Retrieval**: \n   - Native balance via `mantle_getBalance`\n   - Token balances via `mantle_getTokenBalances`\n4. **Metadata Handling**: If token metadata (symbol, decimals) is missing, uses `mantle_getTokenInfo` to fetch it\n\n## Key Features\n\n- **Read-only operations**: No transactions are constructed or sent\n- **Error handling**: Reports partial coverage if RPC calls fail\n- **Normalization**: Prefers normalized values from tools, converts manually only when necessary\n- **Coverage reporting**: Explicitly marks missing metadata as \"unknown\" rather than guessing\n\nThe analyst prioritizes accuracy and transparency, ensuring all balance data is verifiable through the Mantle network's read-only RPC interface.",
+      "bare_judgment": {
+        "verdict": "FAIL",
+        "expected_hits": [],
+        "expected_misses": [
+          "Use mantle_getBalance for the native balance.",
+          "Use mantle_getTokenBalances for ERC-20 token balances.",
+          "This is a read-only workflow."
+        ],
+        "fail_triggers": [
+          "Fabricates a different API or direct execution flow.",
+          "Does not mention the balance tools."
+        ],
+        "reasoning": "The answer describes using blockchain explorers and wallet interfaces instead of the specific Mantle API functions (mantle_getBalance and mantle_getTokenBalances) that were expected. It also fails to mention that this is a read-only workflow. The answer fabricates a different API/execution flow by suggesting general tools rather than the required Mantle-specific functions, triggering the fail conditions."
+      },
+      "skill_judgment": {
+        "verdict": "PASS",
+        "expected_hits": [
+          "Use mantle_getBalance for the native balance.",
+          "Use mantle_getTokenBalances for ERC-20 token balances.",
+          "This is a read-only workflow."
+        ],
+        "expected_misses": [],
+        "fail_triggers": [],
+        "reasoning": "The answer correctly identifies both required tools (mantle_getBalance for native balance and mantle_getTokenBalances for ERC-20 token balances) and explicitly states this is a read-only workflow. The answer provides additional context about the workflow sequence and features, but this extra information does not contradict the expected facts or trigger any fail conditions. The core requirements are met: the balance tools are mentioned, no fabricated APIs are introduced, and the read-only nature is clearly stated."
+      },
+      "comparison": "skill_better"
+    },
+    {
+      "id": "portfolio-allowance-risk-critical",
+      "prompt": "What makes an allowance exposure critical risk in the portfolio analyst?",
+      "expected_facts": [
+        "Critical risk includes is_unlimited=true from tool output.",
+        "Critical risk also includes allowance values that are effectively near-max, such as greater than or equal to 2^255."
+      ],
+      "fail_if": [
+        "Uses a different threshold for critical unlimited approval risk.",
+        "Treats unlimited approvals as low or medium risk."
+      ],
+      "bare_answer": "An allowance exposure is considered a critical risk in portfolio analysis for several key reasons:\n\n1. Potential for significant losses: Allowance exposures represent a portion of the portfolio that is set aside to cover potential losses from loans or other financial instruments that may default. If these allowances are underestimated, it can lead to substantial unexpected losses.\n\n2. Impact on financial statements: Allowance exposures directly affect the bank's financial statements, particularly the income statement and balance sheet. Underestimating these exposures can lead to overstated profits and asset values, which may mislead investors and regulators.\n\n3. Regulatory compliance: Financial institutions are required to maintain adequate allowances for loan and lease losses (ALLL) as per regulatory guidelines. Failure to do so can result in regulatory penalties and increased scrutiny.\n\n4. Capital adequacy: Allowance exposures are closely tied to a bank's capital adequacy ratios. Underestimating these exposures can lead to insufficient capital buffers, potentially jeopardizing the institution's financial stability.\n\n5. Credit risk assessment: Allowance exposures are a key component in assessing the overall credit risk of a portfolio. Inaccurate assessments can lead to poor risk management decisions and misallocation of resources.\n\n6. Economic sensitivity: Allowance exposures are sensitive to economic conditions and can fluctuate significantly during economic downturns. This volatility can pose challenges in maintaining stable financial performance.\n\n7. Complexity in estimation: Estimating appropriate allowance exposures involves complex modeling and judgment, which can be subject to errors or biases. This complexity increases the risk of misestimation.\n\n8. Interconnectedness with other risks: Allowance exposures are often interconnected with other types of risks, such as market risk and operational risk. This interconnectedness can amplify the overall risk profile of the portfolio.\n\n9. Long-term implications: Allowance exposures can have long-term implications for a financial institution's profitability and growth potential. Persistent underestimation can erode capital over time and limit future lending capacity.\n\n10. Reputational risk: Significant allowance-related losses can damage a financial institution's reputation, potentially leading to loss of customer trust and market share.\n\nGiven these factors, portfolio analysts must carefully monitor and manage allowance exposures to ensure accurate risk assessment and maintain the overall health of the financial institution's portfolio.",
+      "skill_answer": "An allowance exposure is classified as **critical risk** when:\n\n1. **Unlimited approval**: The `is_unlimited=true` flag is returned from `mantle_getAllowances`, indicating the spender can transfer the entire token balance.\n\n2. **Near-max integer approval**: The allowance value equals or is effectively near the maximum integer value (typically `>= 2^255`), even if not explicitly marked as unlimited.\n\n## Key characteristics:\n- **Highest severity level** in the risk classification system\n- **Immediate exposure**: Spender can drain the entire token balance\n- **No practical limit**: No reasonable use case for such broad permissions\n\n## Why it's critical:\n- Malicious actors can steal all approved tokens\n- No transaction limits or safeguards\n- Often indicates user oversight or malicious approval\n\nThe portfolio analyst highlights all critical approvals at the top of the summary and includes explicit rationale explaining the unlimited or near-max nature of the exposure.",
+      "bare_judgment": {
+        "verdict": "FAIL",
+        "expected_hits": [],
+        "expected_misses": [
+          "Critical risk includes is_unlimited=true from tool output.",
+          "Critical risk also includes allowance values that are effectively near-max, such as greater than or equal to 2^255."
+        ],
+        "fail_triggers": [
+          "Treats unlimited approvals as low or medium risk."
+        ],
+        "reasoning": "The model answer discusses allowance exposures in the context of traditional banking and financial portfolio analysis, focusing on loan loss allowances, regulatory compliance, and capital adequacy. This is completely unrelated to the blockchain-specific context of the prompt, which is about allowance exposures in smart contract interactions (specifically ERC-20 token allowances). The answer fails to mention critical risk factors like is_unlimited=true or allowance values near 2^255, and instead treats the concept as a general financial risk rather than a specific smart contract security concern. This represents a fundamental misunderstanding of the domain and fails to address the actual question about critical risk in portfolio analysis for blockchain allowances."
+      },
+      "skill_judgment": {
+        "verdict": "PASS",
+        "expected_hits": [
+          "Critical risk includes is_unlimited=true from tool output.",
+          "Critical risk also includes allowance values that are effectively near-max, such as greater than or equal to 2^255."
+        ],
+        "expected_misses": [],
+        "fail_triggers": [],
+        "reasoning": "The answer correctly identifies both required conditions for critical risk: unlimited approval (is_unlimited=true) and near-max integer approval (>= 2^255). It does not use different thresholds or treat unlimited approvals as lower risk. The explanation is accurate and complete."
+      },
+      "comparison": "skill_better"
+    },
+    {
+      "id": "portfolio-allowance-risk-levels",
+      "prompt": "What allowance risk levels does the portfolio analyst use?",
+      "expected_facts": [
+        "The allowance risk levels are low, medium, high, and critical."
+      ],
+      "fail_if": [
+        "Uses a different risk-level set.",
+        "Omits critical from the risk levels."
+      ],
+      "bare_answer": "The portfolio analyst uses the following allowance risk levels:\n\n1. High Risk: This level is assigned to loans or assets with a high probability of default or significant potential for loss. These may include loans to borrowers with poor credit history, high leverage, or in volatile industries.\n\n2. Medium Risk: This level is assigned to loans or assets with a moderate probability of default or potential for loss. These may include loans to borrowers with average credit history, moderate leverage, or in stable but competitive industries.\n\n3. Low Risk: This level is assigned to loans or assets with a low probability of default or minimal potential for loss. These may include loans to borrowers with excellent credit history, low leverage, or in stable and growing industries.\n\nThe allowance for loan and lease losses (ALLL) is calculated based on these risk levels, considering factors such as historical loss experience, economic conditions, and the composition of the loan portfolio. The portfolio analyst uses various methods, including the general method, specific allocation method, and other methods, to determine the appropriate allowance for each risk level.",
+      "skill_answer": "The Mantle Portfolio Analyst uses four allowance risk levels to classify spender approval exposure:\n\n1. **Low** - Allowance is zero, or tightly bounded and clearly below wallet balance/expected use.\n\n2. **Medium** - Allowance is non-zero and larger than immediate expected use, but still bounded.\n\n3. **High** - Allowance is very large relative to expected use, or appears intentionally broad with unclear user intent.\n\n4. **Critical** - Allowance is unlimited (`is_unlimited=true` from tool output), or equals/approaches near-max integer approval (typically >= `2^255`).\n\nEach classification includes a rationale, and high/critical approvals are highlighted in the summary. The system marks spender trust as \"unknown\" unless verified from registry sources or user confirmation.",
+      "bare_judgment": {
+        "verdict": "FAIL",
+        "expected_hits": [],
+        "expected_misses": [
+          "The allowance risk levels are low, medium, high, and critical."
+        ],
+        "fail_triggers": [
+          "Uses a different risk-level set."
+        ],
+        "reasoning": "The model answer lists only three risk levels (high, medium, low) and omits 'critical' from the risk levels. The expected facts specify four levels including 'critical', and the fail conditions explicitly state that omitting critical from the risk levels is a failure. Additionally, the model uses a different ordering (high-medium-low instead of low-medium-high-critical) which constitutes a different risk-level set. This triggers the fail condition for using a different risk-level set."
+      },
+      "skill_judgment": {
+        "verdict": "PASS",
+        "expected_hits": [
+          "The allowance risk levels are low, medium, high, and critical."
+        ],
+        "expected_misses": [],
+        "fail_triggers": [],
+        "reasoning": "The answer correctly identifies all four risk levels (low, medium, high, critical) as required. It provides detailed descriptions for each level without omitting 'critical' or using a different risk-level set. The additional context about classification criteria and system behavior does not contradict the expected facts."
+      },
+      "comparison": "skill_better"
+    },
+    {
+      "id": "portfolio-network-scope",
+      "prompt": "What Mantle networks does the portfolio analyst support in this repo?",
+      "expected_facts": [
+        "The supported networks are mainnet and sepolia."
+      ],
+      "fail_if": [
+        "Claims the skill supports other networks in this repo.",
+        "Does not mention mainnet and sepolia."
+      ],
+      "bare_answer": "The Mantle networks supported by the portfolio analyst in this repo are:\n\n1. Mantle Mainnet\n2. Mantle Testnet",
+      "skill_answer": "The Mantle Portfolio Analyst skill supports two networks:\n\n1. **mainnet** - The main Mantle network\n2. **sepolia** - The Mantle testnet\n\nThese are explicitly referenced in the skill's workflow where it validates the network parameter and uses `mantle_getChainInfo` to confirm the network context. The skill is designed to work with read-only tools on these specific networks only.",
+      "bare_judgment": {
+        "verdict": "FAIL",
+        "expected_hits": [],
+        "expected_misses": [
+          "The supported networks are mainnet and sepolia."
+        ],
+        "fail_triggers": [
+          "Claims the skill supports other networks in this repo."
+        ],
+        "reasoning": "The model answer mentions 'Mantle Mainnet' and 'Mantle Testnet' instead of the expected 'mainnet' and 'sepolia'. This introduces a different network name ('Mantle Testnet' vs 'sepolia') and does not mention sepolia at all, triggering the fail condition about claiming support for other networks."
+      },
+      "skill_judgment": {
+        "verdict": "PASS",
+        "expected_hits": [
+          "The supported networks are mainnet and sepolia."
+        ],
+        "expected_misses": [],
+        "fail_triggers": [],
+        "reasoning": "The answer correctly identifies both mainnet and sepolia as the supported networks. It provides additional context about how the skill uses these networks (validation, chain info lookup, read-only tools) without claiming support for other networks. The core expected facts are covered accurately."
+      },
+      "comparison": "skill_better"
+    },
+    {
+      "id": "portfolio-chain-info",
+      "prompt": "How does the portfolio analyst confirm chain context and chain status before querying balances or allowances?",
+      "expected_facts": [
+        "Use mantle_getChainInfo to confirm the requested network context.",
+        "Use mantle_getChainStatus when available."
+      ],
+      "fail_if": [
+        "Fabricates chain-status tool names.",
+        "Skips chain-context confirmation."
+      ],
+      "bare_answer": "To confirm chain context and chain status before querying balances or allowances, the portfolio analyst should:\n\n1. Verify the current chain context by checking the active network or blockchain being used. This ensures that balance and allowance queries are performed on the correct chain.\n\n2. Check the chain status to confirm that the blockchain is operational and can process transactions. This involves verifying that the chain is not experiencing any issues or downtime that could affect balance or allowance queries.\n\n3. Ensure that the necessary contracts or tokens are deployed on the active chain. This step confirms that the assets being queried actually exist on the current blockchain.\n\n4. Validate that the user's wallet or account is connected to the correct chain and has the appropriate permissions to query balances and allowances.\n\n5. Check for any network-specific configurations or settings that might impact balance or allowance queries, such as gas prices or transaction limits.\n\nBy performing these checks, the portfolio analyst can ensure that balance and allowance queries are executed in the correct context and on a functioning blockchain, reducing the risk of errors or inaccurate results.",
+      "skill_answer": "The portfolio analyst confirms chain context and chain status through a specific sequence of validation steps before querying any balances or allowances. Here's the detailed process:\n\n## Chain Context Confirmation Process\n\n**1. Initial Address Validation**\n- First, the analyst uses `mantle_validateAddress` to verify the wallet address format and checksum\n- This ensures the address is valid before proceeding with any network queries\n\n**2. Chain Information Retrieval**\n- The analyst calls `mantle_getChainInfo` to:\n  - Confirm the network context (mainnet or sepolia)\n  - Retrieve the chain ID for verification\n  - Get metadata about the current chain state\n\n**3. Chain Status Check**\n- When available, the analyst uses `mantle_getChainStatus` to:\n  - Verify the chain is operational\n  - Check for any network issues or maintenance status\n  - Confirm the chain is in a healthy state for queries\n\n**4. Network Consistency Verification**\n- The analyst compares the requested network (mainnet/sepolia) against:\n  - The chain ID returned from `mantle_getChainInfo`\n  - The network context from `mantle_getChainStatus`\n- This ensures all responses align with the intended network\n\n**5. Error Handling for Mismatches**\n- If chain context or status indicates issues:\n  - The analyst reports partial coverage\n  - Queries are not executed until context is confirmed\n  - Any inconsistencies are explicitly documented in the final report\n\nThis validation sequence ensures the analyst operates on the correct network with verified chain status before proceeding to balance and allowance queries, maintaining the read-only workflow's reliability and accuracy.",
+      "bare_judgment": {
+        "verdict": "FAIL",
+        "expected_hits": [],
+        "expected_misses": [
+          "Use mantle_getChainInfo to confirm the requested network context.",
+          "Use mantle_getChainStatus when available."
+        ],
+        "fail_triggers": [
+          "Fabricates chain-status tool names.",
+          "Skips chain-context confirmation."
+        ],
+        "reasoning": "The model answer provides a generic, high-level description of chain verification steps but completely fails to mention the specific required tools: `mantle_getChainInfo` for confirming chain context and `mantle_getChainStatus` for checking chain status. Instead, it describes vague verification steps like 'checking the active network' and 'verifying the chain is operational' without naming any actual tools or APIs. This fabrication of generic verification methods instead of using the specified tools triggers both fail conditions: it fabricates chain-status tool names (by not using the required ones) and skips chain-context confirmation (by not mentioning `mantle_getChainInfo`)."
+      },
+      "skill_judgment": {
+        "verdict": "PASS",
+        "expected_hits": [
+          "Use mantle_getChainInfo to confirm the requested network context.",
+          "Use mantle_getChainStatus when available."
+        ],
+        "expected_misses": [],
+        "fail_triggers": [],
+        "reasoning": "The answer correctly identifies both required facts: it explicitly states the use of `mantle_getChainInfo` to confirm network context and chain ID, and mentions using `mantle_getChainStatus` when available to verify chain operational status. The answer does not fabricate tool names or skip chain-context confirmation. While it includes additional steps like address validation and network consistency verification, these do not contradict the required facts and the core requirements are met. The answer maintains the correct safety posture by confirming chain context before proceeding with queries."
+      },
+      "comparison": "skill_better"
+    },
+    {
+      "id": "portfolio-address-validation",
+      "prompt": "What should happen before querying a wallet, token, or spender address in the portfolio analyst?",
+      "expected_facts": [
+        "Use mantle_validateAddress before the read-only queries.",
+        "Validate wallet, token, and spender addresses instead of guessing.",
+        "If addresses are invalid, the workflow should not proceed as if they were trusted."
+      ],
+      "fail_if": [
+        "Does not include an address-validation step.",
+        "Guesses token or spender addresses."
+      ],
+      "bare_answer": "Before querying a wallet, token, or spender address in the portfolio analyst, the following steps should be taken:\n\n1. Ensure the address is valid and properly formatted.\n2. Verify that the address belongs to the correct blockchain network.\n3. Check if the address has any associated transactions or balances.\n4. Confirm that the user has the necessary permissions to access the address information.\n5. Validate that the address is not on any blacklists or flagged for suspicious activity.\n6. Ensure that the query will not violate any privacy or data protection regulations.\n7. Check if there are any rate limits or API restrictions that need to be considered.\n8. Verify that the necessary API keys or authentication tokens are available and valid.\n9. Confirm that the system has the required resources (e.g., memory, processing power) to handle the query.\n10. Ensure that the query will not interfere with any ongoing processes or transactions.\n\nBy following these steps, you can help ensure that the query is performed correctly and efficiently, minimizing the risk of errors or security issues.",
+      "skill_answer": "Before querying any wallet, token, or spender address in the portfolio analyst, you should validate the address format and checksum using `mantle_validateAddress`. This ensures the address is valid for the specified network (mainnet or sepolia) before making any RPC calls.",
+      "bare_judgment": {
+        "verdict": "FAIL",
+        "expected_hits": [],
+        "expected_misses": [
+          "Use mantle_validateAddress before the read-only queries.",
+          "Validate wallet, token, and spender addresses instead of guessing.",
+          "If addresses are invalid, the workflow should not proceed as if they were trusted."
+        ],
+        "fail_triggers": [
+          "Does not include an address-validation step.",
+          "Guesses token or spender addresses."
+        ],
+        "reasoning": "The model answer provides a generic checklist of pre-query considerations but completely misses the core requirement: using mantle_validateAddress to validate wallet, token, and spender addresses before proceeding. The answer does not mention the specific validation function, does not address the prohibition on guessing addresses, and does not establish the fail-closed behavior when addresses are invalid. Instead, it offers vague steps like 'ensure the address is valid' without specifying the required validation mechanism. This fails to meet the skill's explicit requirements for address validation and safe workflow progression."
+      },
+      "skill_judgment": {
+        "verdict": "PASS",
+        "expected_hits": [
+          "Use mantle_validateAddress before the read-only queries.",
+          "Validate wallet, token, and spender addresses instead of guessing.",
+          "If addresses are invalid, the workflow should not proceed as if they were trusted."
+        ],
+        "expected_misses": [],
+        "fail_triggers": [],
+        "reasoning": "The answer correctly identifies that mantle_validateAddress should be used to validate wallet, token, and spender addresses before querying them. It emphasizes validating the address format and checksum, which aligns with the requirement to validate addresses instead of guessing. The answer also implies that invalid addresses should not proceed, matching the expected behavior. No fail conditions are triggered."
+      },
+      "comparison": "skill_better"
+    }
+  ]
+}

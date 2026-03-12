@@ -1,0 +1,267 @@
+{
+  "generated_at_utc": "2026-03-12T05:09:04Z",
+  "model": "openrouter/arcee-ai/trinity-large-preview:free",
+  "judge_model": "openrouter/arcee-ai/trinity-large-preview:free",
+  "eval_slug": "smart-contract-developer",
+  "eval_file": "evals/smart-contract-developer.yaml",
+  "skill": "mantle-smart-contract-developer",
+  "skill_path": "skills/mantle-smart-contract-developer/SKILL.md",
+  "reference_paths": [
+    "skills/mantle-smart-contract-developer/references/development-checklist.md",
+    "skills/mantle-smart-contract-developer/references/openzeppelin-mcp-handoff.md",
+    "skills/mantle-network-primer/references/mantle-network-basics.md"
+  ],
+  "description": "Mantle-specific contract-development framing, readiness checks, and OpenZeppelin MCP handoff guidance.",
+  "summary": {
+    "eval_count": 6,
+    "bare": {
+      "PASS": 1,
+      "PARTIAL": 2,
+      "FAIL": 3
+    },
+    "skill": {
+      "PASS": 6,
+      "PARTIAL": 0,
+      "FAIL": 0
+    },
+    "skill_better": 5,
+    "bare_better": 0,
+    "same": 1
+  },
+  "results": [
+    {
+      "id": "dev-gas-token-check",
+      "prompt": "What gas-token assumption must be confirmed before deploying or operating a contract on Mantle?",
+      "expected_facts": [
+        "Mantle native gas assumptions must use MNT, not ETH."
+      ],
+      "fail_if": [
+        "Assumes ETH is the Mantle gas token.",
+        "Does not mention MNT."
+      ],
+      "bare_answer": "The gas-token assumption that must be confirmed before deploying or operating a contract on Mantle is that the contract is compatible with the native gas token of the Mantle network. This means that the contract should be designed to use the native token (e.g., ETH on Ethereum) for gas fees rather than any other token. It's crucial to ensure that the contract's logic and any associated smart contracts or interfaces are aligned with this assumption to avoid issues with transaction execution and gas fee payments on the Mantle network.",
+      "skill_answer": "The gas-token assumption that must be confirmed before deploying or operating a contract on Mantle is that **MNT is the gas token**. This means developers should not assume ETH-funded wallets can transact on Mantle, and all wallets interacting with contracts must be funded with MNT for gas fees.",
+      "bare_judgment": {
+        "verdict": "FAIL",
+        "expected_hits": [],
+        "expected_misses": [
+          "Mantle native gas assumptions must use MNT, not ETH."
+        ],
+        "fail_triggers": [
+          "Assumes ETH is the Mantle gas token.",
+          "Does not mention MNT."
+        ],
+        "reasoning": "The model answer fails to mention MNT as the Mantle gas token and instead refers generically to 'native token (e.g., ETH on Ethereum)', which directly violates the fail condition of assuming ETH is the Mantle gas token. The answer does not cover the required fact that Mantle uses MNT for gas."
+      },
+      "skill_judgment": {
+        "verdict": "PASS",
+        "expected_hits": [
+          "Mantle native gas assumptions must use MNT, not ETH."
+        ],
+        "expected_misses": [],
+        "fail_triggers": [],
+        "reasoning": "The answer correctly identifies MNT as the gas token for Mantle and explicitly states that ETH is not used, satisfying both the expected fact and avoiding the fail conditions. It also provides additional context about wallet funding requirements, which reinforces the correct understanding without contradicting any requirements."
+      },
+      "comparison": "skill_better"
+    },
+    {
+      "id": "dev-solidity-version",
+      "prompt": "What Solidity compiler guidance should a Mantle contract developer follow in this repo?",
+      "expected_facts": [
+        "The Mantle reference recommends Solidity v0.8.23 or below.",
+        "This is guidance tied to the Mantle docs snapshot, not a blanket claim that any latest compiler works."
+      ],
+      "fail_if": [
+        "Claims the latest Solidity version works without Mantle-specific caveats.",
+        "Provides a different compiler guidance than v0.8.23 or below."
+      ],
+      "bare_answer": "The Mantle contract development repository provides the following Solidity compiler guidance:\n\n1. Use the latest stable version of the Solidity compiler (solc) for optimal compatibility and security.\n\n2. Set the Solidity version pragma in your contracts to a specific version, e.g., `pragma solidity ^0.8.0;`. This ensures consistent compilation across different environments.\n\n3. Enable the Solidity optimizer when compiling contracts for deployment. The recommended optimization settings are:\n   - Enable optimizer: `true`\n   - Runs: `200`\n\n4. Use the Solidity compiler's built-in security checks and warnings to identify potential vulnerabilities in your code.\n\n5. Consider using a development framework like Hardhat or Truffle, which provide integrated Solidity compilation and testing tools.\n\n6. When deploying contracts to the Mantle network, ensure that the compiler version used for deployment matches the version used during development and testing.\n\n7. Keep your Solidity compiler up to date to benefit from the latest features, bug fixes, and security improvements.\n\n8. For complex projects, consider using a build tool like Buidler or Foundry, which can handle multi-contract compilation and dependency management.\n\n9. When working with external libraries or dependencies, ensure that they are compatible with your chosen Solidity version.\n\n10. Regularly review and update your Solidity compiler settings as new versions are released and best practices evolve.\n\nBy following these guidelines, Mantle contract developers can ensure consistent, secure, and efficient Solidity compilation throughout their development process.",
+      "skill_answer": "Based on the Mantle Network Basics reference, the recommended Solidity compiler guidance for a Mantle contract developer is:\n\n**Use Solidity v0.8.23 or below.**\n\nThis recommendation is explicitly stated in the Onboarding tools section for both mainnet and testnet environments:\n\n- Mainnet: \"Recommended Solidity compiler: v0.8.23 or below\"\n- Testnet (Sepolia): \"Recommended Solidity compiler: v0.8.23 or below\"\n\nThis guidance should be followed when developing contracts for the Mantle network to ensure compatibility with the network's execution environment.",
+      "bare_judgment": {
+        "verdict": "FAIL",
+        "expected_hits": [],
+        "expected_misses": [
+          "The Mantle reference recommends Solidity v0.8.23 or below.",
+          "This is guidance tied to the Mantle docs snapshot, not a blanket claim that any latest compiler works."
+        ],
+        "fail_triggers": [
+          "Claims the latest Solidity version works without Mantle-specific caveats.",
+          "Provides a different compiler guidance than v0.8.23 or below."
+        ],
+        "reasoning": "The model answer recommends using the latest stable Solidity compiler and provides general Solidity compilation guidance, which directly contradicts the expected fact that Mantle specifically recommends Solidity v0.8.23 or below. The answer also fails to mention the Mantle-specific guidance tied to the docs snapshot, instead suggesting that keeping the compiler up to date is the best practice. This triggers both fail conditions: it claims the latest version works without Mantle-specific caveats and provides different compiler guidance than v0.8.23 or below."
+      },
+      "skill_judgment": {
+        "verdict": "PASS",
+        "expected_hits": [
+          "The Mantle reference recommends Solidity v0.8.23 or below."
+        ],
+        "expected_misses": [],
+        "fail_triggers": [],
+        "reasoning": "The answer correctly identifies v0.8.23 or below as the recommended Solidity compiler version and explicitly ties this guidance to the Mantle docs snapshot. It does not claim the latest compiler works without caveats, nor does it provide different guidance. The answer is accurate and complete."
+      },
+      "comparison": "skill_better"
+    },
+    {
+      "id": "dev-oz-handoff",
+      "prompt": "When should the Mantle smart contract developer hand work off to OpenZeppelin MCP?",
+      "expected_facts": [
+        "Use OpenZeppelin MCP for contract scaffolding or code generation.",
+        "Use it for inheritance, security patterns, access control, proxy, or upgrade implementation guidance.",
+        "This skill keeps Mantle-specific framing and readiness checks, while OpenZeppelin MCP handles authoring guidance."
+      ],
+      "fail_if": [
+        "Never mentions OpenZeppelin MCP.",
+        "Claims this skill should author the contract code from memory instead."
+      ],
+      "bare_answer": "The Mantle smart contract developer should hand work off to OpenZeppelin MCP when they need to:\n\n1. Verify the security of their smart contract code\n2. Check for potential vulnerabilities or exploits\n3. Ensure compliance with best practices and standards\n4. Get recommendations for improving contract efficiency and gas usage\n5. Validate the correctness of their implementation against known patterns\n\nOpenZeppelin MCP can provide expert analysis and suggestions to enhance the security and reliability of the smart contract before deployment.",
+      "skill_answer": "The Mantle smart contract developer should hand work off to OpenZeppelin MCP when the user needs actual smart contract writing or implementation guidance for a Mantle project.\n\nSpecifically, route to OpenZeppelin MCP for:\n- Solidity contract scaffolding or code generation\n- OpenZeppelin inheritance and extension choices\n- `Ownable`, `AccessControl`, token, proxy, upgrade, governor, or security module usage\n- constructor, initializer, or storage-layout implementation details\n- contract refactors tied to OpenZeppelin patterns\n\nProvide this handoff context:\n- Mantle environment (mainnet or testnet)\n- contract purpose and user flows\n- asset model and token standards involved\n- admin and upgradeability requirements\n- external Mantle dependencies and known addresses\n- deployment constraints or verification requirements already known\n\nThe expected return from OpenZeppelin MCP is:\n- recommended contract modules and inheritance plan\n- implementation notes or code guidance\n- security-sensitive decisions to review\n- inputs needed for testing and deployment\n\nThe boundary is that OpenZeppelin MCP handles contract authoring guidance, while the Mantle smart contract developer handles Mantle-specific framing, readiness checks, and handoff into the deployment skill.",
+      "bare_judgment": {
+        "verdict": "PARTIAL",
+        "expected_hits": [
+          "Use OpenZeppelin MCP for contract scaffolding or code generation.",
+          "Use it for inheritance, security patterns, access control, proxy, or upgrade implementation guidance."
+        ],
+        "expected_misses": [
+          "This skill keeps Mantle-specific framing and readiness checks, while OpenZeppelin MCP handles authoring guidance."
+        ],
+        "fail_triggers": [],
+        "reasoning": "The answer correctly identifies that OpenZeppelin MCP should be used for security analysis, vulnerability checking, and best practices validation, which aligns with the expected facts about using it for security patterns and inheritance guidance. However, it misses the explicit framing that this skill handles Mantle-specific readiness checks while OpenZeppelin MCP handles authoring guidance. The answer is directionally correct but incomplete in its scope."
+      },
+      "skill_judgment": {
+        "verdict": "PASS",
+        "expected_hits": [
+          "Use OpenZeppelin MCP for contract scaffolding or code generation.",
+          "Use it for inheritance, security patterns, access control, proxy, or upgrade implementation guidance.",
+          "This skill keeps Mantle-specific framing and readiness checks, while OpenZeppelin MCP handles authoring guidance."
+        ],
+        "expected_misses": [],
+        "fail_triggers": [],
+        "reasoning": "The answer correctly identifies that OpenZeppelin MCP should be used for contract scaffolding, code generation, inheritance patterns, security modules, access control, proxy/upgrade patterns, and implementation details. It clearly states the boundary that this skill handles Mantle-specific framing and readiness checks while OpenZeppelin MCP handles authoring guidance. The answer does not claim this skill should author contract code from memory, and it explicitly mentions OpenZeppelin MCP as required. All expected facts are covered and no fail conditions are triggered."
+      },
+      "comparison": "skill_better"
+    },
+    {
+      "id": "dev-address-verification",
+      "prompt": "How should protocol or system addresses be verified before integrating them into a Mantle contract?",
+      "expected_facts": [
+        "Every external contract address must be correct for the requested Mantle environment.",
+        "Mainnet and testnet addresses must not be mixed.",
+        "For system addresses, use the official L1 and L2 system contract docs or an equivalent trusted registry-backed source."
+      ],
+      "fail_if": [
+        "Uses unverified addresses from memory.",
+        "Mixes mainnet and testnet addresses."
+      ],
+      "bare_answer": "To verify protocol or system addresses before integrating them into a Mantle contract, follow these steps:\n\n1. Obtain the address from a trusted source, such as the official documentation or a reputable team member.\n\n2. Verify the address on the blockchain explorer to ensure it exists and matches the expected contract.\n\n3. Check the contract's source code on a blockchain explorer or Etherscan to confirm it's the correct implementation.\n\n4. Verify the contract's ABI (Application Binary Interface) matches the expected interface for the protocol or system.\n\n5. If possible, use a library or wrapper contract that has been audited and is maintained by the protocol team.\n\n6. Implement checks in your contract to ensure the address is not the zero address or an unexpected value.\n\n7. Consider using a proxy pattern or upgradeable contracts to allow for address changes if needed.\n\n8. Document the source and verification process for the address in your code comments.\n\n9. If integrating multiple addresses, consider creating a separate contract to manage and verify these addresses.\n\n10. Regularly check for updates or changes to the protocol addresses and update your contract accordingly.\n\nBy following these steps, you can significantly reduce the risk of integrating incorrect or malicious addresses into your Mantle contract.",
+      "skill_answer": "To verify protocol or system addresses before integrating them into a Mantle contract, follow these steps:\n\n## Verification Process\n\n1. **Check Official Documentation**\n   - Visit the Mantle documentation pages for system contract addresses:\n     - L1 system contracts: https://docs.mantle.xyz/network/system-information/on-chain-system/key-l1-contract-address\n     - L2 system contracts: https://docs.mantle.xyz/network/system-information/off-chain-system/key-l2-contract-address\n   - These pages contain the canonical addresses for mainnet and testnet environments.\n\n2. **Cross-Reference with Token List**\n   - Use the official Mantle token list as a secondary verification source:\n     - Token list source-of-truth: https://token-list.mantle.xyz\n   - This helps verify token addresses and bridge-facing metadata.\n\n3. **Environment-Specific Verification**\n   - Confirm you're using the correct addresses for your target environment:\n     - Mainnet chain ID: 5000\n     - Sepolia testnet chain ID: 5003\n   - Never mix addresses between mainnet and testnet.\n\n4. **Use the Address Registry Navigator**\n   - If available in your runtime, use `$mantle-address-registry-navigator` for exact contract address lookups in execution contexts.\n\n5. **Live Verification for Critical Integrations**\n   - For production deployments, verify addresses on-chain before final integration.\n   - Check that the contract at the verified address matches expected ABI and functionality.\n\n## Best Practices\n\n- **Never rely on memory** for contract addresses - always reference official sources\n- **Document your verification process** for audit trails\n- **Test with small amounts** when first integrating new addresses\n- **Use environment-specific constants** in your contract code to prevent cross-environment errors\n\n## Response Rules\n\nWhen asked about Mantle differences or verification, cover:\n1. Gas token and wallet funding expectations\n2. Inclusion versus L1-backed settlement/finality\n3. Current architecture snapshot versus live-verify items\n4. Onboarding constants (chain IDs, bridge, explorer, faucet)\n5. Operational guidance (RPC rate limits, provider selection)\n\nBy following this verification process, you ensure your Mantle contract integrates with the correct protocol and system addresses for your target environment.",
+      "bare_judgment": {
+        "verdict": "PARTIAL",
+        "expected_hits": [
+          "Every external contract address must be correct for the requested Mantle environment.",
+          "Mainnet and testnet addresses must not be mixed.",
+          "For system addresses, use the official L1 and L2 system contract docs or an equivalent trusted registry-backed source."
+        ],
+        "expected_misses": [
+          "No explicit mention of using official L1/L2 system contract docs or trusted registry-backed sources for system addresses"
+        ],
+        "fail_triggers": [],
+        "reasoning": "The answer provides a comprehensive verification process that covers obtaining addresses from trusted sources, verifying on blockchain explorers, checking contract source code and ABI, and implementing safety checks. It correctly emphasizes using trusted sources and verifying addresses exist on the blockchain. However, it lacks explicit mention of the specific requirement to use official L1 and L2 system contract documentation or trusted registry-backed sources for system addresses, which is a key expected fact. The answer also doesn't explicitly warn against mixing mainnet and testnet addresses, though it implies this through the verification steps. The guidance is directionally correct and would help prevent integration of incorrect addresses, but misses the specific procedural requirements for system addresses that the skill expects."
+      },
+      "skill_judgment": {
+        "verdict": "PASS",
+        "expected_hits": [
+          "Every external contract address must be correct for the requested Mantle environment.",
+          "Mainnet and testnet addresses must not be mixed.",
+          "For system addresses, use the official L1 and L2 system contract docs or an equivalent trusted registry-backed source."
+        ],
+        "expected_misses": [],
+        "fail_triggers": [],
+        "reasoning": "The answer correctly covers all three expected facts: it emphasizes using official documentation for system contract addresses (L1 and L2 docs), explicitly warns against mixing mainnet and testnet addresses, and stresses that every external contract address must be correct for the target Mantle environment. The answer does not trigger any fail conditions - it does not use unverified addresses from memory and does not mix mainnet and testnet addresses. The additional guidance about cross-referencing with token lists, using the address registry navigator, and live verification are helpful enhancements that do not contradict the core requirements."
+      },
+      "comparison": "skill_better"
+    },
+    {
+      "id": "dev-upgradeability",
+      "prompt": "Should Mantle contracts always be upgradeable?",
+      "expected_facts": [
+        "No. Upgradeability depends on the use case and operational requirements.",
+        "If proxies are used, the brief should cover upgrade authorization and storage-layout constraints.",
+        "The trade-off between upgradeable and immutable designs should be stated explicitly."
+      ],
+      "fail_if": [
+        "Says contracts should always be upgradeable.",
+        "Says contracts should never be upgradeable without qualification."
+      ],
+      "bare_answer": "Mantle contracts should not always be upgradeable. While upgradeability offers flexibility to fix bugs and add features, it also introduces risks such as potential loss of trust from users who may worry about unexpected changes to the contract's behavior. The decision to make a contract upgradeable should be based on the specific needs of the project, considering factors like the complexity of the contract, the likelihood of future changes, and the importance of maintaining a fixed, immutable codebase. In some cases, non-upgradeable contracts may be preferable to ensure transparency and trust, especially for critical financial applications where users need certainty about the contract's behavior.",
+      "skill_answer": "No, Mantle contracts should not always be upgradeable. The decision depends on the contract's purpose, risk profile, and operational requirements.\n\n**When upgradeability makes sense:**\n- Contracts that need bug fixes or feature additions after deployment\n- Systems where governance or admin teams need to respond to emergencies\n- Complex protocols where initial assumptions may need refinement\n\n**When immutability is better:**\n- Simple, well-audited contracts with clear, unchanging requirements\n- High-risk systems where upgradeability introduces unacceptable attack surfaces\n- Contracts holding significant assets where upgrade delays could be exploited\n\n**Key considerations:**\n- Upgradeability introduces admin/ownership trust assumptions\n- Proxy patterns add complexity and storage layout constraints\n- Immutable contracts provide stronger security guarantees but no recovery path\n- The choice should be explicit in your requirements, not default\n\nAlways state your upgradeability intent upfront and understand the trade-offs before proceeding with implementation.",
+      "bare_judgment": {
+        "verdict": "PASS",
+        "expected_hits": [
+          "No. Upgradeability depends on the use case and operational requirements.",
+          "The trade-off between upgradeable and immutable designs should be stated explicitly."
+        ],
+        "expected_misses": [
+          "If proxies are used, the brief should cover upgrade authorization and storage-layout constraints."
+        ],
+        "fail_triggers": [],
+        "reasoning": "The answer correctly states that Mantle contracts should not always be upgradeable, explicitly acknowledges that the decision depends on use case and operational requirements, and clearly articulates the trade-off between upgradeable and immutable designs. It does not trigger any fail conditions by saying contracts should always or never be upgradeable without qualification. The only missing element is the specific mention of upgrade authorization and storage-layout constraints when proxies are used, which is a minor omission that doesn't affect the core correctness of the answer."
+      },
+      "skill_judgment": {
+        "verdict": "PASS",
+        "expected_hits": [
+          "No. Upgradeability depends on the use case and operational requirements.",
+          "If proxies are used, the brief should cover upgrade authorization and storage-layout constraints.",
+          "The trade-off between upgradeable and immutable designs should be stated explicitly."
+        ],
+        "expected_misses": [],
+        "fail_triggers": [],
+        "reasoning": "The answer correctly states that Mantle contracts should not always be upgradeable, instead emphasizing that the decision depends on use case and operational requirements. It covers upgrade authorization and storage-layout constraints when proxies are used, and explicitly discusses the trade-offs between upgradeable and immutable designs. The answer avoids both fail conditions by not claiming contracts should always or never be upgradeable without qualification."
+      },
+      "comparison": "same"
+    },
+    {
+      "id": "dev-mantle-specific-checks",
+      "prompt": "What Mantle-specific integration checks need to be in the development brief?",
+      "expected_facts": [
+        "Confirm MNT gas assumptions.",
+        "Confirm environment-correct external addresses and explicitly named bridge, oracle, DEX, vault, or system dependencies.",
+        "Confirm the target Mantle environment and chain settings instead of relying on generic EVM assumptions.",
+        "Confirm frontend or backend integrations know the events, functions, and initialization values they depend on."
+      ],
+      "fail_if": [
+        "Does not mention Mantle-specific gas or address checks.",
+        "Treats the brief as generic Solidity guidance with no Mantle-specific integration review."
+      ],
+      "bare_answer": "The development brief should include the following Mantle-specific integration checks:\n\n1. **Mantle Compatibility**: Ensure that the proposed changes are compatible with Mantle's architecture and design principles. This includes verifying that the changes align with Mantle's modular and extensible framework.\n\n2. **API Integration**: If the changes involve new or modified APIs, ensure that they are properly integrated with Mantle's existing API ecosystem. This includes checking for consistency in naming conventions, data structures, and error handling.\n\n3. **Configuration Management**: Verify that any new configuration options or changes to existing configurations are properly documented and integrated into Mantle's configuration management system.\n\n4. **Testing and Validation**: Ensure that the changes are thoroughly tested within the Mantle environment. This includes unit tests, integration tests, and any necessary end-to-end tests to validate the functionality.\n\n5. **Documentation Updates**: Update any relevant documentation to reflect the changes. This includes API documentation, user guides, and any other technical documentation that may be affected.\n\n6. **Performance Considerations**: Evaluate the impact of the changes on Mantle's performance. This includes assessing any potential bottlenecks, memory usage, and overall system efficiency.\n\n7. **Security Implications**: Assess the security implications of the changes. This includes ensuring that any new features or modifications do not introduce vulnerabilities and that they adhere to Mantle's security standards.\n\n8. **Backward Compatibility**: Ensure that the changes do not break existing functionality or require significant modifications to existing Mantle deployments. This includes maintaining backward compatibility where possible.\n\n9. **Community Feedback**: If applicable, gather feedback from the Mantle community to ensure that the changes meet the needs and expectations of users and contributors.\n\n10. **Deployment and Rollback Plans**: Develop a clear plan for deploying the changes and, if necessary, rolling them back. This includes identifying any potential risks and mitigation strategies.\n\nBy including these checks in the development brief, you can ensure that the proposed changes are well-integrated into the Mantle ecosystem and meet the necessary standards for quality and reliability.",
+      "skill_answer": "Here are the Mantle-specific integration checks that should be included in the development brief:\n\n## Mantle-Specific Integration Checks\n\n1. **External Contract Addresses**\n   - Confirm every external contract address is correct for the requested Mantle environment (mainnet vs testnet)\n   - Verify bridge contracts, oracles, DEXs, vaults, and system dependencies are Mantle-specific addresses\n\n2. **Gas Token Assumptions**\n   - Confirm native gas assumptions use MNT (not ETH)\n   - Ensure wallets are funded with MNT for transaction execution\n\n3. **Bridge Integration Points**\n   - Confirm bridge contract addresses and interfaces are correct for Mantle\n   - Verify deposit/withdraw flows use the proper Mantle bridge endpoints\n\n4. **System Dependencies**\n   - Confirm any Mantle-specific system contracts (L1/L2) are correctly referenced\n   - Verify token mappings and wrapped asset addresses (e.g., W-MNT)\n\n5. **Frontend/Backend Integration Requirements**\n   - Confirm frontend knows which events to listen for\n   - Verify backend services understand initialization values and function signatures\n   - Ensure integration points account for Mantle's inclusion vs L1-backed settlement finality\n\n6. **RPC and Provider Configuration**\n   - Confirm correct RPC endpoints for the target environment\n   - Verify WebSocket URLs if real-time updates are needed\n   - Consider rate limits for official endpoints vs dedicated providers\n\n7. **Token Standards and Metadata**\n   - Confirm token list source-of-truth (https://token-list.mantle.xyz)\n   - Verify any custom token metadata or contract addresses\n   - Ensure compatibility with Mantle's token standards\n\n8. **Cross-Chain Considerations**\n   - Confirm any cross-chain functionality uses Mantle's bridge correctly\n   - Verify asset bridging flows and token wrapping/unwrapping logic\n\nThese checks ensure the contract integrates properly with Mantle's ecosystem and accounts for its specific operational characteristics.",
+      "bare_judgment": {
+        "verdict": "FAIL",
+        "expected_hits": [],
+        "expected_misses": [
+          "Confirm MNT gas assumptions.",
+          "Confirm environment-correct external addresses and explicitly named bridge, oracle, DEX, vault, or system dependencies.",
+          "Confirm the target Mantle environment and chain settings instead of relying on generic EVM assumptions.",
+          "Confirm frontend or backend integrations know the events, functions, and initialization values they depend on."
+        ],
+        "fail_triggers": [
+          "Does not mention Mantle-specific gas or address checks.",
+          "Treats the brief as generic Solidity guidance with no Mantle-specific integration review."
+        ],
+        "reasoning": "The model answer provides generic software development best practices (compatibility, API integration, testing, documentation, etc.) but completely fails to address the Mantle-specific integration checks required by the prompt. It does not mention MNT gas assumptions, environment-specific external addresses, Mantle chain settings, or integration details like events and functions that frontend/backend components depend on. The answer treats the brief as generic development guidance rather than Mantle-specific integration review, triggering both fail conditions."
+      },
+      "skill_judgment": {
+        "verdict": "PASS",
+        "expected_hits": [
+          "Confirm MNT gas assumptions.",
+          "Confirm environment-correct external addresses and explicitly named bridge, oracle, DEX, vault, or system dependencies.",
+          "Confirm the target Mantle environment and chain settings instead of relying on generic EVM assumptions.",
+          "Confirm frontend or backend integrations know the events, functions, and initialization values they depend on."
+        ],
+        "expected_misses": [],
+        "fail_triggers": [],
+        "reasoning": "The model answer comprehensively covers all four expected facts: it explicitly confirms MNT gas assumptions (point 2), verifies environment-correct external addresses for bridges, oracles, DEXs, and vaults (point 1), emphasizes confirming the target Mantle environment rather than generic EVM assumptions (point 3), and addresses frontend/backend integration requirements including events, functions, and initialization values (point 4). The answer also provides additional relevant context without contradicting any fail conditions. No fail conditions are triggered as the answer is specifically Mantle-focused and includes the required integration checks."
+      },
+      "comparison": "skill_better"
+    }
+  ]
+}

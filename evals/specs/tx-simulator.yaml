@@ -1,0 +1,65 @@
+skill: mantle-tx-simulator
+skill_path: skills/mantle-tx-simulator/SKILL.md
+reference_paths:
+  - skills/mantle-tx-simulator/references/simulation-backends.md
+  - skills/mantle-tx-simulator/references/wysiwys-template.md
+description: "External simulation handoff, WYSIWYS reporting, and fail-closed Mantle transaction simulation guidance."
+
+evals:
+  - id: sim-mcp-capability
+    prompt: "Can mantle-mcp v0.2 simulate a Mantle transaction directly?"
+    expected_facts:
+      - "No. mantle-mcp v0.2 does not execute transaction simulations directly in this skill."
+      - "The workflow must use an external simulation backend."
+    fail_if:
+      - "Claims mantle-mcp can run transaction simulations directly."
+      - "Invents a simulation MCP tool in v0.2."
+
+  - id: sim-backends
+    prompt: "What simulation backends does this skill support for Mantle transaction analysis?"
+    expected_facts:
+      - "The skill supports a local fork backend such as Anvil."
+      - "It also supports a managed simulation API such as Tenderly or equivalent."
+    fail_if:
+      - "Fabricates unsupported backend types."
+      - "Omits both the local-fork and managed-simulator paths."
+
+  - id: sim-inconclusive
+    prompt: "When should a Mantle simulation be marked inconclusive?"
+    expected_facts:
+      - "Mark the result inconclusive when there is a backend error without a trace."
+      - "Mark it inconclusive for unresolved calldata decoding."
+      - "Mark it inconclusive when token metadata is missing for the user-facing summary."
+      - "Return do_not_execute_reason when inconclusive conditions exist."
+    fail_if:
+      - "Claims simulations are always conclusive."
+      - "Does not use a do_not_execute style outcome for inconclusive results."
+
+  - id: sim-wysiwys
+    prompt: "What does WYSIWYS stand for in this skill, and what is it used for?"
+    expected_facts:
+      - "WYSIWYS stands for What You See Is What You Sign."
+      - "It is used to translate simulation output into plain-language signing expectations before execution."
+    fail_if:
+      - "Does not know the acronym."
+      - "Explains it as a post-execution receipt rather than a signing summary."
+
+  - id: sim-revert-analysis
+    prompt: "A Mantle simulation reverted. What should the skill do next?"
+    expected_facts:
+      - "Capture the revert as a revert or failure outcome rather than pretending execution will succeed."
+      - "Decode the revert reason or raw error when available."
+      - "Explain the likely failure point and state diff in plain language."
+      - "Return a do_not_execute style recommendation until the issue is resolved."
+    fail_if:
+      - "Only says to fix the contract without analyzing the revert."
+      - "Provides an optimistic success summary after a revert."
+
+  - id: sim-pre-signing
+    prompt: "When should simulation happen relative to signing or broadcasting a Mantle transaction?"
+    expected_facts:
+      - "Simulation should happen before signing or execution."
+      - "It is part of the pre-signing review, not an optional afterthought."
+    fail_if:
+      - "Says simulation is optional or only needed after broadcasting."
+      - "Treats simulation as something done after signing."

@@ -1,0 +1,14 @@
+.DS_Store
+
+.idea/
+.vscode/
+
+*.swp
+*.swo
+*~
+
+__pycache__/
+.pytest_cache/
+
+evals/results/*.json
+evals/results/batches/*/logs/

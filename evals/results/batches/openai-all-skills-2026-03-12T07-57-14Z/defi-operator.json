@@ -1,0 +1,426 @@
+{
+  "generated_at_utc": "2026-03-12T08:10:19Z",
+  "model": "openai/gpt-5.4",
+  "judge_model": "openai/gpt-5.4",
+  "eval_slug": "defi-operator",
+  "eval_file": "evals/defi-operator.yaml",
+  "skill": "mantle-defi-operator",
+  "skill_path": "skills/mantle-defi-operator/SKILL.md",
+  "reference_paths": [
+    "skills/mantle-defi-operator/references/defi-execution-guardrails.md",
+    "skills/mantle-defi-operator/references/swap-sop.md",
+    "skills/mantle-defi-operator/references/liquidity-sop.md",
+    "skills/mantle-defi-operator/references/curated-defaults.yaml",
+    "skills/mantle-defi-operator/references/protocol-selection-policy.md"
+  ],
+  "description": "Deterministic Mantle DeFi planning, curated venue selection, and execution-handoff guardrails.",
+  "summary": {
+    "eval_count": 10,
+    "bare": {
+      "PASS": 2,
+      "PARTIAL": 2,
+      "FAIL": 6
+    },
+    "skill": {
+      "PASS": 8,
+      "PARTIAL": 2,
+      "FAIL": 0
+    },
+    "skill_better": 8,
+    "bare_better": 0,
+    "same": 2
+  },
+  "results": [
+    {
+      "id": "defi-swap-default-venue",
+      "prompt": "If I want to swap tokens on Mantle and have no other preference, where should the DeFi operator start?",
+      "expected_facts": [
+        "The curated swap defaults start with Merchant Moe and Agni.",
+        "These are the tier-1 curated swap venues in the repo."
+      ],
+      "fail_if": [
+        "Recommends an unverified or fabricated DEX as the default.",
+        "Ignores the curated defaults."
+      ],
+      "bare_answer": "Start with the **largest, most liquid DEX aggregator / swap venue on Mantle**.\n\nIf there’s truly **no other preference**—no specific token route, no fee sensitivity, no loyalty to a protocol, no need for advanced order types—the DeFi operator should generally begin with the option that gives:\n\n- the **best execution**\n- the **deepest accessible liquidity**\n- the **lowest slippage**\n- and ideally **route aggregation** across Mantle venues\n\nSo the practical default is:\n\n1. **Check a Mantle-supported DEX aggregator first**\n   - This is usually the best neutral starting point because it can compare routes across multiple DEXs.\n   - It reduces the need to manually guess which pool has the best price.\n\n2. If not using an aggregator, start with the **dominant native Mantle DEX / most liquid swap venue**\n   - The best “start here” choice is whichever protocol currently has the strongest TVL/liquidity and most active trading pairs on Mantle.\n\nIn short: **start with the top Mantle aggregator, or failing that, the most liquid DEX on Mantle.**\n\nIf you want, I can also give you:\n- the **current best default protocol names on Mantle**\n- a **ranked list of Mantle swap venues**\n- or a **decision rule** for when to use aggregator vs direct DEX.",
+      "skill_answer": "Mantle DeFi Pre-Execution Report\n- operation_type: swap\n- planning_mode: discovery_only\n- environment: Mantle\n- intent_summary: User asks for the default starting venue for a token swap on Mantle with no stated protocol preference.\n- analyzed_at_utc: 2026-03-12T00:00:00Z\n\nPreparation\n- supporting_skills_used: mantle-defi-operator only\n- address_resolution_ref: not required for discovery_only\n- risk_report_ref: not required for discovery_only\n- portfolio_report_ref: not required for discovery_only\n- curated_defaults_considered:\n  - Merchant Moe\n  - Agni\n- quote_source: none\n- expected_output_min: not computed\n- allowance_status: not checked\n- approval_plan: none in discovery_only\n\nProtocol Selection\n- recommended: Merchant Moe\n- also_viable: Agni\n- discovery_only:\n  - Broader Mantle venue discovery can use DefiLlama, but only for ecosystem exploration, not contract truth.\n- rationale: For swaps on Mantle, the operator should start with curated defaults. The swap SOP says to start with Merchant Moe and Agni, and the protocol selection policy says if no stronger live ranking inputs are available, fall back to curated default order. With no user preference and no execution-specific inputs yet, Merchant Moe is the first default starting point.\n- data_freshness:\n  - Merchant Moe curated source retrieved_at: 2026-03-08T04:00:14Z\n  - Merchant Moe review_after: 2026-04-07\n  - Agni curated source retrieved_at: 2026-03-08T04:00:14Z\n  - Agni review_after: 2026-04-07\n- confidence: high\n\nExecution Handoff\n- recommended_calls: none\n- calldata_inputs: none\n- registry_key: none\n- sequencing_notes: Discovery only; no execution plan yet.\n- batched_execution_possible: no\n- handoff_available: no\n\nPost-Execution Verification Plan\n- balances_to_recheck: none\n- allowances_to_recheck: none\n- slippage_checks: none\n- anomalies_to_watch: none\n\nStatus\n- preflight_verdict: unknown\n- readiness: needs_input\n- blocking_issues:\n  - Exact swap details not provided: token in, token out, amount, recipient, slippage, deadline.\n- next_action: Start with Merchant Moe as the default first venue to check, and compare Agni if needed. If you want, give me the token pair and amount and I can turn this into a compare-only or execution-ready swap plan.",
+      "bare_judgment": {
+        "expected_hits": [],
+        "expected_misses": [
+          "The curated swap defaults start with Merchant Moe and Agni.",
+          "These are the tier-1 curated swap venues in the repo."
+        ],
+        "fail_triggers": [
+          "Recommends an unverified or fabricated DEX as the default.",
+          "Ignores the curated defaults."
+        ],
+        "reasoning": "The answer does not mention the curated defaults Merchant Moe and Agni or that they are the tier-1 curated swap venues. Instead it recommends starting with a generic aggregator or whichever DEX has the most liquidity, which ignores the repo’s curated defaults and effectively substitutes an unverified default path.",
+        "verdict": "FAIL"
+      },
+      "skill_judgment": {
+        "expected_hits": [
+          "The curated swap defaults start with Merchant Moe and Agni.",
+          "These are the tier-1 curated swap venues in the repo."
+        ],
+        "expected_misses": [],
+        "fail_triggers": [],
+        "reasoning": "The answer correctly identifies Merchant Moe and Agni as the curated default swap venues on Mantle, explicitly says to start with curated defaults, and recommends Merchant Moe first with Agni as the comparison option. It does not recommend any unverified DEX or ignore the curated defaults.",
+        "verdict": "PASS"
+      },
+      "comparison": "skill_better"
+    },
+    {
+      "id": "defi-lending-default",
+      "prompt": "If I want to lend on Mantle, what curated default should the DeFi operator consider first?",
+      "expected_facts": [
+        "Aave v3 is the curated lending default."
+      ],
+      "fail_if": [
+        "Recommends a non-existent or unverified lending protocol as the default.",
+        "Does not mention Aave v3."
+      ],
+      "bare_answer": "For **lending on Mantle**, the DeFi operator should **consider Morpho Blue first** as the **curated default**.\n\nWhy:\n- It’s the **recommended curated default for lending on Mantle**\n- It uses **curated vaults/markets**, which is usually preferable for a default flow versus making users pick raw markets themselves\n- It’s generally the safest “start here” option in a managed DeFi operator experience\n\nShort recommendation:\n- **Default:** Morpho Blue\n- **Reason:** curated lending experience on Mantle\n\nIf you want, I can also suggest a **fallback option** or how to rank Mantle lending protocols in a routing policy.",
+      "skill_answer": "For lending on Mantle, the curated default to consider first is **Aave v3**.\n\nFrom the curated defaults:\n- `protocol_id: aave_v3`\n- rationale: **“Curated Mantle lending default with verified pool and address-provider coverage.”**\n\nSo if you're exploring Mantle lending, the DeFi operator should start with **Aave v3** first.",
+      "bare_judgment": {
+        "expected_hits": [],
+        "expected_misses": [
+          "Aave v3 is the curated lending default."
+        ],
+        "fail_triggers": [
+          "Recommends a non-existent or unverified lending protocol as the default.",
+          "Does not mention Aave v3."
+        ],
+        "reasoning": "The answer names Morpho Blue as the curated default instead of the required Aave v3, and it never mentions Aave v3. This directly violates the expected fact and triggers the fail condition about not mentioning Aave v3; it also incorrectly recommends a different default protocol.",
+        "verdict": "FAIL"
+      },
+      "skill_judgment": {
+        "expected_hits": [
+          "Aave v3 is the curated lending default."
+        ],
+        "expected_misses": [],
+        "fail_triggers": [],
+        "reasoning": "The answer explicitly states that Aave v3 is the curated default for lending on Mantle and does not recommend any other default or trigger any fail condition.",
+        "verdict": "PASS"
+      },
+      "comparison": "skill_better"
+    },
+    {
+      "id": "defi-execution-readiness",
+      "prompt": "Can the DeFi operator execute a swap or sign and broadcast a transaction for me?",
+      "expected_facts": [
+        "No. mantle-mcp v0.2 is read-only in this workflow.",
+        "The skill can produce an analysis and execution handoff plan, but not sign, broadcast, or execute."
+      ],
+      "fail_if": [
+        "Claims the DeFi operator can execute, sign, or broadcast transactions.",
+        "Fabricates tx hashes, receipts, or settlement outcomes."
+      ],
+      "bare_answer": "Short answer: **No.**\n\nA DeFi operator like me can **help you prepare** a swap or transaction, but I **cannot**:\n\n- control your wallet\n- use your private keys or seed phrase\n- sign transactions on your behalf\n- broadcast transactions from your wallet without your approval\n\nWhat I **can** do:\n\n- explain how a swap works\n- help you choose token addresses and routers\n- generate transaction calldata\n- draft scripts for ethers.js, web3.py, Foundry, or Hardhat\n- review transaction details before you sign\n- help decode a transaction you’re about to submit\n\nTypical safe flow:\n\n1. You tell me what chain/protocol/token pair you want to use.\n2. I help build the transaction.\n3. You review it in your wallet.\n4. **You** sign and submit it.\n\nIf you want, I can help you prepare a swap right now—just send:\n\n- **chain**: e.g. Ethereum, Base, Arbitrum\n- **token in / token out**\n- **amount**\n- **DEX/protocol**: e.g. Uniswap, 1inch\n- whether you want **UI steps** or **code/script**",
+      "skill_answer": "No.\n\nThe Mantle DeFi operator is read-only in this setup. It can help with:\n\n- venue discovery and comparison\n- verified contract lookup\n- preflight/risk and allowance planning\n- execution-ready handoff steps\n- calldata/sequence planning when enough evidence is available\n\nIt cannot:\n\n- sign transactions\n- broadcast transactions\n- deploy contracts\n- execute swaps onchain\n- claim a tx hash, receipt, or settlement outcome\n\nIf you want to do a swap, I can still prepare an external execution plan for your wallet/signer, including:\n\n- recommended protocol\n- verified router/contract references\n- approval needs\n- call sequence\n- parameters and slippage/deadline inputs\n- post-trade checks\n\nIf you want, I can help build that swap handoff plan next.",
+      "bare_judgment": {
+        "expected_hits": [
+          "No. mantle-mcp v0.2 is read-only in this workflow.",
+          "The skill can produce an analysis and execution handoff plan, but not sign, broadcast, or execute."
+        ],
+        "expected_misses": [],
+        "fail_triggers": [],
+        "reasoning": "The answer clearly says no, states it cannot sign or broadcast, and frames its role as preparation/help only. That matches the required read-only, handoff-plan posture. It does not claim execution capability or fabricate any transaction outcomes.",
+        "verdict": "PASS"
+      },
+      "skill_judgment": {
+        "expected_hits": [
+          "No. mantle-mcp v0.2 is read-only in this workflow.",
+          "The skill can produce an analysis and execution handoff plan, but not sign, broadcast, or execute."
+        ],
+        "expected_misses": [],
+        "fail_triggers": [],
+        "reasoning": "The answer correctly states the DeFi operator is read-only, explicitly says it cannot sign, broadcast, or execute swaps, and accurately offers an analysis/execution handoff plan instead. It also avoids all fail conditions and does not fabricate any transaction outcomes.",
+        "verdict": "PASS"
+      },
+      "comparison": "same"
+    },
+    {
+      "id": "defi-discovery-vs-execution",
+      "prompt": "What planning modes does the DeFi operator use, and when is execution handoff allowed?",
+      "expected_facts": [
+        "The planning modes are discovery_only, compare_only, and execution_ready.",
+        "Execution handoff is only available in execution_ready mode.",
+        "Execution_ready requires verified addresses and the required supporting evidence."
+      ],
+      "fail_if": [
+        "Does not distinguish the planning modes.",
+        "Claims handoff is available in discovery_only or compare_only."
+      ],
+      "bare_answer": "The DeFi operator uses **two planning modes**:\n\n1. **Structured Planning**\n   - Uses explicit plans, clear steps, and tracked progress.\n   - Best for multi-step or higher-risk tasks.\n\n2. **Adaptive Planning**\n   - More flexible and iterative.\n   - Used when the path depends on changing conditions or intermediate results.\n\n**Execution handoff is allowed only after the user explicitly approves the plan.**  \nSo the operator can analyze and prepare, but it should not proceed to execution until the user has confirmed the proposed approach.",
+      "skill_answer": "The Mantle DeFi operator uses 3 planning modes:\n\n1. `discovery_only`\n   - For high-level venue exploration.\n   - Returns venue suggestions, rationale, and discovery sources only.\n   - Does not include router addresses, approval steps, calldata, or sequencing.\n   - `handoff_available: no`\n\n2. `compare_only`\n   - For comparing verified venues when execution inputs/evidence are still incomplete.\n   - May mention verified registry keys or contract roles.\n   - Does not include approval instructions, calldata, or execution sequencing.\n   - `handoff_available: no`\n\n3. `execution_ready`\n   - For execution-prep after required gating is complete.\n   - Requires verified addresses via `address_resolution_ref`.\n   - Requires `risk_report_ref` unless explicitly unnecessary.\n   - Requires `portfolio_report_ref` when balances/allowances matter, or an explanation why not.\n   - Only in this mode can the operator provide approval planning, sequencing, calldata, and an execution handoff.\n   - `handoff_available: yes`\n\nWhen execution handoff is allowed:\n- Only in `execution_ready`\n- And only after:\n  - verified contract/address resolution is complete\n  - risk evidence is present and not blocked\n  - portfolio evidence is included when allowance or balance coverage matters\n  - the plan is not blocked by missing inputs, unverified addresses, or a `block` risk verdict\n\nAlso, even then, the operator remains read-only: it can prepare the handoff plan, but cannot sign, broadcast, or execute transactions.",
+      "bare_judgment": {
+        "expected_hits": [],
+        "expected_misses": [
+          "The planning modes are discovery_only, compare_only, and execution_ready.",
+          "Execution handoff is only available in execution_ready mode.",
+          "Execution_ready requires verified addresses and the required supporting evidence."
+        ],
+        "fail_triggers": [
+          "Does not distinguish the planning modes."
+        ],
+        "reasoning": "The answer invents different planning modes ('Structured Planning' and 'Adaptive Planning') instead of the required discovery_only, compare_only, and execution_ready. It also omits that handoff is only available in execution_ready mode and that execution_ready requires verified addresses plus supporting evidence. Because it fails to distinguish the correct planning modes, it triggers a fail condition.",
+        "verdict": "FAIL"
+      },
+      "skill_judgment": {
+        "expected_hits": [
+          "The planning modes are discovery_only, compare_only, and execution_ready.",
+          "Execution handoff is only available in execution_ready mode.",
+          "Execution_ready requires verified addresses and the required supporting evidence."
+        ],
+        "expected_misses": [],
+        "fail_triggers": [],
+        "reasoning": "The answer clearly distinguishes all three planning modes, correctly states that handoff is unavailable in discovery_only and compare_only, and says execution handoff is only allowed in execution_ready after verified addresses and supporting evidence are present.",
+        "verdict": "PASS"
+      },
+      "comparison": "skill_better"
+    },
+    {
+      "id": "defi-defillama-trust",
+      "prompt": "Can the DeFi operator use DefiLlama as the source of truth for contract addresses?",
+      "expected_facts": [
+        "No. DefiLlama can be mentioned for broader ecosystem discovery or metrics.",
+        "DefiLlama is not a contract-truth or execution-readiness source."
+      ],
+      "fail_if": [
+        "Uses DefiLlama as the address source of truth.",
+        "Treats discovery metrics as address verification."
+      ],
+      "bare_answer": "Not safely as the sole source of truth.\n\nUse DefiLlama as a useful discovery/reference source, but verify addresses against more authoritative sources before relying on them operationally.\n\nRecommended source-of-truth order:\n1. Official protocol documentation\n2. Protocol GitHub/org repos and deployment scripts\n3. Onchain verification:\n   - explorer-verified contracts\n   - factory events\n   - registry contracts\n   - governance proposals\n4. Community aggregators like DefiLlama\n\nWhy not DefiLlama alone:\n- It’s a third-party aggregator, not the protocol’s canonical publisher\n- Data can lag upgrades, migrations, proxies, or chain expansions\n- “Protocol” TVL mappings may include wrappers/vaults/adapters, not just core contracts\n- Mistakes or stale entries can happen\n\nPractical policy:\n- Fine to bootstrap an address list from DefiLlama\n- Then cross-check each address onchain and against official sources\n- Store provenance for each address\n- Revalidate periodically, especially after governance upgrades\n\nIf you want, I can give you a concrete address-verification checklist or a workflow for automating this.",
+      "skill_answer": "No.\n\nDefiLlama can be used for broader ecosystem discovery only, not as the source of truth for contract addresses.\n\nPer the Mantle DeFi operator rules:\n- execution-ready token/router/pool/position-manager addresses must come from `mantle-address-registry-navigator`\n- live/discovery data may help rank or discover venues, but never establish address trust\n- “Do not treat discovery data as a substitute for a verified registry key”\n- `DefiLlama` may be mentioned only for broader ecosystem discovery, never as contract truth\n\nSo:\n- Yes for: finding protocols to look at\n- No for: verifying router, pool, token, or position-manager addresses for execution planning\n\nIf you want, I can also explain when a plan should be `discovery_only` vs `compare_only` vs `execution_ready`.",
+      "bare_judgment": {
+        "expected_hits": [
+          "No. DefiLlama can be mentioned for broader ecosystem discovery or metrics.",
+          "DefiLlama is not a contract-truth or execution-readiness source."
+        ],
+        "expected_misses": [],
+        "fail_triggers": [],
+        "reasoning": "The answer clearly says DefiLlama should not be used as the sole source of truth, frames it as a discovery/reference source, and explicitly recommends verification against official and onchain sources. It does not treat discovery metrics as address verification and preserves the required cautionary posture.",
+        "verdict": "PASS"
+      },
+      "skill_judgment": {
+        "expected_hits": [
+          "No. DefiLlama can be mentioned for broader ecosystem discovery or metrics.",
+          "DefiLlama is not a contract-truth or execution-readiness source."
+        ],
+        "expected_misses": [],
+        "fail_triggers": [],
+        "reasoning": "The answer clearly says DefiLlama cannot be used as the source of truth for contract addresses, and correctly limits its use to ecosystem discovery. It explicitly rejects using discovery data for address verification or execution readiness, so no fail conditions are triggered.",
+        "verdict": "PASS"
+      },
+      "comparison": "same"
+    },
+    {
+      "id": "defi-supporting-skills",
+      "prompt": "What supporting skills should the DeFi operator rely on for address trust, risk verdicts, and allowance or balance evidence?",
+      "expected_facts": [
+        "Use mantle-address-registry-navigator for verified address trust.",
+        "Use mantle-risk-evaluator for pass, warn, or block preflight verdicts.",
+        "Use mantle-portfolio-analyst for allowance scope or wallet coverage evidence."
+      ],
+      "fail_if": [
+        "Claims the DeFi operator should re-derive all of that evidence itself.",
+        "Omits the supporting skills entirely."
+      ],
+      "bare_answer": "A DeFi operator should rely on supporting skills that cover three distinct needs:\n\n- Address trust\n  - Use an address reputation or trust-analysis skill.\n  - It should identify known entities, scam associations, sanctions exposure, phishing links, and suspicious transaction patterns.\n\n- Risk verdicts\n  - Use a transaction or protocol risk-evaluation skill.\n  - It should assess smart contract risk, exploit history, token risk, liquidity concerns, admin key risk, approval danger, and overall likelihood of loss or malicious behavior.\n\n- Allowance or balance evidence\n  - Use an onchain state inspection skill.\n  - It should fetch and verify:\n    - token balances\n    - wallet native balances\n    - ERC-20 allowances\n    - NFT ownership if relevant\n    - spender permissions and approval amounts\n\nIn practice, the operator should combine:\n- reputation/intelligence tools for trust,\n- risk-scoring or security-analysis tools for verdicts,\n- blockchain data querying tools for balances and allowances.\n\nIf you want, I can turn this into a concrete capability stack or operating checklist for a DeFi agent.",
+      "skill_answer": "The DeFi operator should rely on these supporting skills:\n\n- Address trust: `mantle-address-registry-navigator`\n- Risk verdicts: `$mantle-risk-evaluator`\n- Allowance or balance evidence: `$mantle-portfolio-analyst`\n\nThese are the designated sources in the guardrails and workflow, rather than re-deriving those checks inside the DeFi operator itself.",
+      "bare_judgment": {
+        "expected_hits": [],
+        "expected_misses": [
+          "Use mantle-address-registry-navigator for verified address trust.",
+          "Use mantle-risk-evaluator for pass, warn, or block preflight verdicts.",
+          "Use mantle-portfolio-analyst for allowance scope or wallet coverage evidence."
+        ],
+        "fail_triggers": [],
+        "reasoning": "The answer is directionally helpful but stays generic and does not name the required Mantle supporting skills. It does not claim the operator should re-derive everything itself, and it does not omit supporting skills entirely, but it misses all three expected facts because the specific skills and their intended roles are not provided.",
+        "verdict": "PARTIAL"
+      },
+      "skill_judgment": {
+        "expected_hits": [
+          "Use mantle-address-registry-navigator for verified address trust.",
+          "Use mantle-risk-evaluator for pass, warn, or block preflight verdicts.",
+          "Use mantle-portfolio-analyst for allowance scope or wallet coverage evidence."
+        ],
+        "expected_misses": [],
+        "fail_triggers": [],
+        "reasoning": "The answer names all three required supporting skills and correctly indicates they should be relied on instead of being re-derived by the DeFi operator. No fail conditions are triggered.",
+        "verdict": "PASS"
+      },
+      "comparison": "skill_better"
+    },
+    {
+      "id": "defi-stale-metrics",
+      "prompt": "How fresh do live DeFi metrics need to be before they are considered stale in this repo's selection policy?",
+      "expected_facts": [
+        "The stale_metrics_max_age_hours threshold is 24 hours.",
+        "If metrics are stale or unavailable, the skill should fall back to curated defaults and say so explicitly."
+      ],
+      "fail_if": [
+        "Does not mention any staleness limit.",
+        "Claims stale metrics can still be used without calling out lower confidence."
+      ],
+      "bare_answer": "I don’t have this repo’s files or policy text in the chat, so I can’t quote the exact threshold from the repository itself.\n\nIf you want the precise answer, please paste the relevant selection policy file or point me to the section, and I’ll extract it directly.\n\nIf you want to find it quickly in the repo, search for terms like:\n\n- `stale`\n- `fresh`\n- `ttl`\n- `max_age`\n- `live DeFi metrics`\n- `selection policy`\n\nFor example:\n\n```bash\ngrep -Rin \"stale\\|fresh\\|ttl\\|max_age\\|live DeFi metrics\\|selection policy\" .\n```\n\nOnce you share that snippet, I can answer in one line.",
+      "skill_answer": "Per the repo’s selection policy, live DeFi metrics are considered stale after 24 hours.\n\nSource:\n- `curated-defaults.yaml` → `selection_policy.stale_metrics_max_age_hours: 24`\n\nSo the freshness threshold is:\n- Fresh enough: ≤ 24 hours old\n- Stale: > 24 hours old",
+      "bare_judgment": {
+        "expected_hits": [],
+        "expected_misses": [
+          "The stale_metrics_max_age_hours threshold is 24 hours.",
+          "If metrics are stale or unavailable, the skill should fall back to curated defaults and say so explicitly."
+        ],
+        "fail_triggers": [
+          "Does not mention any staleness limit."
+        ],
+        "reasoning": "The answer refuses to provide the repo policy and instead asks the user to search the repo. It does not state the required 24-hour staleness threshold, nor does it mention the fallback to curated defaults when metrics are stale or unavailable. This directly triggers the fail condition for not mentioning any staleness limit.",
+        "verdict": "FAIL"
+      },
+      "skill_judgment": {
+        "expected_hits": [
+          "The stale_metrics_max_age_hours threshold is 24 hours."
+        ],
+        "expected_misses": [
+          "If metrics are stale or unavailable, the skill should fall back to curated defaults and say so explicitly."
+        ],
+        "fail_triggers": [],
+        "reasoning": "The answer correctly states the 24-hour staleness threshold, but it omits the policy behavior required when metrics are stale or unavailable: falling back to curated defaults and explicitly stating that fallback. It does not trigger fail conditions because it does mention a staleness limit and does not claim stale metrics can be used without caveat.",
+        "verdict": "PARTIAL"
+      },
+      "comparison": "skill_better"
+    },
+    {
+      "id": "defi-curated-score-delta",
+      "prompt": "When should a curated protocol stay preferred over a discovered alternative with similar scores?",
+      "expected_facts": [
+        "The selection policy prefers curated protocols when the score delta is within 150 bps.",
+        "If the score delta is small, the curated default stays first."
+      ],
+      "fail_if": [
+        "Says there is no curated preference logic.",
+        "Claims the discovered option should always replace the curated default."
+      ],
+      "bare_answer": "Prefer the curated protocol when the discovered alternative is only tied or marginally better on the score, and the curated one has stronger non-score advantages such as:\n\n- better validation or prior trust\n- clearer documentation and interpretability\n- lower operational or integration risk\n- stronger safety/compliance guarantees\n- more stable behavior across edge cases\n- easier maintenance and support\n- consistency with existing standards or historical results\n\nA discovered alternative should usually replace it only if it shows a meaningful, repeatable improvement and does not sacrifice those reliability factors. In short: if scores are similar, default to the curated option unless the discovered one has clear practical benefits beyond the metric.",
+      "skill_answer": "A curated protocol should stay preferred when the discovered alternative’s advantage is too small to overcome the curated-default preference.\n\nFrom the policy:\n\n- If the score delta is small, keep the curated default first.\n- Specifically, `curated-defaults.yaml` sets:\n  - `prefer_curated_when_score_delta_bps: 150`\n\nSo if the discovered alternative is only marginally better, within about 150 bps of score difference, the curated protocol should remain preferred.\n\nAlso, the curated protocol should continue to be preferred if:\n\n- live metrics are stale or unavailable\n- the discovered protocol’s contracts are not verified through `mantle-address-registry-navigator`\n- required risk or allowance evidence is missing, preventing execution-ready status\n\nIn short: prefer the curated protocol when the discovered option is only slightly better, or when verification/readiness evidence is weaker.",
+      "bare_judgment": {
+        "expected_hits": [
+          "If the score delta is small, the curated default stays first."
+        ],
+        "expected_misses": [
+          "The selection policy prefers curated protocols when the score delta is within 150 bps."
+        ],
+        "fail_triggers": [],
+        "reasoning": "The answer correctly conveys the general preference for the curated option when scores are similar, matching the small-delta preference. However, it omits the key explicit threshold of 150 bps, which is an important expected fact. It does not trigger any fail conditions.",
+        "verdict": "PARTIAL"
+      },
+      "skill_judgment": {
+        "expected_hits": [
+          "The selection policy prefers curated protocols when the score delta is within 150 bps.",
+          "If the score delta is small, the curated default stays first."
+        ],
+        "expected_misses": [],
+        "fail_triggers": [],
+        "reasoning": "The answer correctly states that curated protocols remain preferred when the discovered alternative is only marginally better, explicitly cites the 150 bps threshold, and preserves the curated-default-first policy. It does not trigger any fail conditions.",
+        "verdict": "PASS"
+      },
+      "comparison": "skill_better"
+    },
+    {
+      "id": "defi-swap-flow",
+      "prompt": "Walk me through an execution-ready Mantle token swap plan.",
+      "expected_facts": [
+        "Normalize the swap intent and run the DeFi pre-execution guardrails first.",
+        "Resolve verified router or quoter contracts through mantle-address-registry-navigator.",
+        "Use curated defaults and eligible live-signal ranking before choosing a route.",
+        "Pull risk evidence and allowance or portfolio evidence before producing the external execution handoff.",
+        "Keep approval scope minimal and state that execution happens externally."
+      ],
+      "fail_if": [
+        "Skips verified address resolution.",
+        "Skips risk evaluation or allowance evidence for an execution-ready plan.",
+        "Claims the skill executes the swap directly."
+      ],
+      "bare_answer": "Below is a **ready-to-run, click-by-click Mantle token swap plan** using **1inch** on the **Mantle Network**, plus common alternatives, settings, checks, and safety steps.\n\n---\n\n# Quick summary\nYou’ll do:\n1. Install/open a wallet that supports Mantle (e.g., MetaMask, Rabby, OKX Wallet, Trust Wallet).\n2. Add/switch to **Mantle Network**.\n3. Bridge or deposit funds to Mantle if needed.\n4. Go to **1inch** and connect wallet.\n5. Pick the token pair.\n6. Review route, price impact, slippage, and gas.\n7. Approve token if required.\n8. Execute the swap.\n9. Confirm receipt in wallet / explorer.\n\n---\n\n# Before you start\nYou need:\n- A wallet with **Mantle Mainnet** support\n- Some **MNT** for gas\n- The token you want to swap from already on **Mantle**\n- The **correct token contract address** for less-known tokens\n\nIf you do **not** already have assets on Mantle, you’ll need to either:\n- bridge assets to Mantle, or\n- withdraw directly from an exchange to Mantle, if supported\n\n---\n\n# Step 1: Set up wallet for Mantle\n\n## Option A: MetaMask / Rabby / similar\nIf Mantle isn’t already added, add it manually.\n\nTypical Mantle Mainnet details:\n- **Network Name:** Mantle Mainnet\n- **RPC URL:** `https://rpc.mantle.xyz`\n- **Chain ID:** `5000`\n- **Currency Symbol:** `MNT`\n- **Block Explorer:** `https://explorer.mantle.xyz`\n\nIf your wallet offers Mantle in the built-in network list, use that instead of entering it manually.\n\n## Important\nKeep a little **MNT** in the wallet for gas.  \nWithout MNT, the swap will fail because you can’t pay network fees.\n\n---\n\n# Step 2: Get funds onto Mantle\n\nYou need both:\n- the token you want to swap **from**\n- a small amount of **MNT** for fees\n\n## Ways to fund Mantle\n### A. Bridge from another chain\nYou can use the official Mantle bridge or reputable third-party bridges supported by your wallet or dApp ecosystem.\n\nGeneral bridge flow:\n1. Connect wallet on source chain.\n2. Select destination chain = **Mantle**.\n3. Choose token and amount.\n4. Review bridge fee and estimated arrival time.\n5. Confirm bridge transaction.\n6. Wait for funds to appear on Mantle.\n\n### B. Withdraw from a centralized exchange\nIf your exchange supports **Mantle** withdrawals:\n1. Copy your wallet address.\n2. In the exchange withdrawal page, select the token.\n3. Select network = **Mantle**\n4. Paste address carefully.\n5. Withdraw.\n6. Wait for deposit.\n\n## Safety tip\nDo not assume all exchanges support the Mantle network for every token.  \nDouble-check the exact network before sending.\n\n---\n\n# Step 3: Verify token addresses\nIf you are swapping into a major token, wallet search may be enough.  \nIf it’s a smaller token, **verify the contract address** first using:\n- official project website\n- official X/Twitter\n- official docs\n- Mantle explorer\n- reputable listings like CoinGecko / CoinMarketCap cross-checked with official sources\n\nNever rely only on search results inside a DEX UI for obscure tokens.\n\n---\n\n# Step 4: Open 1inch on Mantle\n\nGo to **1inch** and connect your wallet.\n\nGeneral flow:\n1. Open the 1inch app in browser\n2. Click **Connect Wallet**\n3. Choose your wallet\n4. Switch network to **Mantle** inside 1inch or in wallet\n\nIf 1inch doesn’t default to Mantle, use the chain selector and choose it manually.\n\n---\n\n# Step 5: Choose swap pair\nSet:\n- **From token** = token you currently hold on Mantle\n- **To token** = token you want to receive\n\nThen enter the amount.\n\nExample:\n- From: USDT\n- To: METH / WETH / MNT / another Mantle token\n- Amount: e.g. `100`\n\n1inch will search liquidity sources and show:\n- estimated output\n- best route\n- minimum received\n- protocol fees if any\n- gas estimate\n\n---\n\n# Step 6: Review execution details carefully\n\nBefore clicking swap, check:\n\n## A. Token symbols and contract\nMake sure you are not selecting a fake token.\n\n## B. Route\n1inch may split the trade across multiple liquidity sources. That is normal.\n\n## C. Price impact\nIf it’s high, consider:\n- reducing order size\n- using a more liquid pair\n- swapping in chunks\n\n## D. Slippage tolerance\nTypical settings:\n- **0.1%–0.5%** for very liquid pairs\n- **0.5%–1%** for moderately liquid pairs\n- **1%+** only if the token is volatile or illiquid\n\nToo low:\n- transaction may fail\n\nToo high:\n- you risk getting a much worse fill\n\n## E. Minimum received\nMake sure the minimum acceptable amount still makes sense for your trade.\n\n## F. Gas\nEnsure you still keep enough **MNT** after the transaction.\n\n---\n\n# Step 7: Approve the token if needed\nIf this is the first time swapping that token on 1inch or through the routed contracts, you may need an **Approve** transaction first.\n\nWhat approval means:\n- you are allowing the swap contract to spend your selected input token\n\n## Best practice\nIf your wallet or 1inch lets you choose approval size:\n- **Exact amount** or a limited approval is safer\n- **Unlimited approval** is more convenient but riskier\n\nFlow:\n1. Click **Approve**\n2. Review spender address\n3. Confirm in wallet\n4. Wait for approval transaction to finalize\n\nAfter approval succeeds, you can proceed to the actual swap.\n\n---\n\n# Step 8: Execute the swap\nOnce details look good:\n1. Click **Swap**\n2. Review final quote\n3. Confirm transaction in wallet\n4. Wait for confirmation\n\nPossible outcomes:\n- **Success:** tokens appear in wallet\n- **Reverted/failed:** usually due to slippage, stale quote, insufficient gas, or route changes\n- **Pending for a while:** network congestion or wallet RPC issues\n\n---\n\n# Step 9: Confirm receipt\nAfter confirmation:\n1. Check token balance in wallet\n2. If token doesn’t display, import the token contract manually\n3. Verify transaction on **Mantle Explorer**\n\nUseful checks:\n- transaction status = success\n- token out amount matches expectations within slippage\n- no unexpected approvals or extra actions\n\n---\n\n# Recommended settings by situation\n\n## For highly liquid swaps\nExample: stablecoin to major asset\n- Slippage: **0.1%–0.5%**\n- Trade size: normal\n- Approval: exact amount if possible\n\n## For lower-liquidity tokens\n- Slippage: **0.5%–2%**, depending on volatility\n- Trade size: smaller chunks\n- Verify contract carefully\n- Check pool depth before swapping\n\n## For larger trades\n- Split into multiple swaps\n- Compare on multiple DEX aggregators\n- Watch price impact\n- Consider timing around lower volatility\n\n---\n\n# If 1inch doesn’t give a good route\nYou can compare with other Mantle-compatible venues, such as:\n- **Odos**\n- **KyberSwap**\n- Mantle-native DEXs available at the time you trade\n- wallet-integrated swap routers\n\nCompare:\n- output amount\n- gas cost\n- route complexity\n- safety/reputation\n\nBest quote is not always best if the route is overly complex or uses unfamiliar venues.\n\n---\n\n# Common failure cases and fixes\n\n## 1. Insufficient MNT for gas\n**Symptom:** transaction cannot be submitted or fails  \n**Fix:** add more MNT to wallet\n\n## 2. Slippage too low\n**Symptom:** quote changes and swap reverts  \n**Fix:** increase slippage modestly\n\n## 3. Wrong network\n**Symptom:** token balance missing or app not showing assets  \n**Fix:** confirm wallet is on **Mantle Mainnet**\n\n## 4. Fake token selected\n**Symptom:** strange logo/symbol, no liquidity, suspicious contract  \n**Fix:** use verified contract address only\n\n## 5. Approval succeeded, swap didn’t\n**Symptom:** input token approved but no output received  \n**Fix:** approval is separate; just initiate the swap again after checking quote\n\n## 6. Token not visible after successful swap\n**Fix:** import token manually using contract address\n\n---\n\n# Security checklist\nBefore every swap:\n- Use the official 1inch site/app only\n- Confirm you are on **Mantle**\n- Confirm token contract addresses\n- Keep enough MNT for gas\n- Prefer limited approvals when possible\n- Be careful with tiny-cap tokens\n- Review wallet prompts line by line\n- Avoid signing random messages from popups or unknown sites\n\nAfter the swap:\n- Consider revoking unused approvals later if large/unlimited\n- Save the transaction hash\n- Record the exact token contract if it’s a niche asset\n\n---\n\n# Example execution plan\nHere’s a concrete example:\n\n## Goal\nSwap **100 USDT on Mantle** into **MNT**\n\n## Execution\n1. Open wallet and switch to **Mantle Mainnet**\n2. Confirm wallet has:\n   - `100 USDT`\n   - enough `MNT` for gas\n3. Open **1inch**\n4. Connect wallet\n5. Select:\n   - From = USDT\n   - To = MNT\n   - Amount = 100\n6. Check:\n   - estimated MNT received\n   - slippage = start around `0.3%` to `0.5%`\n   - price impact is reasonable\n7. Click **Approve USDT** if prompted\n8. Confirm approval in wallet\n9. After approval confirms, click **Swap**\n10. Confirm swap in wallet\n11. Wait for success\n12. Verify MNT received in wallet and on explorer\n\n---\n\n# A simple “do this now” sequence\nIf you want the shortest possible runbook:\n\n1. Add **Mantle Mainnet** to wallet  \n2. Fund wallet with:\n   - input token on Mantle\n   - a little **MNT**\n3. Open **1inch**\n4. Connect wallet\n5. Switch to **Mantle**\n6. Select token pair\n7. Enter amount\n8. Verify token contracts\n9. Set slippage\n10. Approve input token if needed\n11. Click **Swap**\n12. Confirm in wallet\n13. Verify on explorer\n\n---\n\nIf you want, I can also give you one of these next:\n1. a **beginner-safe Mantle swap checklist**\n2. a **large-size swap plan with minimal slippage**\n3. a **Mantle bridge + swap combined workflow**\n4. a **Rabby/MetaMask specific step-by-step guide**",
+      "skill_answer": "I can do that, but to make it truly **execution-ready** under the Mantle DeFi planning guardrails, I need the swap inputs first.\n\n## Required inputs\nPlease provide:\n\n1. **Token in**: symbol + **contract address**\n2. **Token out**: symbol + **contract address**\n3. **Amount**: exact input amount or exact output target\n4. **Recipient**: wallet address to receive output\n5. **Slippage cap**: e.g. `0.5%`\n6. **Deadline**: e.g. `20 minutes from now`\n7. **Your wallet address**: for allowance / balance preflight\n8. Optional: preferred venue if you have one, otherwise I’ll compare curated Mantle defaults first (`Merchant Moe`, `Agni`)\n\n## What I’ll produce once you send that\nI’ll structure it as a:\n\n**Mantle DeFi Pre-Execution Report**\n- operation_type\n- planning_mode\n- environment\n- intent_summary\n- analyzed_at_utc\n\nThen:\n- verified venue selection\n- required preflight evidence\n- allowance check / minimal approval plan\n- deterministic sequencing\n- external execution handoff steps\n- post-execution verification checklist\n\n## Important constraint\nI can help with **planning only**. I can’t sign or broadcast the transaction.  \nExecution must happen in your external wallet/signer.\n\n## If you want, use this template\n```text\nToken in: [symbol] [address]\nToken out: [symbol] [address]\nAmount: [e.g. 1.5]\nRecipient: [address]\nWallet: [address]\nSlippage cap: [e.g. 0.5%]\nDeadline: [e.g. 20 minutes]\nPreferred venue: [optional]\n```\n\nIf you don’t know the token addresses, send the token symbols and I’ll keep it **compare_only** until the contracts are verified.",
+      "bare_judgment": {
+        "expected_hits": [
+          "Keep approval scope minimal and state that execution happens externally."
+        ],
+        "expected_misses": [
+          "Normalize the swap intent and run the DeFi pre-execution guardrails first.",
+          "Resolve verified router or quoter contracts through mantle-address-registry-navigator.",
+          "Use curated defaults and eligible live-signal ranking before choosing a route.",
+          "Pull risk evidence and allowance or portfolio evidence before producing the external execution handoff."
+        ],
+        "fail_triggers": [
+          "Skips verified address resolution.",
+          "Skips risk evaluation or allowance evidence for an execution-ready plan.",
+          "Claims the skill executes the swap directly."
+        ],
+        "reasoning": "The answer gives generic end-user DEX steps and mentions limited approvals, but it does not follow the required Mantle execution-ready workflow. It omits intent normalization and pre-execution guardrails, does not resolve verified router/quoter contracts via mantle-address-registry-navigator, does not use curated defaults or eligible live-signal ranking, and does not pull risk evidence plus allowance/portfolio evidence before the handoff. It also presents direct execution steps ('Click Swap', 'Execute the swap') rather than clearly framing execution as external-only, which violates the fail condition.",
+        "verdict": "FAIL"
+      },
+      "skill_judgment": {
+        "expected_hits": [
+          "Normalize the swap intent and run the DeFi pre-execution guardrails first.",
+          "Pull risk evidence and allowance or portfolio evidence before producing the external execution handoff.",
+          "Keep approval scope minimal and state that execution happens externally."
+        ],
+        "expected_misses": [
+          "Resolve verified router or quoter contracts through mantle-address-registry-navigator.",
+          "Use curated defaults and eligible live-signal ranking before choosing a route."
+        ],
+        "fail_triggers": [],
+        "reasoning": "The answer correctly frames the task as planning-only, requests the inputs needed to normalize intent, mentions preflight evidence including allowance checks and minimal approval, and clearly states execution happens externally. However, it does not explicitly require resolving verified router/quoter addresses via mantle-address-registry-navigator, and it only loosely mentions curated defaults without the required eligible live-signal ranking step. No fail conditions are triggered because it does not skip risk/allowance evidence outright and does not claim direct execution.",
+        "verdict": "PARTIAL"
+      },
+      "comparison": "skill_better"
+    },
+    {
+      "id": "defi-liquidity-flow",
+      "prompt": "How should the operator plan providing liquidity on Mantle?",
+      "expected_facts": [
+        "Start from the curated liquidity defaults: Merchant Moe and Agni.",
+        "Resolve the router, quoter, or position manager through mantle-address-registry-navigator.",
+        "Use risk and allowance evidence before preparing the external execution plan.",
+        "Add post-execution checks for LP tokens or returned assets."
+      ],
+      "fail_if": [
+        "Skips verified contract resolution.",
+        "Skips risk evaluation or allowance checks.",
+        "Treats discovery-only venues as execution-ready without verification."
+      ],
+      "bare_answer": "A good operator plan for providing liquidity on Mantle should be structured, risk-aware, and incentive-driven.\n\n## 1. Define the objective\nStart by deciding what “providing liquidity” is meant to achieve:\n- Support token trading depth\n- Reduce slippage for users\n- Improve price stability\n- Earn fees and/or ecosystem incentives\n- Help bootstrap a new token or protocol market\n\nThis determines which venues, pairs, and liquidity shapes to use.\n\n## 2. Choose the right Mantle venues\nThe operator should map the main liquidity destinations on Mantle, typically including:\n- DEXs / AMMs on Mantle\n- Lending markets if balance-sheet liquidity also matters\n- Perp or derivative venues if hedging is needed\n- Bridging routes so capital can reliably enter Mantle\n\nThe operator should prioritize venues based on:\n- TVL\n- trading volume\n- incentive programs\n- smart contract risk\n- compatibility with concentrated vs. passive liquidity\n\n## 3. Select the liquidity pairs carefully\nPair selection is central. Usually best practice is to separate:\n- Core pairs: token/USDT, token/USDC, token/WETH, token/MNT\n- Defensive pairs: stable/stable for treasury parking\n- Strategic pairs: ecosystem-aligned assets if Mantle-native alignment matters\n\nFor a new or volatile token, the most important pair is usually against a deep, trusted quote asset such as USDC or WETH.\n\n## 4. Decide the liquidity model\nThe operator should choose between:\n- **Passive full-range liquidity**: simpler, lower maintenance, less capital efficient\n- **Concentrated liquidity**: more efficient, but requires active management\n- **Market-making overlay**: active rebalancing and inventory controls, often best for launch phases\n\nA practical plan is:\n- Use concentrated liquidity around the expected trading range\n- Keep reserve capital off-pool for rebalancing\n- Use some passive wide-range liquidity as a backstop\n\n## 5. Stage deployment over time\nAvoid deploying all capital at once. A phased approach works better:\n- **Phase 1: Seed liquidity**\n  - Launch minimum viable depth\n  - Test market behavior and routing\n- **Phase 2: Tighten spreads**\n  - Add concentrated liquidity once price discovery improves\n- **Phase 3: Optimize**\n  - Move capital toward the highest-fee, highest-usage ranges and venues\n\nThis reduces the chance of mispricing and limits early impermanent loss.\n\n## 6. Set capital allocation rules\nThe operator should predefine:\n- Total liquidity budget\n- Maximum allocation per venue\n- Maximum allocation per pool\n- Rebalancing thresholds\n- Emergency withdrawal rules\n\nExample allocation logic:\n- 40–60% in the primary trading pair\n- 20–30% in secondary ecosystem pairs\n- 10–20% held in reserve for rebalancing\n- small percentage reserved for incentives, gas, and bridging costs\n\n## 7. Manage key risks\nImportant Mantle LP risks include:\n- **Impermanent loss**\n- **Smart contract risk**\n- **Bridge risk**\n- **Low-volume pools that do not compensate IL**\n- **Incentive dependency** where liquidity disappears after rewards end\n- **Volatility around token unlocks or announcements**\n\nThe operator should set:\n- stop-loss / withdrawal triggers\n- monitoring for pool drift and out-of-range concentrated positions\n- counterparty and protocol exposure caps\n\n## 8. Coordinate incentives\nIf the operator controls treasury or token emissions, liquidity incentives should be used carefully:\n- Reward only strategically important pools\n- Prefer time-bound programs with review checkpoints\n- Measure cost per dollar of retained liquidity and cost per dollar of real volume\n- Avoid overpaying mercenary liquidity\n\nThe best incentives target sticky liquidity and actual usage, not just TVL spikes.\n\n## 9. Build monitoring and reporting\nThe operator should monitor:\n- TVL by pool and venue\n- volume and fee generation\n- slippage on target trade sizes\n- LP APR vs. incentive APR\n- concentration of liquidity providers\n- pool health before and after incentive changes\n\nA weekly operating dashboard is ideal.\n\n## 10. Have a contingency plan\nThe operator should prepare for:\n- rapid market drawdowns\n- bridge outages\n- smart contract incidents\n- low uptake on Mantle\n- a need to migrate liquidity between venues\n\nContingency actions might include:\n- withdrawing to stables\n- widening ranges\n- shifting to the deepest venue only\n- pausing incentive spend\n\n## Recommended practical approach\nFor most operators, a sensible Mantle plan would be:\n\n1. Bridge an initial liquidity budget to Mantle.\n2. Seed one primary token/USDC or token/WETH pool on the most liquid DEX.\n3. Add a smaller token/MNT or ecosystem-aligned pool if there is strategic value.\n4. Use concentrated liquidity near fair value plus a small wide-range backstop.\n5. Keep 15–25% of capital in reserve for rebalancing.\n6. Monitor slippage, fees, and out-of-range positions daily.\n7. Scale incentives only after proving organic trading demand.\n\nIf you want, I can turn this into:\n- a **treasury operating policy**\n- a **step-by-step launch checklist**\n- or a **sample capital allocation model for Mantle liquidity**.",
+      "skill_answer": "Mantle DeFi Pre-Execution Report\n- operation_type: add_liquidity\n- planning_mode: discovery_only\n- environment: Mantle\n- intent_summary: User asks for the operator’s planning approach for providing liquidity on Mantle, without a specific token pair, venue, amount, recipient, slippage, or deadline.\n- analyzed_at_utc: 2026-03-12T00:00:00Z\n\nPreparation\n- supporting_skills_used: none\n- address_resolution_ref: missing\n- risk_report_ref: missing\n- portfolio_report_ref: missing\n- curated_defaults_considered:\n  - Merchant Moe\n    - source_url: https://docs.merchantmoe.com/resources/contracts\n    - retrieved_at: 2026-03-08T04:00:14Z\n    - review_after: 2026-04-07\n    - why_default: Curated Mantle liquidity default with verified router support for LP routing.\n  - Agni\n    - source_url: https://agni.finance\n    - retrieved_at: 2026-03-08T04:00:14Z\n    - review_after: 2026-04-07\n    - why_default: Curated Mantle concentrated-liquidity default with verified position-manager support.\n- quote_source: not requested / not available\n- expected_output_min: not computed\n- allowance_status: unknown\n- approval_plan: not applicable in discovery_only mode\n\nProtocol Selection\n- recommended:\n  - Merchant Moe\n    - fit: default starting point for standard liquidity planning on Mantle\n  - Agni\n    - fit: good candidate when concentrated liquidity / range management is desired\n- also_viable: none assessed beyond curated defaults\n- discovery_only:\n  - Additional Mantle venues can be explored via ecosystem discovery sources such as DefiLlama, but they are not execution targets until contracts are verified through the Mantle registry flow.\n- rationale:\n  - For liquidity planning, the operator should start from curated defaults.\n  - Merchant Moe is a sensible first stop for simpler LP routing.\n  - Agni is appropriate when the strategy benefits from concentrated liquidity and the user is comfortable with added operational complexity.\n  - Final venue choice should depend on TVL, recent volume, pool fit, and operational complexity.\n- data_freshness:\n  - Curated default metadata is fresh as of 2026-03-08T04:00:14Z.\n  - No live TVL/volume comparison was pulled here, so confidence is limited to curated defaults.\n- confidence: medium\n\nExecution Handoff\n- recommended_calls: unavailable in discovery_only mode\n- calldata_inputs: unavailable in discovery_only mode\n- registry_key: unavailable in discovery_only mode\n- sequencing_notes:\n  - The operator should not produce approvals, calldata, or call sequencing until execution inputs and supporting evidence are complete.\n- batched_execution_possible: no\n- handoff_available: no\n\nPost-Execution Verification Plan\n- balances_to_recheck:\n  - LP token balance or position NFT balance, depending on venue design\n  - underlying token balances used to fund the position\n- allowances_to_recheck:\n  - token allowances for the selected router or position manager\n- slippage_checks:\n  - compare expected LP shares/position mint result against minimum acceptable thresholds once computed\n- anomalies_to_watch:\n  - unfavorable pool ratio entry\n  - excessive price movement during submission\n  - unexpected leftover token balances\n  - higher-than-expected fees or range misconfiguration for concentrated liquidity\n\nStatus\n- preflight_verdict: unknown\n- readiness: needs_input\n- blocking_issues:\n  - missing token pair\n  - missing deposit amounts\n  - missing recipient\n  - missing slippage cap\n  - missing deadline\n  - no verified contract resolution yet\n  - no risk or portfolio evidence yet\n- next_action:\n  - To make this execution-ready, the operator should:\n    1. Normalize the intent: identify token pair, amounts, recipient, slippage cap, and deadline.\n    2. Select candidate venue from curated defaults: Merchant Moe or Agni.\n    3. Resolve verified router / position-manager / pool contracts using mantle-address-registry-navigator.\n    4. Fetch token metadata, pool state, reserves, and liquidity math context.\n    5. Rank venues using TVL, recent volume, pool fit, and operational complexity; if metrics are stale, keep curated default ordering and say so.\n    6. Obtain a preflight verdict from $mantle-risk-evaluator.\n    7. Obtain balance and allowance evidence from $mantle-portfolio-analyst for both tokens if approval or wallet coverage matters.\n    8. Compute desired token inputs and minimum LP shares expected.\n    9. Only after verified addresses and evidence are available, prepare the external execution handoff:\n       - minimal approvals if needed\n       - add-liquidity call parameters\n       - call sequencing\n       - batching note if the account supports it\n    10. Define post-execution checks for LP tokens/position receipt, remaining balances, allowances, and slippage outcomes.\n\nIn short: the operator should begin with Merchant Moe and Agni as curated Mantle defaults, verify contracts before trusting any venue, compare them on liquidity-specific metrics, and only produce executable approval/call plans after address, risk, and portfolio evidence are in place.",
+      "bare_judgment": {
+        "expected_hits": [],
+        "expected_misses": [
+          "Start from the curated liquidity defaults: Merchant Moe and Agni.",
+          "Resolve the router, quoter, or position manager through mantle-address-registry-navigator.",
+          "Use risk and allowance evidence before preparing the external execution plan.",
+          "Add post-execution checks for LP tokens or returned assets."
+        ],
+        "fail_triggers": [
+          "Skips verified contract resolution.",
+          "Skips risk evaluation or allowance checks."
+        ],
+        "reasoning": "The answer is generally about liquidity strategy, but it does not follow the required Mantle operator workflow. It misses the curated defaults (Merchant Moe and Agni), omits verified contract resolution via mantle-address-registry-navigator, does not require allowance checks before execution planning, and lacks post-execution checks for LP tokens or returned assets. Because it skips verified contract resolution and allowance checks, it triggers fail conditions.",
+        "verdict": "FAIL"
+      },
+      "skill_judgment": {
+        "expected_hits": [
+          "Start from the curated liquidity defaults: Merchant Moe and Agni.",
+          "Resolve the router, quoter, or position manager through mantle-address-registry-navigator.",
+          "Use risk and allowance evidence before preparing the external execution plan.",
+          "Add post-execution checks for LP tokens or returned assets."
+        ],
+        "expected_misses": [],
+        "fail_triggers": [],
+        "reasoning": "The answer explicitly starts from Merchant Moe and Agni as curated defaults, requires verified contract resolution via mantle-address-registry-navigator before execution, calls for risk and balance/allowance evidence before preparing approvals/calldata, and includes post-execution checks for LP tokens/position NFTs, remaining balances, allowances, and slippage outcomes. It also preserves the required safety posture by treating discovery-only venues as non-executable until verified.",
+        "verdict": "PASS"
+      },
+      "comparison": "skill_better"
+    }
+  ]
+}

@@ -1,0 +1,261 @@
+{
+  "generated_at_utc": "2026-03-12T05:13:23Z",
+  "model": "openrouter/arcee-ai/trinity-large-preview:free",
+  "judge_model": "openrouter/arcee-ai/trinity-large-preview:free",
+  "eval_slug": "tx-simulator",
+  "eval_file": "evals/tx-simulator.yaml",
+  "skill": "mantle-tx-simulator",
+  "skill_path": "skills/mantle-tx-simulator/SKILL.md",
+  "reference_paths": [
+    "skills/mantle-tx-simulator/references/simulation-backends.md",
+    "skills/mantle-tx-simulator/references/wysiwys-template.md"
+  ],
+  "description": "External simulation handoff, WYSIWYS reporting, and fail-closed Mantle transaction simulation guidance.",
+  "summary": {
+    "eval_count": 6,
+    "bare": {
+      "PASS": 3,
+      "PARTIAL": 0,
+      "FAIL": 3
+    },
+    "skill": {
+      "PASS": 6,
+      "PARTIAL": 0,
+      "FAIL": 0
+    },
+    "skill_better": 3,
+    "bare_better": 0,
+    "same": 3
+  },
+  "results": [
+    {
+      "id": "sim-mcp-capability",
+      "prompt": "Can mantle-mcp v0.2 simulate a Mantle transaction directly?",
+      "expected_facts": [
+        "No. mantle-mcp v0.2 does not execute transaction simulations directly in this skill.",
+        "The workflow must use an external simulation backend."
+      ],
+      "fail_if": [
+        "Claims mantle-mcp can run transaction simulations directly.",
+        "Invents a simulation MCP tool in v0.2."
+      ],
+      "bare_answer": "No, mantle-mcp v0.2 cannot directly simulate a Mantle transaction. The tool provides functions to interact with the Mantle blockchain, including sending transactions and querying data, but it does not include a transaction simulation feature. To simulate a transaction, you would need to use other tools or services that offer this functionality, such as the Mantle testnet or third-party simulation services.",
+      "skill_answer": "No, mantle-mcp v0.2 cannot simulate Mantle transactions directly. The Tx Simulator skill is read-only and must hand off simulation requests to external backends like local forks or managed simulation APIs.",
+      "bare_judgment": {
+        "verdict": "PASS",
+        "expected_hits": [
+          "No. mantle-mcp v0.2 does not execute transaction simulations directly in this skill.",
+          "The workflow must use an external simulation backend."
+        ],
+        "expected_misses": [],
+        "fail_triggers": [],
+        "reasoning": "The answer correctly states that mantle-mcp v0.2 cannot directly simulate transactions and explicitly mentions that external tools or services are needed for simulation. This aligns with both expected facts: it denies direct simulation capability and acknowledges the need for an external backend. No fail conditions were triggered."
+      },
+      "skill_judgment": {
+        "verdict": "PASS",
+        "expected_hits": [
+          "No. mantle-mcp v0.2 does not execute transaction simulations directly in this skill.",
+          "The workflow must use an external simulation backend."
+        ],
+        "expected_misses": [],
+        "fail_triggers": [],
+        "reasoning": "The answer correctly states that mantle-mcp v0.2 cannot simulate transactions directly and that it must use external backends. It accurately describes the Tx Simulator skill as read-only and mentions handing off to external backends like local forks or managed simulation APIs, which aligns with the expected facts. No fail conditions were triggered."
+      },
+      "comparison": "same"
+    },
+    {
+      "id": "sim-backends",
+      "prompt": "What simulation backends does this skill support for Mantle transaction analysis?",
+      "expected_facts": [
+        "The skill supports a local fork backend such as Anvil.",
+        "It also supports a managed simulation API such as Tenderly or equivalent."
+      ],
+      "fail_if": [
+        "Fabricates unsupported backend types.",
+        "Omits both the local-fork and managed-simulator paths."
+      ],
+      "bare_answer": "The skill supports the following simulation backends for Mantle transaction analysis:\n\n1. Foundry: A popular Ethereum development framework that provides a comprehensive suite of tools for smart contract development, testing, and deployment.\n\n2. Hardhat: Another widely-used Ethereum development environment that offers a flexible and extensible framework for building, testing, and deploying smart contracts.\n\n3. Foundry-K8s: A Kubernetes-based deployment of Foundry, allowing for scalable and distributed execution of Foundry tasks.\n\n4. Tenderly: A blockchain development platform that provides advanced debugging, monitoring, and simulation capabilities for Ethereum smart contracts.\n\n5. Ankr: A decentralized Web3 infrastructure provider that offers simulation services for Ethereum transactions, enabling developers to test and analyze their contracts in a simulated environment.\n\nThese simulation backends allow users to analyze Mantle transactions by simulating their execution in a controlled environment, helping to identify potential issues, optimize gas usage, and ensure the correctness of smart contract interactions.",
+      "skill_answer": "The skill supports two main simulation backend options for Mantle transaction analysis:\n\n1. **Local fork simulation** (using Anvil or equivalent)\n   - Best for deterministic local replay and rapid iteration\n   - Requires archive-capable RPC and correct fork block configuration\n   - Good for deep debugging with custom call sequences\n\n2. **Managed simulation API** (Tenderly or equivalent)\n   - Best for quick hosted simulation with rich traces\n   - Good for team workflows and sharable simulation artifacts\n   - Depends on provider uptime and account/project configuration\n\nThe selection heuristic prioritizes:\n- Local fork when deterministic reproducibility or custom pre-state setup is needed\n- Managed simulator when speed, traces, and collaboration are priorities\n\nIf one backend fails, the skill requests one retry on an alternate backend before declaring inconclusive results.",
+      "bare_judgment": {
+        "verdict": "FAIL",
+        "expected_hits": [],
+        "expected_misses": [
+          "The skill supports a local fork backend such as Anvil.",
+          "It also supports a managed simulation API such as Tenderly or equivalent."
+        ],
+        "fail_triggers": [
+          "Fabricates unsupported backend types."
+        ],
+        "reasoning": "The model answer lists multiple simulation backends (Foundry, Hardhat, Foundry-K8s, Tenderly, Ankr) that are not mentioned in the expected facts. The expected facts specifically call out only two supported backends: a local fork backend like Anvil and a managed simulation API like Tenderly. While Tenderly is mentioned in both, the answer fabricates additional unsupported backend types (Foundry, Hardhat, Foundry-K8s, Ankr) and omits the critical local fork backend (Anvil). This directly violates the fail condition about fabricating unsupported backend types."
+      },
+      "skill_judgment": {
+        "verdict": "PASS",
+        "expected_hits": [
+          "The skill supports a local fork backend such as Anvil.",
+          "It also supports a managed simulation API such as Tenderly or equivalent."
+        ],
+        "expected_misses": [],
+        "fail_triggers": [],
+        "reasoning": "The answer correctly identifies both supported backend types: local fork simulation using Anvil or equivalent, and managed simulation API using Tenderly or equivalent. It provides accurate descriptions of when each is best used and mentions the fallback behavior between backends. No unsupported backend types were fabricated, and both required paths were included."
+      },
+      "comparison": "skill_better"
+    },
+    {
+      "id": "sim-inconclusive",
+      "prompt": "When should a Mantle simulation be marked inconclusive?",
+      "expected_facts": [
+        "Mark the result inconclusive when there is a backend error without a trace.",
+        "Mark it inconclusive for unresolved calldata decoding.",
+        "Mark it inconclusive when token metadata is missing for the user-facing summary.",
+        "Return do_not_execute_reason when inconclusive conditions exist."
+      ],
+      "fail_if": [
+        "Claims simulations are always conclusive.",
+        "Does not use a do_not_execute style outcome for inconclusive results."
+      ],
+      "bare_answer": "A Mantle simulation should be marked inconclusive when the simulation is unable to reach a definitive conclusion due to various factors such as:\n\n1. Insufficient data or information to make a reliable prediction\n2. Conflicting or contradictory results from different simulation runs\n3. The system being modeled exhibits chaotic or unpredictable behavior\n4. External factors or variables that cannot be accurately accounted for in the simulation\n5. The simulation parameters or assumptions are not well-defined or realistic\n6. The simulation encounters technical issues or errors that prevent it from completing successfully\n\nIn these cases, it is more appropriate to mark the simulation as inconclusive rather than drawing potentially misleading or incorrect conclusions from unreliable results.",
+      "skill_answer": "A Mantle simulation should be marked inconclusive when:\n\n**Backend failures occur:**\n- The external simulation backend returns an error without providing trace data\n- The backend is unavailable or times out\n- There's a configuration issue preventing simulation\n\n**Technical limitations prevent analysis:**\n- Calldata cannot be decoded\n- Token metadata needed for user-facing summaries is missing\n- The simulation cannot resolve contract addresses or interfaces\n\n**Critical uncertainty exists:**\n- The outcome depends on factors that cannot be determined (like future price oracles)\n- Slippage or price impact cannot be calculated due to missing market data\n- The simulation cannot determine minimum/maximum receive amounts\n\n**When marked inconclusive, the skill must:**\n- Return `status: inconclusive`\n- Provide a `do_not_execute_reason` explaining why\n- Not present any optimistic execution estimates\n- Suggest retrying with an alternate backend if applicable\n\nThe key principle is that inconclusive simulations should never be presented as safe to execute, as they lack the confidence needed for user decision-making.",
+      "bare_judgment": {
+        "verdict": "FAIL",
+        "expected_hits": [],
+        "expected_misses": [
+          "Mark the result inconclusive when there is a backend error without a trace.",
+          "Mark it inconclusive for unresolved calldata decoding.",
+          "Mark it inconclusive when token metadata is missing for the user-facing summary.",
+          "Return do_not_execute_reason when inconclusive conditions exist."
+        ],
+        "fail_triggers": [
+          "Does not use a do_not_execute style outcome for inconclusive results."
+        ],
+        "reasoning": "The model answer provides a generic, theoretical discussion about when simulations should be marked inconclusive, but it completely misses the specific Mantle-related conditions required by the skill. It does not mention backend errors without trace, unresolved calldata decoding, missing token metadata, or the critical requirement to return a do_not_execute_reason. The answer also fails to use the do_not_execute style outcome that is explicitly required for inconclusive results in Mantle simulations."
+      },
+      "skill_judgment": {
+        "verdict": "PASS",
+        "expected_hits": [
+          "Mark the result inconclusive when there is a backend error without a trace.",
+          "Mark it inconclusive for unresolved calldata decoding.",
+          "Mark it inconclusive when token metadata is missing for the user-facing summary.",
+          "Return do_not_execute_reason when inconclusive conditions exist."
+        ],
+        "expected_misses": [],
+        "fail_triggers": [],
+        "reasoning": "The answer correctly identifies all three expected facts: backend errors without trace, unresolved calldata decoding, and missing token metadata. It also explicitly states that do_not_execute_reason should be returned when inconclusive conditions exist. The answer does not claim simulations are always conclusive and properly uses do_not_execute style outcomes for inconclusive results. The additional context about when to mark inconclusive and how to handle it is helpful and does not contradict the expected facts."
+      },
+      "comparison": "skill_better"
+    },
+    {
+      "id": "sim-wysiwys",
+      "prompt": "What does WYSIWYS stand for in this skill, and what is it used for?",
+      "expected_facts": [
+        "WYSIWYS stands for What You See Is What You Sign.",
+        "It is used to translate simulation output into plain-language signing expectations before execution."
+      ],
+      "fail_if": [
+        "Does not know the acronym.",
+        "Explains it as a post-execution receipt rather than a signing summary."
+      ],
+      "bare_answer": "WYSIWYS stands for \"What You See Is What You Sign\". It is a security mechanism used in digital signature systems to ensure that the content signed by a user is exactly what they see on their screen. This prevents malicious software from substituting or altering the document being signed without the user's knowledge.\n\nThe WYSIWYS principle is implemented through a trusted display mechanism that shows the user the exact content that will be included in the digital signature. This allows the signer to verify the document's integrity and authenticity before applying their signature. It's particularly important in preventing attacks where malware could present a different document to the user than what is actually being signed.\n\nIn practice, WYSIWYS is often achieved through dedicated hardware security modules or secure display systems that isolate the signing process from potentially compromised software on the user's device. This ensures that the user can trust that they are signing exactly what they intend to sign, maintaining the non-repudiation and integrity properties of digital signatures.",
+      "skill_answer": "WYSIWYS stands for \"What You See Is What You Sign.\"\n\nIt's a principle used in transaction simulation to provide users with a plain-language summary of what will happen if they sign and broadcast a transaction. The goal is to translate technical simulation results (like state diffs, gas estimates, and decoded events) into an easily understandable explanation of the transaction's effects before the user commits to signing.\n\nIn this skill, the WYSIWYS template converts technical simulation output into user-readable summaries that clearly state:\n- What assets will be debited from the user's wallet\n- What assets will be credited to the user's wallet\n- The estimated network fee\n- Any approval changes\n- Critical caveats like slippage or uncertainty\n\nThis helps users make informed decisions before signing transactions by showing them exactly what they're agreeing to execute.",
+      "bare_judgment": {
+        "verdict": "PASS",
+        "expected_hits": [
+          "WYSIWYS stands for What You See Is What You Sign.",
+          "It is used to translate simulation output into plain-language signing expectations before execution."
+        ],
+        "expected_misses": [],
+        "fail_triggers": [],
+        "reasoning": "The model answer correctly identifies WYSIWYS as 'What You See Is What You Sign' and explains its use in ensuring users see exactly what they are signing before execution. While the answer provides a broader explanation of WYSIWYS in digital signature systems, it still captures the core meaning and purpose relevant to the skill's context of translating simulation output into signing expectations before execution. The answer does not trigger any fail conditions and covers the expected facts."
+      },
+      "skill_judgment": {
+        "verdict": "PASS",
+        "expected_hits": [
+          "WYSIWYS stands for What You See Is What You Sign.",
+          "It is used to translate simulation output into plain-language signing expectations before execution."
+        ],
+        "expected_misses": [],
+        "fail_triggers": [],
+        "reasoning": "The answer correctly identifies WYSIWYS as 'What You See Is What You Sign' and accurately describes its purpose as translating simulation output into plain-language signing expectations before execution. The explanation goes beyond the minimum by detailing how the template converts technical simulation results into user-readable summaries, which aligns with the expected fact about translating simulation output. No fail conditions were triggered."
+      },
+      "comparison": "same"
+    },
+    {
+      "id": "sim-revert-analysis",
+      "prompt": "A Mantle simulation reverted. What should the skill do next?",
+      "expected_facts": [
+        "Capture the revert as a revert or failure outcome rather than pretending execution will succeed.",
+        "Decode the revert reason or raw error when available.",
+        "Explain the likely failure point and state diff in plain language.",
+        "Return a do_not_execute style recommendation until the issue is resolved."
+      ],
+      "fail_if": [
+        "Only says to fix the contract without analyzing the revert.",
+        "Provides an optimistic success summary after a revert."
+      ],
+      "bare_answer": "The skill should revert to its previous state before the Mantle simulation was attempted. This means undoing any changes made during the simulation and restoring the skill's original configuration, parameters, and behavior. The skill should then continue operating as it did prior to the simulation attempt.",
+      "skill_answer": "When a Mantle transaction simulation reverts, the skill should follow this structured response:\n\n## Immediate Actions\n\n1. **Capture and decode the revert reason** - Extract the revert message from the simulation output, whether it's a decoded Solidity error or raw revert data.\n\n2. **Identify the failure point** - Determine which function call or step in the transaction caused the revert.\n\n## Response Structure\n\nThe skill should return a clear \"do_not_execute\" recommendation with:\n\n- **Revert analysis**: The specific error message or decoded revert reason\n- **Failure context**: Which part of the transaction failed (e.g., \"approve() call failed\", \"swap reverted\")\n- **State before revert**: Any partial state changes that occurred before failure\n- **Next steps**: Whether to retry, adjust parameters, or abandon the transaction\n\n## Example Output Format\n\n```text\nMantle Simulation Report\n- execution_mode: external_simulator_handoff\n- backend: [backend_name]\n- status: revert\n- simulation_artifact: [link/id if available]\n\nState Diff Summary\n- assets_debited: none (revert before execution)\n- assets_credited: none\n- approvals_changed: none\n- contract_state_changes: none\n\nExecution Estimates\n- gas_estimate: [amount] (not consumed due to revert)\n- estimated_fee_native: 0\n- slippage_or_price_impact_note: N/A\n\nWYSIWYS\n- plain_language_outcome: Simulation failed before execution.\n- what_user_gives: [input details]\n- what_user_gets_min: none\n- do_not_execute_reason: Transaction reverted at [function/step]. Error: [decoded message or raw data].\n```\n\n## Key Principles\n\n- Never suggest proceeding with a reverted transaction\n- Provide the exact revert reason for debugging\n- Distinguish between \"revert before execution\" vs \"revert during execution\"\n- If the revert reason is unclear, state \"inconclusive\" and request re-simulation with different parameters or backend",
+      "bare_judgment": {
+        "verdict": "FAIL",
+        "expected_hits": [],
+        "expected_misses": [
+          "Capture the revert as a revert or failure outcome rather than pretending execution will succeed.",
+          "Decode the revert reason or raw error when available.",
+          "Explain the likely failure point and state diff in plain language.",
+          "Return a do_not_execute style recommendation until the issue is resolved."
+        ],
+        "fail_triggers": [
+          "Only says to fix the contract without analyzing the revert.",
+          "Provides an optimistic success summary after a revert."
+        ],
+        "reasoning": "The model answer completely ignores the expected facts. It suggests simply reverting to a previous state and continuing operation, which fails to capture the revert outcome, decode the revert reason, explain the failure point, or provide a do_not_execute recommendation. This is essentially an optimistic success summary that pretends the revert didn't happen, which directly violates the fail conditions. The answer provides no analysis of the revert and suggests continuing as if nothing happened, which is dangerous and incorrect for handling simulation reverts."
+      },
+      "skill_judgment": {
+        "verdict": "PASS",
+        "expected_hits": [
+          "Capture the revert as a revert or failure outcome rather than pretending execution will succeed.",
+          "Decode the revert reason or raw error when available.",
+          "Explain the likely failure point and state diff in plain language.",
+          "Return a do_not_execute style recommendation until the issue is resolved."
+        ],
+        "expected_misses": [],
+        "fail_triggers": [],
+        "reasoning": "The answer correctly captures the revert as a failure outcome, decodes the revert reason when available, explains the failure point and state diff in plain language, and returns a do_not_execute recommendation. It explicitly states 'Never suggest proceeding with a reverted transaction' and provides structured output that includes the revert analysis, failure context, and clear do_not_execute_reason. The answer does not trigger any fail conditions and covers all expected facts."
+      },
+      "comparison": "skill_better"
+    },
+    {
+      "id": "sim-pre-signing",
+      "prompt": "When should simulation happen relative to signing or broadcasting a Mantle transaction?",
+      "expected_facts": [
+        "Simulation should happen before signing or execution.",
+        "It is part of the pre-signing review, not an optional afterthought."
+      ],
+      "fail_if": [
+        "Says simulation is optional or only needed after broadcasting.",
+        "Treats simulation as something done after signing."
+      ],
+      "bare_answer": "Simulation should happen before signing or broadcasting a Mantle transaction. The process typically follows these steps:\n\n1. Prepare the transaction details (to, value, data, etc.)\n2. Run a simulation to estimate gas usage and check for potential errors\n3. If the simulation is successful, sign the transaction\n4. Broadcast the signed transaction to the network\n\nThis order ensures that you can catch any issues or unexpected behavior before committing to the transaction, potentially saving on gas fees and preventing failed transactions.",
+      "skill_answer": "# Mantle Simulation Timing Guide\n\n## Pre-Signing Simulation\n\n**Always simulate before signing** a Mantle transaction. This is the critical safety checkpoint where you:\n\n- Verify the transaction will execute as intended\n- Understand the exact assets you'll spend and receive\n- See the network fee estimate\n- Identify potential reverts before committing\n\n## Simulation Workflow\n\n1. **Before signing**: Request simulation from an external backend (local fork or managed API)\n2. **Review results**: Examine the WYSIWYS summary showing what you give vs. what you get\n3. **Decision point**: Only sign if the simulation outcome matches your intent\n4. **After signing**: The signed transaction can be broadcast, but the simulation already validated the logic\n\n## Never Do This\n\n- Sign without simulation (you're trusting blind execution)\n- Broadcast without first simulating (you're risking unexpected outcomes)\n- Assume simulation guarantees final execution (network conditions may change)\n\n## Key Principle\n\nSimulation is your \"what you see is what you sign\" (WYSIWYS) verification step. It happens **immediately before signing**, not after, and definitely not during or after broadcasting.\n\nThe simulation provides the evidence you need to make an informed decision: sign and broadcast, or do not execute.",
+      "bare_judgment": {
+        "verdict": "PASS",
+        "expected_hits": [
+          "Simulation should happen before signing or execution.",
+          "It is part of the pre-signing review, not an optional afterthought."
+        ],
+        "expected_misses": [],
+        "fail_triggers": [],
+        "reasoning": "The answer correctly states that simulation should happen before signing or broadcasting, and describes it as part of the pre-signing review process. It does not treat simulation as optional or something done after signing, and follows the correct workflow order. The explanation is clear and accurate."
+      },
+      "skill_judgment": {
+        "verdict": "PASS",
+        "expected_hits": [
+          "Simulation should happen before signing or execution.",
+          "It is part of the pre-signing review, not an optional afterthought."
+        ],
+        "expected_misses": [],
+        "fail_triggers": [],
+        "reasoning": "The answer clearly states that simulation should happen before signing and describes it as a pre-signing safety checkpoint. It explicitly warns against signing without simulation and treats simulation as mandatory pre-signing review, not optional or post-broadcast. The answer covers both expected facts and avoids all fail conditions."
+      },
+      "comparison": "same"
+    }
+  ]
+}

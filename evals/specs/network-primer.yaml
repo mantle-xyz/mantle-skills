@@ -1,0 +1,85 @@
+skill: mantle-network-primer
+skill_path: skills/mantle-network-primer/SKILL.md
+reference_paths:
+  - skills/mantle-network-primer/references/mantle-network-basics.md
+description: "Mantle network fundamentals, chain settings, architecture, and onboarding guidance."
+
+evals:
+  - id: primer-gas-token
+    prompt: "What token do I need to pay gas on Mantle, and what common assumption should I avoid?"
+    expected_facts:
+      - "MNT is the gas token on Mantle."
+      - "Developers should not assume ETH-funded wallets can transact on Mantle."
+    fail_if:
+      - "Says gas is paid in ETH on Mantle."
+      - "Does not mention MNT."
+
+  - id: primer-chain-id
+    prompt: "What are the Mantle chain IDs for mainnet and Sepolia testnet?"
+    expected_facts:
+      - "Mantle mainnet chain ID is 5000."
+      - "Mantle Sepolia testnet chain ID is 5003."
+    fail_if:
+      - "Gives the wrong chain ID for mainnet or Sepolia."
+      - "Claims there is only one Mantle chain ID."
+
+  - id: primer-rpc-endpoint
+    prompt: "What is the official public RPC endpoint for Mantle mainnet?"
+    expected_facts:
+      - "The public Mantle mainnet RPC endpoint is https://rpc.mantle.xyz."
+    fail_if:
+      - "Provides a hallucinated or unofficial Mantle mainnet RPC URL."
+      - "Answers with a Sepolia or non-Mantle endpoint."
+
+  - id: primer-settlement-vs-inclusion
+    prompt: "Is a Mantle transaction fully final once it appears in an L2 block?"
+    expected_facts:
+      - "L2 inclusion is not the same as L1-backed settlement/finality."
+      - "A transaction being visible in an L2 block does not mean the strongest settlement assurance has been reached."
+    fail_if:
+      - "Claims L2 inclusion is the same thing as final settlement."
+      - "Does not distinguish inclusion from L1-backed settlement/finality."
+
+  - id: primer-wrapped-mnt
+    prompt: "What is the wrapped MNT (WMNT) address on Mantle mainnet?"
+    expected_facts:
+      - "The WMNT address on Mantle mainnet is 0x78c1b0C915c4FAA5FffA6CAbf0219DA63d7f4cb8."
+    fail_if:
+      - "Provides the wrong WMNT address."
+      - "Returns a token symbol or description without the address."
+
+  - id: primer-public-rpc-production
+    prompt: "Is the official public Mantle RPC a good default for production or high-frequency traffic?"
+    expected_facts:
+      - "Official public Mantle RPC endpoints are rate-limited."
+      - "Production or high-frequency workloads should use a dedicated provider."
+    fail_if:
+      - "Says the public RPC is fine for production by default."
+      - "Does not mention rate limits or dedicated providers."
+
+  - id: primer-architecture
+    prompt: "How is Mantle v2 Skadi described architecturally in the reference?"
+    expected_facts:
+      - "Mantle v2 Skadi is described as having an execution layer."
+      - "It includes a ZK validity proving module."
+      - "It uses Ethereum data availability via blobs."
+    fail_if:
+      - "Calls Mantle a sidechain or L1."
+      - "Omits the ZK validity proving or Ethereum blob-based data availability context."
+
+  - id: primer-da-layer
+    prompt: "What data availability layer does Mantle v2 Skadi use?"
+    expected_facts:
+      - "Mantle v2 Skadi uses Ethereum for data availability."
+      - "The reference specifically points to Ethereum blobs."
+    fail_if:
+      - "Claims Mantle uses its own proprietary DA layer."
+      - "Claims Mantle uses Celestia or another third-party DA layer in this reference."
+
+  - id: primer-bridge
+    prompt: "What official bridge URL should I use to bridge assets into Mantle mainnet?"
+    expected_facts:
+      - "The official bridge URL is https://app.mantle.xyz/bridge."
+    fail_if:
+      - "Provides a hallucinated bridge URL."
+      - "Answers with a generic exchange deposit flow instead of the official bridge."

@@ -1,0 +1,84 @@
+skill: mantle-risk-evaluator
+skill_path: skills/mantle-risk-evaluator/SKILL.md
+reference_paths:
+  - skills/mantle-risk-evaluator/references/risk-checklist.md
+  - skills/mantle-risk-evaluator/references/risk-threshold-guidance.md
+description: "Preflight Mantle risk thresholds, checklist-driven verdicts, and fail-closed safety behavior."
+
+evals:
+  - id: risk-high-slippage
+    prompt: "A planned swap uses 3% slippage and the user did not provide a custom cap. Is that safe?"
+    expected_facts:
+      - "Default slippage fail threshold is above 1.0%."
+      - "A 3% slippage setting should fail the slippage check and block the plan."
+    fail_if:
+      - "Says 3% slippage is acceptable with no warning."
+      - "Does not block or fail the plan."
+
+  - id: risk-moderate-slippage
+    prompt: "A planned swap uses 0.7% slippage with no custom user cap. What should the slippage check return?"
+    expected_facts:
+      - "Default slippage warn threshold is above 0.5%."
+      - "Default slippage fail threshold is above 1.0%."
+      - "A 0.7% slippage setting should be a warn, not a pass."
+    fail_if:
+      - "Calls 0.7% a pass with no warning."
+      - "Claims 0.7% should fail."
+
+  - id: risk-infinite-approval
+    prompt: "The plan requires approving type(uint256).max for a new token allowance. How should the risk evaluator classify that?"
+    expected_facts:
+      - "A new or existing near-unlimited approval without explicit user approval is a fail condition."
+      - "The near-unlimited heuristic is raw allowance greater than or equal to 2^255."
+      - "The final verdict should block the plan when this is required without explicit approval."
+    fail_if:
+      - "Says unlimited approval is fine by default."
+      - "Does not mention the near-unlimited threshold or fail-closed behavior."
+
+  - id: risk-missing-inputs
+    prompt: "Can the risk evaluator approve a swap plan if the token or amount is missing?"
+    expected_facts:
+      - "Mandatory intent fields must be present before the plan can be evaluated safely."
+      - "Missing token or amount is a fail condition."
+      - "The final verdict should be block, not pass or warn."
+    fail_if:
+      - "Proceeds as if missing token or amount is acceptable."
+      - "Returns pass or warn despite missing mandatory inputs."
+
+  - id: risk-stale-deadline
+    prompt: "A swap deadline is two hours from now and there is no special user override. Is that acceptable?"
+    expected_facts:
+      - "Default deadline warn threshold is above 20 minutes."
+      - "Default deadline fail threshold is above 60 minutes."
+      - "A two-hour deadline should fail and block the plan."
+    fail_if:
+      - "Says a two-hour deadline is reasonable with no warning."
+      - "Does not block the plan."
+
+  - id: risk-price-impact
+    prompt: "The quote shows 4% estimated price impact. What should the price-impact check return?"
+    expected_facts:
+      - "Default price-impact warn threshold is above 2%."
+      - "Default price-impact fail threshold is above 5%."
+      - "A 4% price impact should return warn."
+    fail_if:
+      - "Calls 4% price impact a pass."
+      - "Claims 4% should fail instead of warn."
+
+  - id: risk-gas-deviation
+    prompt: "Estimated gas is 50% above the rolling baseline. What should the gas check and final verdict be?"
+    expected_facts:
+      - "Default gas-deviation warn threshold is above 20%."
+      - "Default gas-deviation fail threshold is above 40%."
+      - "A 50% gas deviation should fail the gas check and block the plan."
+    fail_if:
+      - "Says a 50% gas deviation is normal."
+      - "Does not block the plan."
+
+  - id: risk-verdict-format
+    prompt: "What final verdicts can the Mantle risk evaluator return?"
+    expected_facts:
+      - "The final verdicts are pass, warn, and block."
+    fail_if:
+      - "Uses a different final-verdict set."
+      - "Omits block from the verdict set."

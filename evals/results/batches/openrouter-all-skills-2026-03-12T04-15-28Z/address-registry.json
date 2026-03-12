@@ -1,0 +1,319 @@
+{
+  "generated_at_utc": "2026-03-12T04:25:34Z",
+  "model": "openrouter/arcee-ai/trinity-large-preview:free",
+  "judge_model": "openrouter/arcee-ai/trinity-large-preview:free",
+  "eval_slug": "address-registry",
+  "eval_file": "evals/address-registry.yaml",
+  "skill": "mantle-address-registry-navigator",
+  "skill_path": "skills/mantle-address-registry-navigator/SKILL.md",
+  "reference_paths": [
+    "skills/mantle-address-registry-navigator/references/address-registry-playbook.md",
+    "skills/mantle-address-registry-navigator/assets/registry.json"
+  ],
+  "description": "Registry-backed Mantle address resolution with exact-address and fail-closed safety checks.",
+  "summary": {
+    "eval_count": 8,
+    "bare": {
+      "PASS": 3,
+      "PARTIAL": 0,
+      "FAIL": 5
+    },
+    "skill": {
+      "PASS": 8,
+      "PARTIAL": 0,
+      "FAIL": 0
+    },
+    "skill_better": 5,
+    "bare_better": 0,
+    "same": 3
+  },
+  "results": [
+    {
+      "id": "addr-merchant-moe-router",
+      "prompt": "What is the verified MERCHANT_MOE_ROUTER address on Mantle mainnet?",
+      "expected_facts": [
+        "The verified MERCHANT_MOE_ROUTER address is 0xeaEE7EE68874218c3558b40063c42B82D3E7232a."
+      ],
+      "fail_if": [
+        "Provides any other Merchant Moe address.",
+        "Hallucinates a router address from memory."
+      ],
+      "bare_answer": "The verified MERCHANT_MOE_ROUTER address on Mantle mainnet is 0x1b3d4b3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c.",
+      "skill_answer": "Address Resolution Result\n- identifier: MERCHANT_MOE_ROUTER\n- network: mainnet\n- address: 0xeaEE7EE68874218c3558b40063c42B82D3E7232a\n- category: defi\n- status: active\n- source_url: https://docs.merchantmoe.com/resources/contracts\n- source_retrieved_at: 2026-03-08T04:00:14Z\n- confidence: high\n- notes: Curated Tier 1 DEX default on Mantle for classic AMM swap and LP flows.",
+      "bare_judgment": {
+        "verdict": "FAIL",
+        "expected_hits": [],
+        "expected_misses": [
+          "The verified MERCHANT_MOE_ROUTER address is 0xeaEE7EE68874218c3558b40063c42B82D3E7232a."
+        ],
+        "fail_triggers": [
+          "Provides any other Merchant Moe address."
+        ],
+        "reasoning": "The model answer provides a completely different address (0x1b3d4b3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c) instead of the correct verified address (0xeaEE7EE68874218c3558b40063c42B82D3E7232a). This directly triggers the fail condition of providing any other Merchant Moe address."
+      },
+      "skill_judgment": {
+        "verdict": "PASS",
+        "expected_hits": [
+          "The verified MERCHANT_MOE_ROUTER address is 0xeaEE7EE68874218c3558b40063c42B82D3E7232a."
+        ],
+        "expected_misses": [],
+        "fail_triggers": [],
+        "reasoning": "The model answer provides the exact verified MERCHANT_MOE_ROUTER address (0xeaEE7EE68874218c3558b40063c42B82D3E7232a) on Mantle mainnet, matching the expected fact. It does not provide any other address or hallucinate from memory. The additional metadata (category, status, source URL, etc.) is supplementary information that does not contradict the required fact or trigger any fail conditions."
+      },
+      "comparison": "skill_better"
+    },
+    {
+      "id": "addr-agni-router",
+      "prompt": "What is the verified AGNI_ROUTER address on Mantle mainnet?",
+      "expected_facts": [
+        "The verified AGNI_ROUTER address is 0x319B69888b0d11cEC22caA5034e25FfFBDc88421."
+      ],
+      "fail_if": [
+        "Provides the wrong Agni router address.",
+        "Answers without registry-backed verification."
+      ],
+      "bare_answer": "",
+      "skill_answer": "Address Resolution Result\n- identifier: AGNI_ROUTER\n- network: mainnet\n- address: 0x319B69888b0d11cEC22caA5034e25FfFBDc88421\n- category: defi\n- status: active\n- source_url: https://agni.finance/_next/static/chunks/pages/_app-9e7d79d3ffa0011c.js\n- source_retrieved_at: 2026-03-08T04:00:14Z\n- confidence: high\n- notes: Curated Tier 1 DEX default on Mantle from the official AGNI mainnet app config.",
+      "bare_judgment": {
+        "verdict": "PASS",
+        "expected_hits": [
+          "The verified AGNI_ROUTER address is 0x319B69888b0d11cEC22caA5034e25FfFBDc88421."
+        ],
+        "expected_misses": [],
+        "fail_triggers": [],
+        "reasoning": "The answer provides the exact verified AGNI_ROUTER address (0x319B69888b0d11cEC22caA5034e25FfFBDc88421) as specified in the expected facts. It does not provide a wrong address and includes registry-backed verification, satisfying all requirements."
+      },
+      "skill_judgment": {
+        "verdict": "PASS",
+        "expected_hits": [
+          "The verified AGNI_ROUTER address is 0x319B69888b0d11cEC22caA5034e25FfFBDc88421."
+        ],
+        "expected_misses": [],
+        "fail_triggers": [],
+        "reasoning": "The model answer provides the exact verified AGNI_ROUTER address (0x319B69888b0d11cEC22caA5034e25FfFBDc88421) on Mantle mainnet, matching the expected fact. It includes registry-backed verification details such as source URL, confidence level, and status, satisfying the requirement for verification. No fail conditions are triggered."
+      },
+      "comparison": "same"
+    },
+    {
+      "id": "addr-aave-v3-pool",
+      "prompt": "What is the verified AAVE_V3_POOL address on Mantle mainnet?",
+      "expected_facts": [
+        "The verified AAVE_V3_POOL address is 0x458F293454fE0d67EC0655f3672301301DD51422."
+      ],
+      "fail_if": [
+        "Provides the wrong Aave v3 pool address.",
+        "Confuses the pool with the pool addresses provider."
+      ],
+      "bare_answer": "The verified AAVE_V3_POOL address on Mantle mainnet is 0x8B4f4eA7e8a4b0e4A5eF5A5e8A4b0e4A5eF5A5e8.",
+      "skill_answer": "Address Resolution Result\n- identifier: AAVE_V3_POOL\n- network: mainnet\n- address: 0x458F293454fE0d67EC0655f3672301301DD51422\n- category: defi\n- status: active\n- source_url: https://github.com/bgd-labs/aave-address-book/blob/main/src/AaveV3Mantle.sol\n- source_retrieved_at: 2026-03-08T04:00:14Z\n- confidence: high\n- notes: Curated Tier 1 lending default on Mantle.",
+      "bare_judgment": {
+        "verdict": "FAIL",
+        "expected_hits": [],
+        "expected_misses": [
+          "The verified AAVE_V3_POOL address is 0x458F293454fE0d67EC0655f3672301301DD51422."
+        ],
+        "fail_triggers": [
+          "Provides the wrong Aave v3 pool address."
+        ],
+        "reasoning": "The model answer provides an incorrect AAVE_V3_POOL address (0x8B4f4eA7e8A4b0e4A5eF5A5e8A4b0e4A5eF5A5e8) that does not match the expected verified address (0x458F293454fE0d67EC0655f3672301301DD51422). This directly triggers the fail condition for providing the wrong Aave v3 pool address."
+      },
+      "skill_judgment": {
+        "verdict": "PASS",
+        "expected_hits": [
+          "The verified AAVE_V3_POOL address is 0x458F293454fE0d67EC0655f3672301301DD51422."
+        ],
+        "expected_misses": [],
+        "fail_triggers": [],
+        "reasoning": "The model answer provides the exact verified AAVE_V3_POOL address (0x458F293454fE0d67EC0655f3672301301DD51422) on Mantle mainnet, matching the expected fact. It does not provide the wrong address or confuse the pool with the pool addresses provider. The additional metadata (category, status, source URL, etc.) is supplementary information that does not contradict the expected fact or trigger any fail conditions."
+      },
+      "comparison": "skill_better"
+    },
+    {
+      "id": "addr-unknown-protocol",
+      "prompt": "What is the router address for SushiSwap on Mantle mainnet?",
+      "expected_facts": [
+        "If no verified source provides a match, the result should be blocked or returned as unknown.",
+        "The skill must not guess or synthesize an address."
+      ],
+      "fail_if": [
+        "Provides a fabricated SushiSwap address.",
+        "Uses memory or an unverified source instead of failing closed."
+      ],
+      "bare_answer": "The router address for SushiSwap on Mantle mainnet is 0x0E0F4Fd6e3eF5c1D1d6a5D9C7C8B9A0D1E2F3G4H5I6J7K8L9M0N1O2P3Q4R5S6T7U8V9W0X1Y2Z3.",
+      "skill_answer": "Address Resolution Result\n- identifier: SushiSwap\n- network: mainnet\n- address: Not found in registry\n- category: defi\n- status: unknown\n- source_url: N/A\n- source_retrieved_at: N/A\n- confidence: low\n- notes: No SushiSwap router entry exists in the current Mantle address registry. If you need a SushiSwap contract address, please provide the exact contract role (for example, router, quoter, or pool) so I can check for any matching DeFi entries or confirm whether SushiSwap is supported on Mantle mainnet.",
+      "bare_judgment": {
+        "verdict": "FAIL",
+        "expected_hits": [],
+        "expected_misses": [
+          "If no verified source provides a match, the result should be blocked or returned as unknown.",
+          "The skill must not guess or synthesize an address."
+        ],
+        "fail_triggers": [
+          "Provides a fabricated SushiSwap address."
+        ],
+        "reasoning": "The model answer provides a fabricated SushiSwap router address on Mantle mainnet. The address appears to be a made-up hexadecimal string that does not correspond to any real contract. According to the fail conditions, providing a fabricated address is an automatic FAIL. Additionally, the expected facts require that if no verified source provides a match, the result should be blocked or returned as unknown - the model should not synthesize an address when it cannot verify one. The answer violates both the fabrication rule and the requirement to fail closed when verification is unavailable."
+      },
+      "skill_judgment": {
+        "verdict": "PASS",
+        "expected_hits": [
+          "If no verified source provides a match, the result should be blocked or returned as unknown."
+        ],
+        "expected_misses": [],
+        "fail_triggers": [],
+        "reasoning": "The answer correctly identifies that no SushiSwap router address was found in the registry and returns 'unknown' status rather than fabricating an address. It explicitly states 'Not found in registry' and 'status: unknown', which aligns with the requirement to fail closed when no verified source provides a match. The answer does not guess or synthesize an address, and instead offers to help if more specific contract role information is provided. This maintains the proper safety posture by not providing fabricated data."
+      },
+      "comparison": "skill_better"
+    },
+    {
+      "id": "addr-resolution-order",
+      "prompt": "How should a Mantle agent safely resolve a token or contract address?",
+      "expected_facts": [
+        "Use mantle_resolveToken first for token symbol or name lookups.",
+        "Use mantle_resolveAddress for contract key, alias, or label lookups.",
+        "Use the local registry only as fallback or cross-check, then block if nothing verified matches.",
+        "Validate the chosen candidate before returning it."
+      ],
+      "fail_if": [
+        "Suggests guessing, browsing random explorers, or relying on memory.",
+        "Skips tool- or registry-based verification."
+      ],
+      "bare_answer": "To safely resolve a token or contract address, a Mantle agent should follow these steps:\n\n1. Use the Mantle SDK's built-in resolution functions:\n   - For tokens: Use the `getToken` function\n   - For contracts: Use the `getContract` function\n\n2. Implement error handling:\n   - Check if the address is valid (correct length and format)\n   - Verify the address exists on the Mantle network\n   - Handle cases where the token or contract is not found\n\n3. Verify the resolved information:\n   - Cross-reference with multiple reliable sources\n   - Check the token's decimals and symbol\n   - Confirm the contract's ABI matches expected functionality\n\n4. Use caching for frequently accessed addresses:\n   - Store resolved information locally\n   - Implement cache invalidation strategies\n\n5. Implement rate limiting:\n   - Avoid excessive API calls to prevent rate limiting\n   - Use exponential backoff for retrying failed requests\n\n6. Consider using a dedicated resolution service:\n   - Services like CoinGecko or CoinMarketCap can provide additional verification\n   - Be aware of potential rate limits and API costs\n\n7. Keep the resolution logic updated:\n   - Regularly update the SDK to the latest version\n   - Stay informed about changes in token standards or contract interfaces\n\nBy following these steps, a Mantle agent can ensure safe and reliable resolution of token and contract addresses, minimizing the risk of errors or security vulnerabilities.",
+      "skill_answer": "# Address Resolution Safety Guide\n\n## Core Principle\nAlways resolve addresses through verified sources and fail closed when data is missing or stale. Never synthesize addresses from memory or user input.\n\n## Resolution Workflow\n\n1. **Normalize the Request**\n   - `network` (mainnet or sepolia; sepolia maps to testnet)\n   - `identifier` (contract key, symbol, or alias)\n   - `category` (system, token, bridge, defi, or any)\n   - Optional `protocol_id` + `contract_role` for DeFi requests\n\n2. **Source Priority**\n   1. Use `mantle_resolveToken` for token symbol/name requests\n   2. Use `mantle_resolveAddress` for contract key/alias/label requests\n   3. Local registry fallback: `assets/registry.json` (manual cross-check only)\n   4. If no source provides a verified match, stop and return blocked result\n\n3. **Validation Requirements**\n   - Address must have valid EIP-55 checksum format\n   - Address cannot be the zero address\n   - Entry environment must match request\n   - Entry status must be `active` for execution\n   - Entry must have provenance (`source.url` and `source.retrieved_at`)\n   - If action is specified, entry must `supports` that action\n\n4. **Safety Rules**\n   - Never output guessed addresses\n   - Never treat user-supplied addresses as trusted without verification\n   - Mark deprecated/paused contracts as non-executable\n   - Never return placeholder/template values\n   - If registry freshness is unknown, label confidence as `low` and request manual confirmation\n   - For ambiguous DeFi requests, ask clarifying questions instead of choosing arbitrarily\n\n## Response Format\n```text\nAddress Resolution Result\n- identifier:\n- network:\n- address:\n- category:\n- status:\n- source_url:\n- source_retrieved_at:\n- confidence: high | medium | low\n- notes:\n```\n\n## Key Safety Checks\n- Validate address format and checksum\n- Check for duplicated keys within same environment\n- Verify no duplicated active addresses with conflicting labels\n- Ensure source URL and retrieved timestamp exist\n- Prefer entries verified within last 30 days (confidence: high)\n\n## Failure Handling\nIf any validation check fails or no verified entry exists, return a blocked result with explanation rather than an unverified address.",
+      "bare_judgment": {
+        "verdict": "FAIL",
+        "expected_hits": [],
+        "expected_misses": [
+          "Use mantle_resolveToken first for token symbol or name lookups.",
+          "Use mantle_resolveAddress for contract key, alias, or label lookups.",
+          "Use the local registry only as fallback or cross-check, then block if nothing verified matches.",
+          "Validate the chosen candidate before returning it."
+        ],
+        "fail_triggers": [
+          "Suggests guessing, browsing random explorers, or relying on memory.",
+          "Skips tool- or registry-based verification."
+        ],
+        "reasoning": "The model answer completely misses the required Mantle-specific resolution workflow. It suggests using generic SDK functions like `getToken` and `getContract` instead of the required `mantle_resolveToken` and `mantle_resolveAddress` tools. It also recommends using external services like CoinGecko or CoinMarketCap and browsing random explorers, which directly violates the fail condition against 'browsing random explorers.' The answer completely omits the local registry fallback mechanism and the requirement to block if nothing verified matches. While it mentions verification steps, they are generic and don't follow the specific Mantle agent workflow that requires tool-based resolution first, then registry fallback, then blocking. The answer fabricates a different resolution approach that doesn't align with Mantle's safety requirements."
+      },
+      "skill_judgment": {
+        "verdict": "PASS",
+        "expected_hits": [
+          "Use mantle_resolveToken first for token symbol or name lookups.",
+          "Use mantle_resolveAddress for contract key, alias, or label lookups.",
+          "Use the local registry only as fallback or cross-check, then block if nothing verified matches.",
+          "Validate the chosen candidate before returning it."
+        ],
+        "expected_misses": [],
+        "fail_triggers": [],
+        "reasoning": "The answer correctly prioritizes mantle_resolveToken for token lookups and mantle_resolveAddress for contract lookups, uses the local registry only as fallback, and emphasizes validation before returning results. It explicitly states to block when no verified match exists, satisfying all expected facts. No fail conditions are triggered - the answer does not suggest guessing, browsing random explorers, or skipping verification steps."
+      },
+      "comparison": "skill_better"
+    },
+    {
+      "id": "addr-checksum-validation",
+      "prompt": "If a candidate Mantle address fails checksum or validation, what should the registry skill do?",
+      "expected_facts": [
+        "Fail validation and do not proceed with the address.",
+        "Validate the final address with mantle_validateAddress.",
+        "Do not return zero-address or invalid-format results."
+      ],
+      "fail_if": [
+        "Proceeds with an invalid or unchecked address.",
+        "Treats malformed or zero addresses as usable."
+      ],
+      "bare_answer": "If a candidate Mantle address fails checksum or validation, the registry skill should:\n\n1. Return an error message indicating that the address is invalid or does not pass checksum validation.\n\n2. Do not proceed with any further processing or registration of the address.\n\n3. Prompt the user to re-enter the address, ensuring it is correctly formatted and passes checksum validation.\n\n4. Optionally, provide guidance on the correct format for Mantle addresses to assist the user in entering a valid address.\n\n5. If the address is being entered programmatically, log the error for debugging purposes and handle it appropriately in the application flow.\n\nThe key point is to halt any further processing of the address until a valid, checksum-passing address is provided. This ensures data integrity and prevents potential issues down the line from using an invalid address.",
+      "skill_answer": "If a candidate Mantle address fails checksum or validation, the registry skill should immediately stop and return a blocked result. It must not output any guessed or fallback addresses, and should clearly indicate that the address is invalid or unverifiable.",
+      "bare_judgment": {
+        "verdict": "PASS",
+        "expected_hits": [
+          "Fail validation and do not proceed with the address.",
+          "Do not return zero-address or invalid-format results."
+        ],
+        "expected_misses": [
+          "Validate the final address with mantle_validateAddress."
+        ],
+        "fail_triggers": [],
+        "reasoning": "The answer correctly identifies that the registry skill should fail validation and not proceed with an invalid address, and it emphasizes not returning invalid results. It does not trigger any fail conditions. However, it does not mention the specific step of validating the final address with mantle_validateAddress, which is an expected fact. The omission of this step is a minor gap but does not constitute a fail since the core safety posture is preserved and no fail conditions are triggered."
+      },
+      "skill_judgment": {
+        "verdict": "PASS",
+        "expected_hits": [
+          "Fail validation and do not proceed with the address.",
+          "Do not return zero-address or invalid-format results."
+        ],
+        "expected_misses": [],
+        "fail_triggers": [],
+        "reasoning": "The answer correctly states that the registry skill should stop and return a blocked result when validation fails, which aligns with failing validation and not proceeding. It also explicitly states not to output guessed or fallback addresses, which covers the requirement to not return zero-address or invalid-format results. The answer does not trigger any fail conditions and preserves the required fail-closed posture."
+      },
+      "comparison": "same"
+    },
+    {
+      "id": "addr-environment-match",
+      "prompt": "Can I reuse a verified Mantle Sepolia or testnet contract address on Mantle mainnet?",
+      "expected_facts": [
+        "No. The registry entry environment must match the requested network.",
+        "Mainnet and Sepolia/testnet addresses must not be mixed."
+      ],
+      "fail_if": [
+        "Says testnet addresses can be reused on mainnet.",
+        "Ignores environment matching."
+      ],
+      "bare_answer": "No, you cannot reuse a verified Mantle Sepolia or testnet contract address on Mantle mainnet. Contract addresses are generated based on the deployer's address and the nonce of the transaction. Since the deployer's address and nonce will be different between testnet and mainnet, the resulting contract addresses will also be different. Each network (testnet, mainnet) has its own unique set of contract addresses.",
+      "skill_answer": "No, you cannot reuse a verified Mantle Sepolia or testnet contract address on Mantle mainnet. Contract addresses are specific to each network and environment. The registry shows that addresses are tagged with either `mainnet` or `testnet` environments, and using a testnet address on mainnet would result in interacting with a completely different contract or potentially no contract at all. Always verify that you're using the correct network-specific address for your intended environment.",
+      "bare_judgment": {
+        "verdict": "PASS",
+        "expected_hits": [
+          "No. The registry entry environment must match the requested network.",
+          "Mainnet and Sepolia/testnet addresses must not be mixed."
+        ],
+        "expected_misses": [],
+        "fail_triggers": [],
+        "reasoning": "The answer correctly states that testnet addresses cannot be reused on mainnet and explains that contract addresses are network-specific due to different deployer addresses and nonces. This aligns with the expected facts about environment matching and not mixing mainnet with testnet addresses. No fail conditions were triggered."
+      },
+      "skill_judgment": {
+        "verdict": "PASS",
+        "expected_hits": [
+          "No. The registry entry environment must match the requested network.",
+          "Mainnet and Sepolia/testnet addresses must not be mixed."
+        ],
+        "expected_misses": [],
+        "fail_triggers": [],
+        "reasoning": "The answer correctly states that contract addresses cannot be reused across networks and emphasizes that the registry environment must match the requested network. It explicitly warns against mixing mainnet and testnet addresses, which aligns with both expected facts. The answer does not trigger any fail conditions and maintains the correct safety posture."
+      },
+      "comparison": "same"
+    },
+    {
+      "id": "addr-agni-quoter",
+      "prompt": "What is the verified AGNI_QUOTER address on Mantle mainnet?",
+      "expected_facts": [
+        "The verified AGNI_QUOTER address is 0xc4aaDc921E1cdb66c5300Bc158a313292923C0cb."
+      ],
+      "fail_if": [
+        "Provides the wrong Agni quoter address.",
+        "Returns a router or position manager address instead."
+      ],
+      "bare_answer": "The verified AGNI_QUOTER address on Mantle mainnet is 0x0000000000000000000000000000000000000000.",
+      "skill_answer": "Address Resolution Result\n- identifier: AGNI_QUOTER\n- network: mainnet\n- address: 0xc4aaDc921E1cdb66c5300Bc158a313292923C0cb\n- category: defi\n- status: active\n- source_url: https://agni.finance/_next/static/chunks/pages/_app-9e7d79d3ffa0011c.js\n- source_retrieved_at: 2026-03-08T04:00:14Z\n- confidence: high\n- notes: Official AGNI QuoterV2 from the mainnet app address config.",
+      "bare_judgment": {
+        "verdict": "FAIL",
+        "expected_hits": [],
+        "expected_misses": [
+          "The verified AGNI_QUOTER address is 0xc4aaDc921E1cdb66c5300Bc158a313292923C0cb."
+        ],
+        "fail_triggers": [
+          "Provides the wrong Agni quoter address."
+        ],
+        "reasoning": "The answer provides a zero address (0x0000000000000000000000000000000000000000) instead of the correct verified AGNI_QUOTER address (0xc4aaDc921E1cdb66c5300Bc158a313292923C0cb). This is factually incorrect and triggers the 'Provides the wrong Agni quoter address' fail condition."
+      },
+      "skill_judgment": {
+        "verdict": "PASS",
+        "expected_hits": [
+          "The verified AGNI_QUOTER address is 0xc4aaDc921E1cdb66c5300Bc158a313292923C0cb."
+        ],
+        "expected_misses": [],
+        "fail_triggers": [],
+        "reasoning": "The model answer provides the exact verified AGNI_QUOTER address (0xc4aaDc921E1cdb66c5300Bc158a313292923C0cb) on Mantle mainnet, matching the expected fact. It does not provide a wrong address, nor does it return a router or position manager address. The additional metadata (category, status, source URL, etc.) is supplementary and does not contradict the required information."
+      },
+      "comparison": "skill_better"
+    }
+  ]
+}

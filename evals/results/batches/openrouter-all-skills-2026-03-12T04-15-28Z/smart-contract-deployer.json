@@ -1,0 +1,267 @@
+{
+  "generated_at_utc": "2026-03-12T05:03:17Z",
+  "model": "openrouter/arcee-ai/trinity-large-preview:free",
+  "judge_model": "openrouter/arcee-ai/trinity-large-preview:free",
+  "eval_slug": "smart-contract-deployer",
+  "eval_file": "evals/smart-contract-deployer.yaml",
+  "skill": "mantle-smart-contract-deployer",
+  "skill_path": "skills/mantle-smart-contract-deployer/SKILL.md",
+  "reference_paths": [
+    "skills/mantle-smart-contract-deployer/references/deployment-checklist.md",
+    "skills/mantle-smart-contract-deployer/references/verification-playbook.md",
+    "skills/mantle-network-primer/references/mantle-network-basics.md"
+  ],
+  "description": "Mantle deployment-readiness checks, external signer handoff, and explorer verification workflow.",
+  "summary": {
+    "eval_count": 6,
+    "bare": {
+      "PASS": 1,
+      "PARTIAL": 1,
+      "FAIL": 4
+    },
+    "skill": {
+      "PASS": 6,
+      "PARTIAL": 0,
+      "FAIL": 0
+    },
+    "skill_better": 5,
+    "bare_better": 0,
+    "same": 1
+  },
+  "results": [
+    {
+      "id": "deploy-checklist",
+      "prompt": "What do I need to confirm before preparing a Mantle deployment handoff?",
+      "expected_facts": [
+        "Confirm the target environment, expected chain ID, and RPC endpoint.",
+        "Confirm compiler version, optimizer settings, and constructor arguments.",
+        "Confirm deployer gas balance, artifact availability, and bytecode reproducibility."
+      ],
+      "fail_if": [
+        "Omits multiple critical pre-deployment checks.",
+        "Treats deployment as ready without compiler, constructor, or environment confirmation."
+      ],
+      "bare_answer": "Before preparing a Mantle deployment handoff, I need to confirm the following:\n\n1. The deployment is complete and all components are functioning as expected.\n2. All necessary documentation is up-to-date and accurate.\n3. The client or team has been notified and is ready to take over.\n4. Any required training or knowledge transfer sessions have been scheduled.\n5. All access credentials and permissions have been transferred to the appropriate parties.\n6. A final review of the deployment has been conducted to ensure nothing was overlooked.\n7. The handoff plan, including timelines and responsibilities, has been agreed upon with all stakeholders.",
+      "skill_answer": "Before preparing a Mantle deployment handoff, you need to confirm the following:\n\n## Environment checks\n- Target environment (mainnet or testnet)\n- Expected chain ID and RPC endpoint\n- Deployer address and sufficient MNT balance for gas\n\n## Build checks\n- Compiler version and optimizer settings\n- Bytecode reproducibility from clean build\n- ABI and metadata artifacts exist\n- Constructor arguments are complete and correctly encoded\n\n## Safety checks\n- No unresolved TODO/debug flags in source\n- External dependency addresses are network-correct\n- Ownership/admin initialization values are intentional\n\n## Cost checks\n- Deployment gas estimate\n- Native fee estimate using current gas pricing\n- Comparison against max cost constraint\n\n## Final gate\n- If any required check fails: stop deployment\n- If all checks pass: produce an unsigned deployment handoff for an external signer/wallet",
+      "bare_judgment": {
+        "verdict": "FAIL",
+        "expected_hits": [],
+        "expected_misses": [
+          "Confirm the target environment, expected chain ID, and RPC endpoint.",
+          "Confirm compiler version, optimizer settings, and constructor arguments.",
+          "Confirm deployer gas balance, artifact availability, and bytecode reproducibility."
+        ],
+        "fail_triggers": [
+          "Omits multiple critical pre-deployment checks.",
+          "Treats deployment as ready without compiler, constructor, or environment confirmation."
+        ],
+        "reasoning": "The answer focuses on post-deployment handoff logistics (documentation, training, credentials, stakeholder agreements) but completely omits the technical pre-deployment checks that the skill requires. It does not confirm the target environment, chain ID, RPC endpoint, compiler version, optimizer settings, constructor arguments, deployer gas balance, artifact availability, or bytecode reproducibility. This is a fundamental mismatch with the expected facts and triggers both fail conditions."
+      },
+      "skill_judgment": {
+        "verdict": "PASS",
+        "expected_hits": [
+          "Confirm the target environment, expected chain ID, and RPC endpoint.",
+          "Confirm compiler version, optimizer settings, and constructor arguments.",
+          "Confirm deployer gas balance, artifact availability, and bytecode reproducibility."
+        ],
+        "expected_misses": [],
+        "fail_triggers": [],
+        "reasoning": "The answer covers all three expected facts: environment confirmation (target environment, chain ID, RPC endpoint), build checks (compiler version, optimizer settings, constructor arguments), and safety/cost checks that include deployer gas balance, artifact availability, and bytecode reproducibility. The answer also adds useful context about safety and cost checks without contradicting the expected facts. No fail conditions are triggered."
+      },
+      "comparison": "skill_better"
+    },
+    {
+      "id": "deploy-verification",
+      "prompt": "How should a Mantle contract be verified on the explorer after external deployment?",
+      "expected_facts": [
+        "Prepare a verification payload for the explorer API or UI submission.",
+        "Use exact compiler version, optimizer settings, and constructor arguments.",
+        "Poll for verification success or failure and record the verification link or identifier.",
+        "Compiler, optimizer, constructor-arg, and metadata or library mismatches are common failure cases."
+      ],
+      "fail_if": [
+        "Describes a verification flow that ignores compiler or constructor-arg matching.",
+        "Claims verification is complete without explorer response evidence."
+      ],
+      "bare_answer": "To verify a Mantle contract on the explorer after external deployment, follow these steps:\n\n1. Go to the Mantle explorer and navigate to the \"Code\" tab.\n2. Click on the \"Verify Contract\" button.\n3. Fill in the required information:\n   - Contract address\n   - Contract name\n   - Compiler version used\n   - Optimization status (if applicable)\n   - Contract code (copy and paste the Solidity code)\n4. Click \"Verify\" to submit the contract for verification.\n\nThe explorer will then attempt to compile the provided code and match it with the deployed bytecode. If successful, the contract will be verified and its source code will be publicly available on the explorer.\n\nNote that the exact steps may vary slightly depending on the specific Mantle explorer being used. Some explorers might require additional information or have slightly different interfaces. Always refer to the documentation provided by the Mantle explorer for the most up-to-date and accurate verification process.",
+      "skill_answer": "To verify a Mantle contract on the explorer after external deployment, follow these steps:\n\n## Required Inputs\n- Deployed contract address\n- Contract source path and name\n- Compiler version and optimizer settings\n- Constructor arguments (raw and encoded)\n- Linked library addresses (if any)\n\n## Verification Workflow\n\n1. **Confirm Deployment**\n   - Verify the contract bytecode exists at the deployed address on the explorer\n\n2. **Prepare Verification Payload**\n   - Gather all required inputs matching exactly what was used at deployment\n   - Include constructor arguments in both raw and encoded forms\n   - Map any linked libraries with their deployed addresses\n\n3. **Submit for Verification**\n   - Use the explorer's API or UI to submit the verification request\n   - For Mantle, this is typically done through Mantlescan (mainnet) or Sepolia Mantlescan (testnet)\n\n4. **Monitor Status**\n   - Poll the verification status through explorer responses\n   - Continue until you receive success, failure, or timeout\n\n## Common Verification Issues\n\n**Compiler Mismatch**\n- Rebuild with the exact compiler version used at deployment\n- Even minor version differences can cause verification failure\n\n**Optimizer Mismatch**\n- Match both the enabled flag and run count exactly\n- Example: `optimizer: { enabled: true, runs: 200 }`\n\n**Constructor Arguments Mismatch**\n- Re-encode with precise argument order and types\n- Ensure ABI encoding matches deployment exactly\n\n**Metadata/Library Mismatch**\n- Provide fully qualified library mappings\n- Include all linked library addresses\n\n## Evidence Requirements\n\n- Keep full request payload snapshot (excluding secrets)\n- Record explorer response body and timestamp\n- Do not claim verification success without explicit success response\n- In Mantle MCP v0.2, do not claim the agent submitted verification transactions\n\n## Explorer Links\n\n- **Mainnet**: https://mantlescan.xyz/\n- **Testnet (Sepolia)**: https://sepolia.mantlescan.xyz/\n\nThe verification process ensures your contract source code is publicly verifiable and matches the deployed bytecode, providing transparency and trust for users interacting with your contract.",
+      "bare_judgment": {
+        "verdict": "PARTIAL",
+        "expected_hits": [
+          "Prepare a verification payload for the explorer API or UI submission.",
+          "Use exact compiler version, optimizer settings, and constructor arguments."
+        ],
+        "expected_misses": [
+          "Poll for verification success or failure and record the verification link or identifier.",
+          "Compiler, optimizer, constructor-arg, and metadata or library mismatches are common failure cases."
+        ],
+        "fail_triggers": [],
+        "reasoning": "The answer covers the basic verification steps including preparing a payload and using exact compiler/optimizer settings, which are important expected facts. However, it misses the critical expected facts about polling for verification results and recording the verification link/identifier, as well as mentioning common failure cases like mismatches. The answer provides a reasonable general workflow but lacks the completeness and error-handling awareness that the expected facts indicate are important for this skill."
+      },
+      "skill_judgment": {
+        "verdict": "PASS",
+        "expected_hits": [
+          "Prepare a verification payload for the explorer API or UI submission.",
+          "Use exact compiler version, optimizer settings, and constructor arguments.",
+          "Poll for verification success or failure and record the verification link or identifier.",
+          "Compiler, optimizer, constructor-arg, and metadata or library mismatches are common failure cases."
+        ],
+        "expected_misses": [],
+        "fail_triggers": [],
+        "reasoning": "The answer covers all required expected facts: it describes preparing a verification payload with exact compiler/optimizer/constructor arguments, polling for verification status, and lists common failure cases including compiler, optimizer, constructor-arg, and metadata/library mismatches. It does not trigger any fail conditions - it does not ignore compiler or constructor-arg matching, and explicitly states not to claim verification success without explicit success response. The answer provides comprehensive workflow steps and safety guidance consistent with the expected facts."
+      },
+      "comparison": "skill_better"
+    },
+    {
+      "id": "deploy-signer-handoff",
+      "prompt": "Who actually signs deployment transactions in this workflow?",
+      "expected_facts": [
+        "An external signer or wallet signs deployment transactions.",
+        "This skill prepares an unsigned deployment handoff and does not sign or broadcast itself."
+      ],
+      "fail_if": [
+        "Claims the skill signs or broadcasts the deployment.",
+        "Hides the external signer handoff."
+      ],
+      "bare_answer": "In this workflow, the deployment transactions are signed by the owner of the wallet that is used to deploy the contracts. This is typically the developer or the entity deploying the contracts. The wallet owner has the private key necessary to sign the transactions and authorize the deployment on the blockchain.",
+      "skill_answer": "In this workflow, the user or an external executor signs deployment transactions. The skill prepares an unsigned deployment handoff package containing the deployment payload, gas bounds, and signer instructions, but execution happens externally.",
+      "bare_judgment": {
+        "verdict": "PASS",
+        "expected_hits": [
+          "An external signer or wallet signs deployment transactions."
+        ],
+        "expected_misses": [
+          "This skill prepares an unsigned deployment handoff and does not sign or broadcast itself."
+        ],
+        "fail_triggers": [],
+        "reasoning": "The answer correctly identifies that an external wallet/signer (the wallet owner/developer) signs deployment transactions, which satisfies the first expected fact. However, it does not mention that this skill prepares an unsigned handoff and does not sign or broadcast itself, which is the second expected fact. Since the answer is directionally correct about who signs but misses the explicit skill limitation, this is a PARTIAL match. No fail conditions were triggered."
+      },
+      "skill_judgment": {
+        "verdict": "PASS",
+        "expected_hits": [
+          "An external signer or wallet signs deployment transactions.",
+          "This skill prepares an unsigned deployment handoff and does not sign or broadcast itself."
+        ],
+        "expected_misses": [],
+        "fail_triggers": [],
+        "reasoning": "The answer correctly identifies that an external signer (user or executor) signs deployment transactions and that the skill only prepares an unsigned handoff package without signing or broadcasting. This matches both expected facts and avoids all fail conditions."
+      },
+      "comparison": "same"
+    },
+    {
+      "id": "deploy-receipt-capture",
+      "prompt": "What evidence should be captured after an external Mantle deployment succeeds?",
+      "expected_facts": [
+        "Capture the transaction receipt or equivalent deployment evidence.",
+        "Capture the deployed contract address and block number.",
+        "Gas used and fee evidence are also part of the deployment report."
+      ],
+      "fail_if": [
+        "Only captures the contract address.",
+        "Does not preserve receipt or deployment evidence."
+      ],
+      "bare_answer": "After an external Mantle deployment succeeds, the following evidence should be captured:\n\n1. Deployment logs: Detailed logs of the deployment process, including any errors or warnings encountered.\n\n2. Configuration files: All configuration files used during the deployment, including any modifications made.\n\n3. Network diagrams: Visual representations of the deployed network architecture, including all connected devices and their configurations.\n\n4. System performance metrics: Baseline performance data for all deployed systems, including CPU usage, memory utilization, and network throughput.\n\n5. Security audit results: Any security scans or audits performed on the deployed systems, including vulnerability assessments and penetration test results.\n\n6. User access logs: Records of all user access attempts and successful logins to the deployed systems.\n\n7. Backup procedures: Documentation of backup procedures implemented for the deployed systems, including backup schedules and retention policies.\n\n8. Disaster recovery plan: A comprehensive plan outlining steps to be taken in case of system failures or data loss.\n\n9. Compliance reports: Any reports demonstrating compliance with relevant regulations or industry standards.\n\n10. User manuals and documentation: Updated user manuals and system documentation reflecting the new deployment.\n\n11. Change management records: Documentation of all changes made during the deployment process, including approvals and sign-offs.\n\n12. Post-deployment testing results: Results from any tests conducted after deployment to ensure system functionality and performance.\n\n13. Incident response plan: A plan outlining procedures for handling potential security incidents or system failures.\n\n14. Training materials: Any training materials provided to users or administrators for the new deployment.\n\n15. Support contact information: Updated contact information for technical support related to the deployed systems.\n\nThis evidence should be organized, securely stored, and made available to relevant stakeholders for future reference and auditing purposes.",
+      "skill_answer": "Here's the evidence you should capture after an external Mantle deployment succeeds:\n\n## Core Deployment Evidence\n\n**Transaction Receipt Metadata**\n- Transaction hash (tx_hash)\n- Deployed contract address\n- Block number where deployment occurred\n- Gas used in deployment\n- Actual deployment fee paid (native MNT)\n\n**Deployment Context**\n- Chain ID and network environment (mainnet/testnet)\n- RPC endpoint used\n- Timestamp of deployment\n- Deployer address that submitted the transaction\n\n## Verification Evidence\n\n**Explorer Verification Status**\n- Explorer domain used (mantlescan.xyz or sepolia.mantlescan.xyz)\n- Verification status (verified/pending/failed)\n- Verification ID or direct link to verification page\n- Timestamp of verification attempt\n- Full request payload snapshot (excluding secrets)\n- Explorer response body and timestamp\n\n**Verification Details**\n- Compiler version used\n- Optimizer settings (enabled/runs)\n- Constructor arguments (both raw and encoded)\n- Linked library addresses (if applicable)\n- Metadata and ABI artifacts\n\n## Artifacts Package\n\n**Source and Build Files**\n- Contract source path and name\n- ABI file path\n- Metadata file path\n- Bytecode fingerprint/hash\n- Compiler profile used\n\n**Deployment Package**\n- Constructor arguments encoded\n- Deployment cost estimate vs actual\n- Gas limit used\n- Any deployment overrides or special parameters\n\n## Final Documentation\n\n**Deployment Report Structure**\n```text\nMantle Deployment Report\n- contract_name:\n- environment:\n- chain_id:\n- compiler_profile:\n- bytecode_hash:\n\nDeployment\n- execution_mode: external_wallet_or_signer\n- tx_hash:\n- deployed_address:\n- block_number:\n- gas_used:\n- deployment_fee_native:\n\nVerification\n- explorer:\n- status:\n- verification_id_or_link:\n- failure_reason:\n\nArtifacts\n- constructor_args_encoded:\n- abi_path:\n- metadata_path:\n```\n\nThis evidence package serves as complete proof of deployment and verification status, enabling future audits, debugging, and contract management.",
+      "bare_judgment": {
+        "verdict": "FAIL",
+        "expected_hits": [],
+        "expected_misses": [
+          "Capture the transaction receipt or equivalent deployment evidence.",
+          "Capture the deployed contract address and block number.",
+          "Gas used and fee evidence are also part of the deployment report."
+        ],
+        "fail_triggers": [
+          "Only captures the contract address.",
+          "Does not preserve receipt or deployment evidence."
+        ],
+        "reasoning": "The model answer provides a generic IT deployment evidence checklist that is completely unrelated to Mantle blockchain contract deployment. It fails to capture any of the three required blockchain-specific facts: transaction receipt, contract address with block number, or gas/fee evidence. Instead, it lists general IT operations items like network diagrams, compliance reports, and training materials that are irrelevant to the blockchain deployment context. This is a complete miss on the expected facts and does not address the blockchain-specific evidence requirements."
+      },
+      "skill_judgment": {
+        "verdict": "PASS",
+        "expected_hits": [
+          "Capture the transaction receipt or equivalent deployment evidence.",
+          "Capture the deployed contract address and block number.",
+          "Gas used and fee evidence are also part of the deployment report."
+        ],
+        "expected_misses": [],
+        "fail_triggers": [],
+        "reasoning": "The answer comprehensively covers all three expected facts: it explicitly captures transaction receipt metadata (including tx_hash, block number, gas used, and deployment fee), the deployed contract address, and gas/fee evidence. The answer goes beyond the minimum requirements by including additional verification evidence, artifacts, and documentation structure, but this extra detail does not contradict any fail conditions. The core deployment evidence section directly addresses all required elements without triggering any fail conditions."
+      },
+      "comparison": "skill_better"
+    },
+    {
+      "id": "deploy-explorer-url",
+      "prompt": "What explorer URL should be used for Mantle mainnet verification?",
+      "expected_facts": [
+        "The Mantle mainnet explorer URL is https://mantlescan.xyz/."
+      ],
+      "fail_if": [
+        "Provides the wrong explorer URL.",
+        "Answers with a generic explorer or a Sepolia explorer instead of Mantle mainnet."
+      ],
+      "bare_answer": "The explorer URL for Mantle mainnet verification is: https://explorer.mantle.xyz/",
+      "skill_answer": "For Mantle mainnet verification, the explorer URL to use is:\n\n**https://mantlescan.xyz/**\n\nThis is the official Mantle explorer for mainnet, where you can verify contract source code and view deployment details.",
+      "bare_judgment": {
+        "verdict": "FAIL",
+        "expected_hits": [],
+        "expected_misses": [
+          "The Mantle mainnet explorer URL is https://mantlescan.xyz/."
+        ],
+        "fail_triggers": [
+          "Provides the wrong explorer URL."
+        ],
+        "reasoning": "The model answer provides https://explorer.mantle.xyz/ as the Mantle mainnet explorer URL, but the expected fact states the correct URL is https://mantlescan.xyz/. This is a factually incorrect URL, triggering the fail condition for providing the wrong explorer URL."
+      },
+      "skill_judgment": {
+        "verdict": "PASS",
+        "expected_hits": [
+          "The Mantle mainnet explorer URL is https://mantlescan.xyz/."
+        ],
+        "expected_misses": [],
+        "fail_triggers": [],
+        "reasoning": "The answer correctly identifies https://mantlescan.xyz/ as the Mantle mainnet explorer URL, matching the expected fact exactly. It does not provide a wrong URL, generic explorer, or Sepolia explorer, so no fail conditions are triggered. The additional context about using it for contract verification and deployment details is helpful but not required."
+      },
+      "comparison": "skill_better"
+    },
+    {
+      "id": "deploy-after-developer",
+      "prompt": "What should be complete before the deployer skill takes over for a Mantle contract?",
+      "expected_facts": [
+        "Contract architecture and implementation decisions should already be finalized.",
+        "The handoff should come from mantle-smart-contract-developer or an equivalent finalized development brief.",
+        "The deployer skill starts after design and authoring decisions are complete."
+      ],
+      "fail_if": [
+        "Treats the deployer skill as the place to design or write the contract.",
+        "Does not mention the dependency on finalized build inputs or the developer handoff."
+      ],
+      "bare_answer": "Before the deployer skill takes over for a Mantle contract, the following should be complete:\n\n1. The contract's source code should be written and compiled successfully.\n2. The contract's ABI (Application Binary Interface) should be generated.\n3. The contract's bytecode should be available.\n4. Any necessary constructor parameters should be prepared.\n5. The deployment environment (e.g., local blockchain, testnet, or mainnet) should be set up and running.\n6. The deployer account should be funded with enough cryptocurrency to cover the deployment cost.\n7. Any required dependencies or libraries should be installed and configured.\n8. The deployment script or tool should be ready to use.\n9. The contract's metadata (if any) should be prepared.\n10. Any necessary permissions or access rights should be granted to the deployer account.\n\nOnce these steps are complete, the deployer skill can take over and handle the actual deployment process of the Mantle contract.",
+      "skill_answer": "Before the deployer skill takes over, the following should be complete:\n\n## Contract Development Complete\n- Contract architecture and implementation are finalized\n- Source code is written and ready for deployment\n- No unresolved TODO/debug flags remain in the source\n\n## Build Artifacts Ready\n- Source path and contract name identified\n- Compiler version and optimizer settings determined\n- ABI and metadata artifacts exist\n- Constructor arguments are complete and correctly encoded\n\n## Environment Configuration\n- Target environment selected (mainnet or testnet)\n- Chain ID confirmed (5000 for mainnet, 5003 for Sepolia testnet)\n- RPC endpoint verified\n- Deployer address prepared with sufficient MNT balance\n\n## Safety Checks Passed\n- External dependency addresses verified as network-correct\n- Ownership/admin initialization values confirmed intentional\n- Bytecode reproducibility confirmed from clean build\n\n## Cost Estimation Complete\n- Deployment gas estimate obtained\n- Native fee calculated using current gas pricing\n- Cost compared against max cost constraint\n\nThe deployer skill is specifically for deployment planning and execution handoff - it does not handle contract design, writing, or initial development work.",
+      "bare_judgment": {
+        "verdict": "FAIL",
+        "expected_hits": [],
+        "expected_misses": [
+          "Contract architecture and implementation decisions should already be finalized.",
+          "The handoff should come from mantle-smart-contract-developer or an equivalent finalized development brief.",
+          "The deployer skill starts after design and authoring decisions are complete."
+        ],
+        "fail_triggers": [
+          "Treats the deployer skill as the place to design or write the contract."
+        ],
+        "reasoning": "The model answer focuses on technical deployment prerequisites (compiled code, ABI, bytecode, deployment environment, etc.) but completely misses the expected facts about the handoff from the developer skill and the completion of design/architecture decisions. More critically, it treats the deployer skill as if it's responsible for preparing the contract source code and compilation, which directly violates the fail condition that states the deployer skill should not be the place to design or write the contract. The answer describes what the deployer needs to have ready, rather than what should be complete before the deployer skill takes over."
+      },
+      "skill_judgment": {
+        "verdict": "PASS",
+        "expected_hits": [
+          "Contract architecture and implementation decisions should already be finalized.",
+          "The handoff should come from mantle-smart-contract-developer or an equivalent finalized development brief.",
+          "The deployer skill starts after design and authoring decisions are complete."
+        ],
+        "expected_misses": [],
+        "fail_triggers": [],
+        "reasoning": "The answer correctly identifies that contract architecture and implementation must be finalized before the deployer skill takes over, explicitly states that the deployer skill does not handle contract design or writing, and covers the dependency on finalized build inputs. It mentions the handoff from development work and clearly establishes that the deployer skill starts after design and authoring decisions are complete. The answer also correctly treats the deployer skill as the deployment phase rather than the design/writing phase, satisfying all expected facts without triggering any fail conditions."
+      },
+      "comparison": "skill_better"
+    }
+  ]
+}

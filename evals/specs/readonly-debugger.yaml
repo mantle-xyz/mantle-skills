@@ -1,0 +1,66 @@
+skill: mantle-readonly-debugger
+skill_path: skills/mantle-readonly-debugger/SKILL.md
+reference_paths:
+  - skills/mantle-readonly-debugger/references/error-signature-map.md
+  - skills/mantle-readonly-debugger/references/troubleshooting-playbook.md
+description: "Structured Mantle read-path troubleshooting for RPC errors, quote failures, and balance inconsistencies."
+
+evals:
+  - id: debug-rpc-timeout
+    prompt: "A Mantle RPC call timed out. What issue type is that and what should I do first?"
+    expected_facts:
+      - "A timeout is a transport or connectivity problem, not automatically a contract bug."
+      - "Check endpoint health or rate-limit signals."
+      - "Retry with bounded backoff and compare endpoints if needed."
+    fail_if:
+      - "Claims a timeout is definitely a contract or ABI error."
+      - "Does not mention retry, endpoint health, or transport diagnostics."
+
+  - id: debug-429-error
+    prompt: "Mantle RPC is returning HTTP 429. What does that usually mean and what should I do next?"
+    expected_facts:
+      - "HTTP 429 indicates rate limiting or provider saturation."
+      - "Reduce request rate, retry with backoff, or switch to a fallback endpoint."
+      - "Production workloads should prefer dedicated providers over public RPC."
+    fail_if:
+      - "Says to increase gas or change contract logic."
+      - "Does not recognize rate limiting."
+
+  - id: debug-quote-revert
+    prompt: "A quote call returns null or an error. How should the readonly debugger triage that?"
+    expected_facts:
+      - "Classify this as a quote or liquidity failure."
+      - "Verify token addresses, decimals, and amount scaling."
+      - "Try a smaller size or an alternate route or source."
+    fail_if:
+      - "Treats the quote failure as proof that a real transaction already failed."
+      - "Skips token or liquidity checks."
+
+  - id: debug-balance-mismatch
+    prompt: "My Mantle wallet balance differs between reads. What should the debugger check?"
+    expected_facts:
+      - "Compare reads at latest versus pending."
+      - "Check for unconfirmed transactions or nonce conflicts."
+      - "Re-read at a consistent block context after a bounded delay if needed."
+    fail_if:
+      - "Ignores pending transactions or nonce issues."
+      - "Claims the discrepancy can be ignored without investigation."
+
+  - id: debug-execution-reverted
+    prompt: "I got an \"execution reverted\" error from a Mantle read call. What should the debugger do?"
+    expected_facts:
+      - "Classify this as a call or revert error."
+      - "Verify the target address and ABI or function selector."
+      - "Decode revert data if available and check inputs or state preconditions."
+    fail_if:
+      - "Only says to try again later."
+      - "Does not mention revert decoding, address checks, or input-state checks."
+
+  - id: debug-escalation
+    prompt: "When should Mantle read-path debugging be escalated, and what evidence should be included?"
+    expected_facts:
+      - "Escalate when the issue remains unresolved after bounded retries and targeted checks."
+      - "Include raw error strings, endpoints tested, request fingerprints, timestamped observations, and what was ruled out."
+    fail_if:
+      - "Never escalates unresolved issues."
+      - "Escalates without a captured evidence package."

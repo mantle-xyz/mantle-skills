@@ -1,0 +1,260 @@
+{
+  "generated_at_utc": "2026-03-12T08:04:01Z",
+  "model": "openai/gpt-5.4",
+  "judge_model": "openai/gpt-5.4",
+  "eval_slug": "data-indexer",
+  "eval_file": "evals/data-indexer.yaml",
+  "skill": "mantle-data-indexer",
+  "skill_path": "skills/mantle-data-indexer/SKILL.md",
+  "reference_paths": [
+    "skills/mantle-data-indexer/references/indexer-selection-and-quality.md",
+    "skills/mantle-data-indexer/references/query-templates.md"
+  ],
+  "description": "Historical Mantle data retrieval through GraphQL and SQL indexers with endpoint and quality guardrails.",
+  "summary": {
+    "eval_count": 6,
+    "bare": {
+      "PASS": 1,
+      "PARTIAL": 2,
+      "FAIL": 3
+    },
+    "skill": {
+      "PASS": 5,
+      "PARTIAL": 1,
+      "FAIL": 0
+    },
+    "skill_better": 5,
+    "bare_better": 0,
+    "same": 1
+  },
+  "results": [
+    {
+      "id": "indexer-query-types",
+      "prompt": "What query methods does the Mantle data indexer use?",
+      "expected_facts": [
+        "The GraphQL path uses mantle_querySubgraph.",
+        "The SQL path uses mantle_queryIndexerSql."
+      ],
+      "fail_if": [
+        "Fabricates other query methods.",
+        "Omits either the GraphQL or SQL path."
+      ],
+      "bare_answer": "Can you clarify which “Mantle data indexer” you mean?\n\nThere are a few possibilities, for example:\n- a Mantle blockchain indexer / subgraph-style service\n- Mantle’s own data indexing stack\n- an SDK or library named “Mantle”\n- a specific repo, API, or product doc\n\nIf you have a link, repo name, or doc page, send it and I can tell you exactly what query methods it uses.\n\nIf you mean this in a general blockchain-indexer sense, common query methods are:\n- GraphQL queries\n- REST endpoints\n- JSON-RPC calls to nodes\n- SQL/NoSQL database queries behind the API\n- event/log filtering by contract, block range, topics, and addresses\n\nShare the exact Mantle indexer reference and I’ll answer precisely.",
+      "skill_answer": "The Mantle data indexer uses two query methods:\n\n1. GraphQL indexer\n   - Tool: `mantle_querySubgraph`\n   - Requires:\n     - `endpoint`\n     - `query`\n   - Best for:\n     - historical entity lookups\n     - flexible filtering\n     - nested protocol data via subgraphs\n\n2. SQL indexer\n   - Tool: `mantle_queryIndexerSql`\n   - Requires:\n     - `endpoint`\n     - `query`\n   - Optional:\n     - `params`\n   - Best for:\n     - aggregations\n     - windowed metrics\n     - protocol analytics\n     - backfills over large datasets\n\nIn short: the Mantle data indexer uses GraphQL and SQL query paths, depending on the data source and analysis needed.",
+      "bare_judgment": {
+        "expected_hits": [],
+        "expected_misses": [
+          "The GraphQL path uses mantle_querySubgraph.",
+          "The SQL path uses mantle_queryIndexerSql."
+        ],
+        "fail_triggers": [
+          "Fabricates other query methods.",
+          "Omits either the GraphQL or SQL path."
+        ],
+        "reasoning": "The answer does not provide the required Mantle-specific query methods and instead lists generic possibilities like REST and JSON-RPC, which fabricates other query methods relative to the expected skill answer. It also omits both required facts: mantle_querySubgraph for GraphQL and mantle_queryIndexerSql for SQL.",
+        "verdict": "FAIL"
+      },
+      "skill_judgment": {
+        "expected_hits": [
+          "The GraphQL path uses mantle_querySubgraph.",
+          "The SQL path uses mantle_queryIndexerSql."
+        ],
+        "expected_misses": [],
+        "fail_triggers": [],
+        "reasoning": "The answer correctly identifies both required query methods: GraphQL via mantle_querySubgraph and SQL via mantle_queryIndexerSql. It does not fabricate additional query methods and includes both paths explicitly.",
+        "verdict": "PASS"
+      },
+      "comparison": "skill_better"
+    },
+    {
+      "id": "indexer-chain-id-sql",
+      "prompt": "What chain ID should the SQL templates use for Mantle mainnet?",
+      "expected_facts": [
+        "The SQL templates use chain_id = 5000 for Mantle mainnet."
+      ],
+      "fail_if": [
+        "Uses the wrong chain ID.",
+        "Claims the SQL templates are chain-agnostic in this repo."
+      ],
+      "bare_answer": "Mantle mainnet uses chain ID **5000**.\n\nIf your SQL templates distinguish EVM networks by chain ID, use:\n\n```sql\n5000\n```",
+      "skill_answer": "Mantle mainnet uses chain ID `5000`.\n\nIn the SQL templates, use:\n\n```sql\nWHERE chain_id = 5000\n```",
+      "bare_judgment": {
+        "expected_hits": [
+          "The SQL templates use chain_id = 5000 for Mantle mainnet."
+        ],
+        "expected_misses": [],
+        "fail_triggers": [],
+        "reasoning": "The answer directly states that Mantle mainnet uses chain ID 5000 and does not claim the templates are chain-agnostic or provide any incorrect chain ID.",
+        "verdict": "PASS"
+      },
+      "skill_judgment": {
+        "expected_hits": [
+          "The SQL templates use chain_id = 5000 for Mantle mainnet."
+        ],
+        "expected_misses": [],
+        "fail_triggers": [],
+        "reasoning": "The answer directly states Mantle mainnet uses chain ID 5000 and shows the correct SQL usage. It does not trigger any fail condition.",
+        "verdict": "PASS"
+      },
+      "comparison": "same"
+    },
+    {
+      "id": "indexer-endpoint-fabrication",
+      "prompt": "If I have not configured a Mantle subgraph endpoint yet, what should the data indexer do?",
+      "expected_facts": [
+        "Endpoints are runtime inputs.",
+        "If an endpoint is missing, the skill should request it explicitly instead of guessing."
+      ],
+      "fail_if": [
+        "Provides a made-up or guessed endpoint URL.",
+        "Treats missing endpoint configuration as acceptable without calling it out."
+      ],
+      "bare_answer": "If no Mantle subgraph endpoint is configured yet, the data indexer should generally **treat Mantle indexing as disabled** and **skip any subgraph-based Mantle sync work**.\n\nRecommended behavior:\n\n- **Do not attempt requests** to a missing/empty Mantle subgraph URL.\n- **Log a clear warning/info message**, e.g.:\n  - `\"Mantle subgraph endpoint not configured; skipping Mantle indexing\"`\n- **Continue running other indexers/networks normally** instead of failing the whole service.\n- **Mark Mantle as unavailable/disabled** in health/status output if your system exposes that.\n- Optionally:\n  - **Retry only after config reload/restart**, not in a tight loop.\n  - **Fallback to RPC-only ingestion** if your architecture supports it.\n\nA good rule is:\n\n- **Missing config** = expected optional condition → **skip gracefully**\n- **Configured but unreachable/broken endpoint** = operational error → **report/retry according to backoff policy**\n\nExample pseudo-logic:\n\n```ts\nif (!config.mantle?.subgraphUrl) {\n  logger.info(\"Mantle subgraph endpoint not configured; skipping Mantle indexing\");\n  return;\n}\n\nstartMantleIndexer(config.mantle.subgraphUrl);\n```\n\nIf you want, I can also help define the exact expected behavior for:\n- startup,\n- health checks,\n- logs,\n- and retry policy.",
+      "skill_answer": "It should not guess or invent one.\n\nIf no Mantle subgraph endpoint is configured, the data indexer should:\n\n- stop before querying\n- report that it is blocked by missing input\n- explicitly ask you to provide the subgraph `endpoint`\n- avoid fabricating any URL\n- if this is an E2E `endpoint-configured` scenario and `E2E_SUBGRAPH_ENDPOINT` is unset, skip that scenario\n\nIn short: no configured endpoint = no subgraph query. The correct behavior is to request the endpoint explicitly.",
+      "bare_judgment": {
+        "expected_hits": [
+          "Endpoints are runtime inputs."
+        ],
+        "expected_misses": [
+          "If an endpoint is missing, the skill should request it explicitly instead of guessing."
+        ],
+        "fail_triggers": [
+          "Treats missing endpoint configuration as acceptable without calling it out."
+        ],
+        "reasoning": "The answer correctly avoids guessing an endpoint and recognizes the endpoint comes from configuration/runtime input. However, it says missing config should be handled by skipping/disablement as an acceptable optional condition, rather than explicitly requesting the missing endpoint. That violates the required workflow and triggers the fail condition about treating missing configuration as acceptable without calling it out as needing user input.",
+        "verdict": "FAIL"
+      },
+      "skill_judgment": {
+        "expected_hits": [
+          "Endpoints are runtime inputs.",
+          "If an endpoint is missing, the skill should request it explicitly instead of guessing."
+        ],
+        "expected_misses": [],
+        "fail_triggers": [],
+        "reasoning": "The answer correctly states that the indexer must not guess an endpoint, should stop and report missing input, and explicitly request the subgraph endpoint. It does not treat the missing configuration as acceptable and does not fabricate a URL.",
+        "verdict": "PASS"
+      },
+      "comparison": "skill_better"
+    },
+    {
+      "id": "indexer-no-data-vs-failure",
+      "prompt": "How should the data indexer distinguish zero rows from a query failure?",
+      "expected_facts": [
+        "No data and query failure must be treated differently.",
+        "If a query fails partway, the report should mark the partial boundary or failure clearly.",
+        "Tool warnings and lag or truncation caveats should be propagated."
+      ],
+      "fail_if": [
+        "Treats zero rows as the same thing as a query failure.",
+        "Claims empty results always mean failure."
+      ],
+      "bare_answer": "Use an explicit success/error result, not “row count == 0” as a proxy.\n\nRecommended pattern:\n- Success with rows\n- Success with zero rows\n- Failure with error details\n\nExamples:\n\n1. Return a structured result\n```ts\ntype QueryResult<T> =\n  | { ok: true; rows: T[]; rowCount: number }\n  | { ok: false; error: string; code?: string; retryable?: boolean };\n```\n\nThen:\n- `ok: true, rowCount: 0` => valid query, no matching data\n- `ok: false` => query failed\n\n2. If using exceptions\n- No rows: return empty array / `rowCount = 0`\n- Failure: throw or propagate an error\n- Caller must catch and classify errors\n\n3. Persist status separately in the indexer\nFor each indexing step/store:\n- `status`: `success | empty | failed`\n- `last_success_at`\n- `last_error`\n- `attempt_count`\n\nWhy this matters:\n- Zero rows may be normal for a block range, address, or newly deployed contract\n- A failure usually needs retry/backoff/alerting\n- Treating both the same can cause silent data loss or endless retries\n\nPractical rule:\n- Database/client returned a result object successfully? That is not a failure, even if `rowCount` is 0.\n- Network/timeout/SQL error/decoder error? That is a failure.\n\nIf you want, I can also suggest a schema/API design for an indexer checkpoint table that tracks this cleanly.",
+      "skill_answer": "It should treat them as two different outcomes and report them explicitly:\n\n- Zero rows:\n  - The query executed successfully.\n  - Result set is empty.\n  - This means “no data matched the filters,” not that the system failed.\n  - Possible causes to mention: wrong network, wrong entity ID, narrow time window, or genuinely no activity.\n\n- Query failure:\n  - The query did not complete successfully.\n  - This means the result is unknown, not zero.\n  - Report the error, whether any partial data was returned, and the exact boundary of what succeeded.\n\nBest practice from the Mantle indexer guidance:\n\n- Do not label failures as empty results.\n- In the final report, clearly note:\n  - `Results`: zero matching records if applicable\n  - `Quality Notes`:\n    - `tool_warnings`\n    - `caveats`\n    - `confidence`\n    - if failed, state query failure and impact\n\nA good distinction looks like this:\n\n- Zero rows:\n  - “Query succeeded; 0 records matched the Mantle filters for 2025-01-01 00:00:00 UTC to 2025-01-02 00:00:00 UTC.”\n\n- Failure:\n  - “Query failed before completion; no conclusion can be made about records in the requested Mantle time range.”\n\nIf helpful, I can also give you a small response schema for handling `success_empty` vs `failed` states.",
+      "bare_judgment": {
+        "expected_hits": [
+          "No data and query failure must be treated differently."
+        ],
+        "expected_misses": [
+          "If a query fails partway, the report should mark the partial boundary or failure clearly.",
+          "Tool warnings and lag or truncation caveats should be propagated."
+        ],
+        "fail_triggers": [],
+        "reasoning": "The answer correctly distinguishes successful zero-row results from failures and warns against conflating them. However, it does not mention marking partial boundaries when a query fails partway, nor does it mention propagating tool warnings or lag/truncation caveats. No fail conditions were triggered.",
+        "verdict": "PARTIAL"
+      },
+      "skill_judgment": {
+        "expected_hits": [
+          "No data and query failure must be treated differently.",
+          "If a query fails partway, the report should mark the partial boundary or failure clearly.",
+          "Tool warnings and lag or truncation caveats should be propagated."
+        ],
+        "expected_misses": [],
+        "fail_triggers": [],
+        "reasoning": "The answer clearly distinguishes empty successful results from failures, explicitly says failures mean unknown rather than zero, and instructs marking partial data and exact successful boundaries. It also says to include tool warnings and caveats in the final report. No fail conditions are triggered.",
+        "verdict": "PASS"
+      },
+      "comparison": "skill_better"
+    },
+    {
+      "id": "indexer-wallet-activity",
+      "prompt": "How should the skill query historical wallet swap activity on Mantle?",
+      "expected_facts": [
+        "Use the GraphQL WalletSwaps template or an equivalent query built from the template.",
+        "Filter by the wallet or trader address.",
+        "Use absolute UTC timestamp bounds and deterministic ordering."
+      ],
+      "fail_if": [
+        "Provides a fabricated query approach unrelated to the repo templates.",
+        "Does not filter by wallet address."
+      ],
+      "bare_answer": "Use Mantle’s on-chain event history and transaction traces rather than just current balances.\n\nRecommended approach:\n1. Identify the wallet address.\n2. Query historical transactions on Mantle via:\n   - Mantle block explorer API, if available\n   - RPC endpoints with log/event queries\n   - Indexers like Covalent, Alchemy, Goldsky, Subsquid, The Graph, or custom Dune/SQL datasets if supported\n3. Detect swap activity by looking for:\n   - DEX router contract calls\n   - Pair/pool `Swap` events\n   - Token transfer patterns consistent with swaps\n4. Decode relevant events:\n   - input token, output token\n   - amounts in/out\n   - protocol used\n   - timestamp\n   - tx hash\n5. Normalize results across protocols into a common schema.\n\nGood normalized fields:\n- `txHash`\n- `timestamp`\n- `wallet`\n- `protocol`\n- `poolOrRouter`\n- `tokenIn`\n- `amountIn`\n- `tokenOut`\n- `amountOut`\n- `usdValue` if available\n- `chain = mantle`\n\nPractical implementation options:\n- Best: use an indexed data provider with Mantle support for faster historical lookups.\n- Fallback: use `eth_getLogs` on known DEX pool/router contracts over block ranges, then filter by wallet.\n- If decoding user intent from aggregator swaps, combine:\n   - router call input decoding\n   - emitted `Swap` events\n   - ERC-20 `Transfer` events\n\nThings to watch:\n- Aggregators may route through multiple pools in one tx.\n- Native token wraps/unwraps can appear as separate steps.\n- Internal transactions may matter.\n- Some swaps look like transfers unless you decode router interactions.\n- Large block ranges may require pagination.\n\nIf you want, I can also outline:\n- a Mantle swap-detection architecture,\n- a sample query flow,\n- or code in TypeScript using RPC / indexer APIs.",
+      "skill_answer": "Use the Mantle Data Indexer flow, not raw RPC.\n\n**Recommended path**\n- Prefer a **GraphQL subgraph** if one exists for the target protocol.\n- Use **SQL indexer** if you need rollups/aggregations or warehouse-style analytics.\n\n**Required inputs**\n- `wallet` address\n- absolute `start` and `end` timestamps in **UTC**\n- an **endpoint** for either:\n  - `mantle_querySubgraph`, or\n  - `mantle_queryIndexerSql`\n\nDo **not** guess the endpoint URL if it isn’t provided.\n\n**GraphQL approach**\nUse `mantle_querySubgraph` with deterministic ordering and pagination.\n\nTemplate:\n```graphql\nquery WalletSwaps(\n  $wallet: String!,\n  $startTs: Int!,\n  $endTs: Int!,\n  $first: Int!,\n  $skip: Int!\n) {\n  swaps(\n    where: {\n      trader: $wallet\n      timestamp_gte: $startTs\n      timestamp_lte: $endTs\n    }\n    orderBy: timestamp\n    orderDirection: asc\n    first: $first\n    skip: $skip\n  ) {\n    id\n    txHash\n    timestamp\n    tokenIn\n    tokenOut\n    amountIn\n    amountOut\n  }\n}\n```\n\nNotes:\n- paginate with `first`/`skip`\n- keep ordering deterministic: `timestamp asc`\n- verify timestamps are in the expected unit\n- normalize token decimals before aggregating amounts\n\n**SQL approach**\nUse `mantle_queryIndexerSql` for historical wallet activity rollups.\n\nTemplate:\n```sql\nSELECT\n  DATE_TRUNC('day', block_time) AS day_utc,\n  COUNT(*) AS tx_count,\n  SUM(amount_usd) AS volume_usd\nFROM swaps\nWHERE chain_id = 5000\n  AND LOWER(wallet_address) = LOWER(:wallet)\n  AND block_time >= :start_utc\n  AND block_time < :end_utc\nGROUP BY 1\nORDER BY 1 ASC;\n```\n\nNotes:\n- Mantle chain scope should be confirmed\n- `chain_id = 5000`\n- SQL must be read-only\n- use absolute UTC bounds\n- distinguish raw amounts from USD-normalized amounts\n\n**Workflow the skill should follow**\n1. Normalize the request:\n   - objective: wallet swap history\n   - entity: wallet\n   - time range: absolute UTC\n2. Confirm the query is for **Mantle**\n3. Check endpoint availability\n4. Choose source:\n   - GraphQL for entity history\n   - SQL for aggregates\n5. Execute with pagination / deterministic ordering\n6. Normalize units and decimals\n7. Report provenance and caveats\n\n**Important guardrails**\n- Do not invent endpoint URLs\n- Include timezone as UTC\n- Propagate warnings like:\n  - `hasNextPage=true`\n  - `truncated=true`\n- Distinguish:\n  - **no data**\n  - **query failure**\n- If lag is unknown, say **lag status unknown**\n\n**Expected output format**\nA concise historical data report including:\n- `objective`\n- `source_type`\n- `source_endpoint`\n- `queried_at_utc`\n- `time_range_utc`\n- `entity_scope`\n- query summary\n- results\n- quality notes / caveats / confidence\n\nIf you want, I can also draft the exact `mantle_querySubgraph` or `mantle_queryIndexerSql` call payload for a specific wallet and time range.",
+      "bare_judgment": {
+        "expected_hits": [
+          "Filter by the wallet or trader address."
+        ],
+        "expected_misses": [
+          "Use the GraphQL WalletSwaps template or an equivalent query built from the template.",
+          "Use absolute UTC timestamp bounds and deterministic ordering."
+        ],
+        "fail_triggers": [
+          "Provides a fabricated query approach unrelated to the repo templates."
+        ],
+        "reasoning": "The answer suggests generic explorer/RPC/indexer methods instead of using the required GraphQL WalletSwaps template or an equivalent built from that template. It does mention identifying/filtering by wallet address, but it omits the required absolute UTC timestamp bounds and deterministic ordering. Because it uses an unrelated query approach, it triggers a fail condition.",
+        "verdict": "FAIL"
+      },
+      "skill_judgment": {
+        "expected_hits": [
+          "Filter by the wallet or trader address.",
+          "Use absolute UTC timestamp bounds and deterministic ordering."
+        ],
+        "expected_misses": [
+          "Use the GraphQL WalletSwaps template or an equivalent query built from the template."
+        ],
+        "fail_triggers": [],
+        "reasoning": "The answer correctly advises filtering by wallet/trader address and using absolute UTC bounds with deterministic ordering. It also presents a GraphQL query named WalletSwaps that is directionally aligned. However, it introduces extra tooling/endpoints and an SQL path not grounded in the stated repo-template requirement, so it does not clearly anchor to the GraphQL WalletSwaps template from the repo or an equivalent built from that template closely enough for full credit. It does not trigger fail conditions because the GraphQL approach is still relevant and it does filter by wallet.",
+        "verdict": "PARTIAL"
+      },
+      "comparison": "skill_better"
+    },
+    {
+      "id": "indexer-pool-volume",
+      "prompt": "How should the skill find the top pools by 24-hour volume on Mantle?",
+      "expected_facts": [
+        "Use the SQL top-pools-by-24h-volume template.",
+        "The query uses chain_id = 5000.",
+        "The results should be ordered by descending 24h volume."
+      ],
+      "fail_if": [
+        "Uses the wrong chain ID.",
+        "Suggests a write query or an unrelated method."
+      ],
+      "bare_answer": "Use the Mantle endpoint and sort by 24h volume descending.\n\nRecommended approach:\n1. Query the Mantle pools dataset/indexer you use for on-chain pool stats.\n2. Filter to chain = Mantle.\n3. Read each pool’s 24h volume field.\n4. Sort descending by 24h volume.\n5. Return the top N pools with key metadata.\n\nSuggested output fields:\n- pool address\n- token pair / symbols\n- 24h volume\n- TVL\n- fee tier\n- DEX / protocol\n- chain = Mantle\n\nPseudo-logic:\n```ts\nconst pools = await getPools({ chain: \"mantle\" });\n\nconst topPools = pools\n  .filter(p => p.volume24h != null)\n  .sort((a, b) => b.volume24h - a.volume24h)\n  .slice(0, N)\n  .map(p => ({\n    address: p.address,\n    pair: `${p.token0.symbol}/${p.token1.symbol}`,\n    volume24h: p.volume24h,\n    tvl: p.tvl,\n    feeTier: p.feeTier,\n    dex: p.protocol,\n    chain: \"Mantle\",\n  }));\n```\n\nIf the skill uses a GraphQL/subgraph-style source, the query should request:\n- pool id/address\n- token0/token1 symbols\n- volumeUSD over last 24h, or the source’s equivalent 24h metric\n- totalValueLockedUSD\n- fee tier\n- protocol name\n\nImportant implementation note:\n- Prefer a native `volume24h`/rolling-24h field from the data source.\n- If unavailable, compute it from hourly snapshots by summing the last 24 hourly buckets.\n- Normalize numeric strings to numbers before sorting.\n- Be explicit that ranking is by volume on Mantle only, not all chains.\n\nIf you want, I can also draft:\n- a concrete GraphQL query,\n- a REST example,\n- or the exact skill prompt/tool logic.",
+      "skill_answer": "Use the SQL indexer path if a warehouse table for swaps exists.\n\nProcess:\n1. Confirm the request is for Mantle.\n2. Require a configured SQL endpoint; do not guess one.\n3. Define an absolute 24-hour UTC window:\n   - `window_start_utc`\n   - `window_end_utc`\n4. Run the read-only SQL template against the Mantle swaps dataset with `chain_id = 5000`.\n5. Order by volume descending and limit results.\n6. Check for truncation warnings and report lag status if known.\n\nRecommended query from the skill reference:\n\n```sql\nSELECT\n  pool_address,\n  SUM(amount_usd) AS volume_24h_usd,\n  COUNT(*) AS swap_count\nFROM swaps\nWHERE chain_id = 5000\n  AND block_time >= :window_start_utc\n  AND block_time < :window_end_utc\nGROUP BY pool_address\nORDER BY volume_24h_usd DESC\nLIMIT :limit_n;\n```\n\nExpected tool:\n- `mantle_queryIndexerSql`\n\nRequired inputs:\n- `endpoint`\n- `window_start_utc` in UTC\n- `window_end_utc` in UTC\n- `limit_n`\n\nWhat to include in the answer:\n- `source_type: sql`\n- source endpoint or dataset\n- queried time in UTC\n- exact 24h window in UTC\n- whether `amount_usd` is already normalized\n- truncation/tool warnings\n- lag/completeness caveats\n\nIf no SQL endpoint is available, the skill should stop and ask for the endpoint instead of inventing one.",
+      "bare_judgment": {
+        "expected_hits": [
+          "The results should be ordered by descending 24h volume."
+        ],
+        "expected_misses": [
+          "Use the SQL top-pools-by-24h-volume template.",
+          "The query uses chain_id = 5000."
+        ],
+        "fail_triggers": [],
+        "reasoning": "The answer is directionally helpful and correctly emphasizes sorting by descending 24h volume on Mantle, but it does not mention the required SQL top-pools-by-24h-volume template or the specific required filter chain_id = 5000. It also does not trigger any fail conditions because it does not use an explicitly wrong chain ID or suggest a write query.",
+        "verdict": "PARTIAL"
+      },
+      "skill_judgment": {
+        "expected_hits": [
+          "Use the SQL top-pools-by-24h-volume template.",
+          "The query uses chain_id = 5000.",
+          "The results should be ordered by descending 24h volume."
+        ],
+        "expected_misses": [],
+        "fail_triggers": [],
+        "reasoning": "The answer correctly recommends the SQL/indexer approach, includes a read-only SQL template for top pools by 24h volume, uses chain_id = 5000, and orders results by descending 24h volume. It does not suggest a write query or unrelated method, and does not use the wrong chain ID.",
+        "verdict": "PASS"
+      },
+      "comparison": "skill_better"
+    }
+  ]
+}

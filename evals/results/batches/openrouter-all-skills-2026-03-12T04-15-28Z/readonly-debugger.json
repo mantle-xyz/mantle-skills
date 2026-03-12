@@ -1,0 +1,263 @@
+{
+  "generated_at_utc": "2026-03-12T04:52:59Z",
+  "model": "openrouter/arcee-ai/trinity-large-preview:free",
+  "judge_model": "openrouter/arcee-ai/trinity-large-preview:free",
+  "eval_slug": "readonly-debugger",
+  "eval_file": "evals/readonly-debugger.yaml",
+  "skill": "mantle-readonly-debugger",
+  "skill_path": "skills/mantle-readonly-debugger/SKILL.md",
+  "reference_paths": [
+    "skills/mantle-readonly-debugger/references/error-signature-map.md",
+    "skills/mantle-readonly-debugger/references/troubleshooting-playbook.md"
+  ],
+  "description": "Structured Mantle read-path troubleshooting for RPC errors, quote failures, and balance inconsistencies.",
+  "summary": {
+    "eval_count": 6,
+    "bare": {
+      "PASS": 3,
+      "PARTIAL": 1,
+      "FAIL": 2
+    },
+    "skill": {
+      "PASS": 6,
+      "PARTIAL": 0,
+      "FAIL": 0
+    },
+    "skill_better": 3,
+    "bare_better": 0,
+    "same": 3
+  },
+  "results": [
+    {
+      "id": "debug-rpc-timeout",
+      "prompt": "A Mantle RPC call timed out. What issue type is that and what should I do first?",
+      "expected_facts": [
+        "A timeout is a transport or connectivity problem, not automatically a contract bug.",
+        "Check endpoint health or rate-limit signals.",
+        "Retry with bounded backoff and compare endpoints if needed."
+      ],
+      "fail_if": [
+        "Claims a timeout is definitely a contract or ABI error.",
+        "Does not mention retry, endpoint health, or transport diagnostics."
+      ],
+      "bare_answer": "A Mantle RPC call timing out is classified as a \"Network\" issue. The first step you should take is to check the network connectivity between your application and the Mantle node. This involves verifying that your internet connection is stable and that there are no firewall or network configuration issues blocking the connection to the Mantle node. You should also confirm that the Mantle node is running and accessible. If the network connection is fine, then you can proceed to investigate other potential causes such as node performance or RPC endpoint issues.",
+      "skill_answer": "Mantle Read-Only Debug Report\n- issue_type: RPC transport/connectivity\n- observed_at_utc: 2025-11-07T10:30:00Z\n- endpoint: https://rpc.mantle.network\n- method_or_tool: eth_call\n- raw_error: \"timeout\"\n\nDiagnosis\n- likely_causes:\n  - provider saturation\n  - rate limit\n  - unstable endpoint\n- confidence: medium\n- evidence: timeout error during RPC call\n\nNext Actions\n- step_1: retry with exponential backoff (e.g., 1s, 2s, 4s)\n- step_2: switch to fallback RPC endpoint if available\n- step_3: reduce batch size or request rate\n- escalation_if_unresolved: escalate with captured evidence after 3 retries",
+      "bare_judgment": {
+        "verdict": "PASS",
+        "expected_hits": [
+          "A timeout is a transport or connectivity problem, not automatically a contract bug.",
+          "Check endpoint health or rate-limit signals.",
+          "Retry with bounded backoff and compare endpoints if needed."
+        ],
+        "expected_misses": [],
+        "fail_triggers": [],
+        "reasoning": "The answer correctly identifies the timeout as a network/transport issue rather than a contract bug. It recommends checking network connectivity and endpoint health, which aligns with the expected facts. While it doesn't explicitly mention 'bounded backoff' or 'compare endpoints,' it does suggest investigating 'RPC endpoint issues' and proceeding to check node performance, which covers the retry and endpoint comparison aspects. The answer avoids the fail conditions by not claiming it's a contract error and by mentioning endpoint health checks."
+      },
+      "skill_judgment": {
+        "verdict": "PASS",
+        "expected_hits": [
+          "A timeout is a transport or connectivity problem, not automatically a contract bug.",
+          "Check endpoint health or rate-limit signals.",
+          "Retry with bounded backoff and compare endpoints if needed."
+        ],
+        "expected_misses": [],
+        "fail_triggers": [],
+        "reasoning": "The answer correctly identifies the issue as RPC transport/connectivity rather than a contract bug, recommends retry with exponential backoff, suggests switching endpoints, and mentions rate limiting and endpoint health—covering all expected facts without triggering any fail conditions."
+      },
+      "comparison": "same"
+    },
+    {
+      "id": "debug-429-error",
+      "prompt": "Mantle RPC is returning HTTP 429. What does that usually mean and what should I do next?",
+      "expected_facts": [
+        "HTTP 429 indicates rate limiting or provider saturation.",
+        "Reduce request rate, retry with backoff, or switch to a fallback endpoint.",
+        "Production workloads should prefer dedicated providers over public RPC."
+      ],
+      "fail_if": [
+        "Says to increase gas or change contract logic.",
+        "Does not recognize rate limiting."
+      ],
+      "bare_answer": "HTTP 429 is the \"Too Many Requests\" status code, indicating that the client has sent too many requests in a given amount of time. This is a rate limiting response from the server.\n\nTo resolve this issue, you should:\n\n1. Check if you're making too many requests in a short period. If so, implement a delay between requests or use a retry mechanism with exponential backoff.\n\n2. Verify if you're using the correct API key or authentication method. Some APIs require authentication to track usage.\n\n3. Review the API documentation for rate limits and adjust your application accordingly.\n\n4. If you're using a third-party service, contact their support to inquire about increasing your rate limit or discuss your usage needs.\n\n5. Consider implementing caching to reduce the number of requests to the server.\n\n6. If you're running a distributed system, ensure that requests are properly distributed across multiple instances to avoid hitting rate limits on a single endpoint.\n\nBy addressing these points, you should be able to resolve the HTTP 429 error and continue using the Mantle RPC service effectively.",
+      "skill_answer": "Mantle Read-Only Debug Report\n- issue_type: RPC transport/connectivity\n- observed_at_utc: 2025-11-07T10:30:00Z\n- endpoint: [endpoint redacted]\n- method_or_tool: [method redacted]\n- raw_error: HTTP 429\n\nDiagnosis\n- likely_causes:\n  - RPC provider rate limit exceeded\n  - provider saturation or temporary overload\n- confidence: high\n- evidence: HTTP 429 is the standard HTTP status code for \"Too Many Requests\"\n\nNext Actions\n- step_1: Retry the request with exponential backoff (e.g., wait 1s, then 2s, then 4s)\n- step_2: Switch to a fallback Mantle RPC endpoint if available\n- step_3: Reduce request batch size or rate if making multiple concurrent calls\n- escalation_if_unresolved: If still failing after 3 retries with backoff, capture full request details and consider contacting your RPC provider for rate limit limits or using a premium endpoint with higher limits",
+      "bare_judgment": {
+        "verdict": "PASS",
+        "expected_hits": [
+          "HTTP 429 indicates rate limiting or provider saturation.",
+          "Reduce request rate, retry with backoff, or switch to a fallback endpoint.",
+          "Production workloads should prefer dedicated providers over public RPC."
+        ],
+        "expected_misses": [],
+        "fail_triggers": [],
+        "reasoning": "The answer correctly identifies HTTP 429 as a rate limiting response and provides appropriate mitigation steps including reducing request rate, implementing retry with backoff, and considering dedicated providers for production workloads. It does not suggest increasing gas or changing contract logic, and clearly recognizes rate limiting as the issue. The guidance aligns with expected facts and avoids all fail conditions."
+      },
+      "skill_judgment": {
+        "verdict": "PASS",
+        "expected_hits": [
+          "HTTP 429 indicates rate limiting or provider saturation.",
+          "Reduce request rate, retry with backoff, or switch to a fallback endpoint.",
+          "Production workloads should prefer dedicated providers over public RPC."
+        ],
+        "expected_misses": [],
+        "fail_triggers": [],
+        "reasoning": "The answer correctly identifies HTTP 429 as rate limiting/provider saturation, recommends retry with backoff, suggests switching to a fallback endpoint, and implicitly advises against public RPC for production by recommending premium endpoints. It does not trigger any fail conditions and covers all expected facts."
+      },
+      "comparison": "same"
+    },
+    {
+      "id": "debug-quote-revert",
+      "prompt": "A quote call returns null or an error. How should the readonly debugger triage that?",
+      "expected_facts": [
+        "Classify this as a quote or liquidity failure.",
+        "Verify token addresses, decimals, and amount scaling.",
+        "Try a smaller size or an alternate route or source."
+      ],
+      "fail_if": [
+        "Treats the quote failure as proof that a real transaction already failed.",
+        "Skips token or liquidity checks."
+      ],
+      "bare_answer": "When a quote call returns null or an error, the readonly debugger should triage it as follows:\n\n1. Check if the quote call is being made to a valid and accessible contract. If the contract address is incorrect or the contract is not deployed, it will result in an error.\n\n2. Verify that the quote call is using the correct function signature and parameters. If the function signature or parameters are incorrect, it will lead to an error or unexpected behavior.\n\n3. Ensure that the quote call is being made with the appropriate permissions and access rights. If the caller does not have the necessary permissions to access the contract or function, it will result in an error.\n\n4. Check if the contract being called has any known issues or vulnerabilities that could cause the quote call to fail. If the contract has been audited and any issues have been identified, they should be taken into account.\n\n5. If the quote call is part of a larger transaction or contract interaction, verify that the overall transaction is valid and that all dependencies are met. If there are any issues with the transaction or its dependencies, it could cause the quote call to fail.\n\n6. If the quote call is being made to a contract that is not under the debugger's control, consider reaching out to the contract's developers or maintainers for assistance in troubleshooting the issue.\n\n7. If the issue persists and cannot be resolved through the above steps, it may be necessary to escalate the issue to the appropriate support channels or seek further assistance from the development team or community.",
+      "skill_answer": "Mantle Read-Only Debug Report\n- issue_type: quote failure\n- observed_at_utc: 2025-11-07T10:30:00Z\n- endpoint: https://rpc.mantle.network\n- method_or_tool: getQuote\n- raw_error: \"quote returned null\" or \"error: path not found\"\n\nDiagnosis\n- likely_causes:\n  - insufficient liquidity for requested amount\n  - unsupported token pair or route\n  - incorrect token decimals/amount scaling\n  - DEX aggregator temporarily unavailable\n- confidence: medium\n- evidence: quote call returned null/error instead of structured quote object\n\nNext Actions\n- step_1: Verify token addresses and decimals using token metadata\n- step_2: Try smaller notional amount (e.g., 10% of original)\n- step_3: Try alternate liquidity source or route if available\n- step_4: Check DEX aggregator status and recent liquidity events\n- escalation_if_unresolved: Capture full request parameters and error details for deeper investigation",
+      "bare_judgment": {
+        "verdict": "FAIL",
+        "expected_hits": [],
+        "expected_misses": [
+          "Classify this as a quote or liquidity failure.",
+          "Verify token addresses, decimals, and amount scaling.",
+          "Try a smaller size or an alternate route or source."
+        ],
+        "fail_triggers": [
+          "Treats the quote failure as proof that a real transaction already failed.",
+          "Skips token or liquidity checks."
+        ],
+        "reasoning": "The model answer completely misses the expected facts. It treats the quote failure as a generic contract call issue rather than a quote or liquidity failure, and it does not verify token addresses, decimals, or amount scaling. It also does not suggest trying a smaller size or alternate route/source. Instead, it focuses on contract access, permissions, and developer outreach, which are not relevant to the expected triage steps. The answer also does not trigger the fail condition about treating quote failure as proof of transaction failure, but it does skip the mandatory token and liquidity checks, which is a fail condition."
+      },
+      "skill_judgment": {
+        "verdict": "PASS",
+        "expected_hits": [
+          "Classify this as a quote or liquidity failure.",
+          "Verify token addresses, decimals, and amount scaling.",
+          "Try a smaller size or an alternate route or source."
+        ],
+        "expected_misses": [],
+        "fail_triggers": [],
+        "reasoning": "The answer correctly classifies the issue as a quote/liquidity failure, explicitly recommends verifying token addresses and decimals (step 1), and suggests trying a smaller amount (step 2) and alternate routes/sources (step 3). It does not treat the quote failure as proof of transaction failure, nor does it skip token/liquidity checks. The response is comprehensive and follows the expected triage workflow."
+      },
+      "comparison": "skill_better"
+    },
+    {
+      "id": "debug-balance-mismatch",
+      "prompt": "My Mantle wallet balance differs between reads. What should the debugger check?",
+      "expected_facts": [
+        "Compare reads at latest versus pending.",
+        "Check for unconfirmed transactions or nonce conflicts.",
+        "Re-read at a consistent block context after a bounded delay if needed."
+      ],
+      "fail_if": [
+        "Ignores pending transactions or nonce issues.",
+        "Claims the discrepancy can be ignored without investigation."
+      ],
+      "bare_answer": "The debugger should check the following:\n\n1. Network connectivity: Ensure the wallet is properly connected to the Mantle network and can communicate with nodes.\n\n2. API endpoint: Verify that the correct Mantle API endpoint is being used for balance queries.\n\n3. Block height: Check if the balance is being read from different block heights, which can cause discrepancies.\n\n4. Transaction status: Confirm that all relevant transactions have been confirmed and included in the blockchain.\n\n5. Cache: Investigate if there's any caching mechanism that might be serving stale data.\n\n6. Decimal precision: Ensure consistent handling of token decimals when displaying balances.\n\n7. Multiple accounts: Verify that the correct wallet address is being queried.\n\n8. Time synchronization: Check if there are any time-related issues affecting the balance retrieval.\n\n9. Error handling: Review how errors or timeouts are handled during balance queries.\n\n10. Data source: Confirm that the balance is being read from the correct source (e.g., smart contract vs. native token balance).\n\nBy systematically checking these areas, the debugger can identify the root cause of the balance discrepancies in the Mantle wallet.",
+      "skill_answer": "Mantle Read-Only Debug Report\n- issue_type: balance inconsistency\n- observed_at_utc: 2025-11-07T14:30:00Z\n- endpoint: https://mantle-mainnet-node-1.example.com\n- method_or_tool: eth_getBalance\n- raw_error: None (no error, but inconsistent values)\n\nDiagnosis\n- likely_causes:\n  - pending transactions affecting balance\n  - stale block tag causing read lag\n  - nonce contention with concurrent operations\n- confidence: medium\n- evidence:\n  - multiple reads show different balances\n  - no explicit error returned\n  - likely reading at different block contexts\n\nNext Actions\n- step_1: Compare balance at `latest` vs `pending` block tags\n- step_2: Check for unconfirmed transactions in wallet history\n- step_3: Verify no concurrent operations are causing nonce conflicts\n- escalation_if_unresolved: Collect timestamped balance reads at consistent block tags and wallet transaction history for further analysis",
+      "bare_judgment": {
+        "verdict": "PARTIAL",
+        "expected_hits": [
+          "Compare reads at latest versus pending.",
+          "Check for unconfirmed transactions or nonce conflicts.",
+          "Re-read at a consistent block context after a bounded delay if needed."
+        ],
+        "expected_misses": [],
+        "fail_triggers": [],
+        "reasoning": "The answer covers the core expected facts about comparing latest vs pending reads, checking unconfirmed transactions/nonce conflicts, and re-reading at consistent block context. However, it provides a much broader list of potential issues (network connectivity, API endpoints, cache, decimal precision, etc.) that goes beyond what the skill requires. The answer is directionally helpful and doesn't trigger any fail conditions, but it's more verbose than necessary and includes many items that aren't specifically about the pending vs latest read discrepancy the skill focuses on. This is a PARTIAL because it covers the essential expected facts but dilutes them with extensive additional troubleshooting steps."
+      },
+      "skill_judgment": {
+        "verdict": "PASS",
+        "expected_hits": [
+          "Compare reads at latest versus pending.",
+          "Check for unconfirmed transactions or nonce conflicts.",
+          "Re-read at a consistent block context after a bounded delay if needed."
+        ],
+        "expected_misses": [],
+        "fail_triggers": [],
+        "reasoning": "The model answer correctly identifies the core debugging steps: comparing latest vs pending reads, checking for unconfirmed transactions and nonce conflicts, and implies the need for consistent block context reads. It does not ignore pending transactions or nonce issues, and does not claim the discrepancy can be ignored without investigation. The answer covers all expected facts and avoids all fail conditions."
+      },
+      "comparison": "skill_better"
+    },
+    {
+      "id": "debug-execution-reverted",
+      "prompt": "I got an \"execution reverted\" error from a Mantle read call. What should the debugger do?",
+      "expected_facts": [
+        "Classify this as a call or revert error.",
+        "Verify the target address and ABI or function selector.",
+        "Decode revert data if available and check inputs or state preconditions."
+      ],
+      "fail_if": [
+        "Only says to try again later.",
+        "Does not mention revert decoding, address checks, or input-state checks."
+      ],
+      "bare_answer": "When encountering an \"execution reverted\" error from a Mantle read call, the debugger should:\n\n1. Check the error message for details about the revert reason, which may provide insights into the cause of the failure.\n\n2. Verify that the contract being called is deployed and accessible on the Mantle network.\n\n3. Ensure that the function being called exists in the contract and that the parameters passed to it are correct and in the expected format.\n\n4. Check if the contract requires any specific conditions to be met before the function can be executed successfully, such as sufficient token balances or proper access control.\n\n5. Review the contract's source code or ABI to understand the function's logic and any potential revert conditions.\n\n6. If the contract is verified on a block explorer like Etherscan, check the contract's details and any available documentation for more information.\n\n7. Consider reaching out to the contract's developers or the Mantle community for assistance if the issue persists.\n\n8. If the error occurs consistently, it may indicate a bug in the contract's code that needs to be addressed by the contract's developers.\n\n9. Ensure that the debugger is using the correct network configuration and that it is connected to the Mantle network.\n\n10. If the error is intermittent, it could be due to network congestion or temporary issues with the Mantle network, in which case retrying the call after some time may resolve the issue.",
+      "skill_answer": "Mantle Read-Only Debug Report\n- issue_type: call/revert error\n- observed_at_utc: 2025-11-07T14:30:00Z\n- endpoint: https://mantle-mainnet-node.example.com\n- method_or_tool: eth_call\n- raw_error: execution reverted\n\nDiagnosis\n- likely_causes:\n  - wrong contract address\n  - wrong ABI/function selector\n  - invalid params or state preconditions\n- confidence: medium\n- evidence: error matches \"execution reverted\" pattern in error-signature-map\n\nNext Actions\n- step_1: verify target contract address is correct and deployed on Mantle\n- step_2: verify ABI matches the contract and function selector is correct\n- step_3: test with minimal valid parameters to isolate the issue\n- escalation_if_unresolved: capture full revert data and escalate with evidence package",
+      "bare_judgment": {
+        "verdict": "PASS",
+        "expected_hits": [
+          "Classify this as a call or revert error.",
+          "Verify the target address and ABI or function selector.",
+          "Decode revert data if available and check inputs or state preconditions."
+        ],
+        "expected_misses": [],
+        "fail_triggers": [],
+        "reasoning": "The answer correctly classifies the error as a revert error and provides comprehensive guidance covering all expected facts. It mentions checking the revert reason (step 1), verifying the contract address and function existence (steps 2-3), checking inputs and state preconditions (step 4), and reviewing the ABI/source code (step 5). The answer also includes practical debugging steps like checking network configuration and considering network issues. While it mentions retrying later (step 10), this is presented as one of many troubleshooting steps rather than the sole recommendation, so it doesn't trigger the fail condition. The answer provides thorough, actionable guidance without fabricating capabilities or giving dangerous advice."
+      },
+      "skill_judgment": {
+        "verdict": "PASS",
+        "expected_hits": [
+          "Classify this as a call or revert error.",
+          "Verify the target address and ABI or function selector.",
+          "Decode revert data if available and check inputs or state preconditions."
+        ],
+        "expected_misses": [],
+        "fail_triggers": [],
+        "reasoning": "The answer correctly classifies the error as a call/revert error, explicitly recommends verifying the target address and ABI/function selector, and suggests testing with minimal valid parameters to check inputs or state preconditions. It also mentions capturing full revert data for escalation, which aligns with the expected fact about decoding revert data. No fail conditions were triggered."
+      },
+      "comparison": "same"
+    },
+    {
+      "id": "debug-escalation",
+      "prompt": "When should Mantle read-path debugging be escalated, and what evidence should be included?",
+      "expected_facts": [
+        "Escalate when the issue remains unresolved after bounded retries and targeted checks.",
+        "Include raw error strings, endpoints tested, request fingerprints, timestamped observations, and what was ruled out."
+      ],
+      "fail_if": [
+        "Never escalates unresolved issues.",
+        "Escalates without a captured evidence package."
+      ],
+      "bare_answer": "Mantle read-path debugging should be escalated when the issue cannot be resolved within the team or when it involves complex interactions between multiple components. The evidence that should be included when escalating the issue consists of:\n\n1. Detailed logs from the affected components, including timestamps and error messages.\n2. Network traces or packet captures showing the communication between components.\n3. Configuration files and settings for the involved systems.\n4. Performance metrics and resource utilization data.\n5. Steps to reproduce the issue, if possible.\n6. Any recent changes or updates to the system that might have triggered the problem.\n7. Analysis of potential root causes based on the collected data.\n8. Impact assessment on the overall system functionality and user experience.\n\nBy providing this comprehensive evidence, the escalation process can be more efficient, allowing the receiving team to quickly understand the issue and work towards a resolution.",
+      "skill_answer": "Mantle Read-Only Debug Report\n- issue_type: escalation criteria\n- observed_at_utc: [current UTC time]\n- endpoint: N/A\n- method_or_tool: N/A\n- raw_error: N/A\n\nDiagnosis\n- likely_causes: escalation warranted when bounded troubleshooting fails to resolve read-path failures\n- confidence: high\n- evidence: structured troubleshooting steps exhausted without resolution\n\nNext Actions\n- step_1: escalate when all of the following are true:\n  - Step 1 (reproduce and capture) completed with consistent failure\n  - Step 2 (branch by issue type) exhausted all applicable paths\n  - Step 3 (conclude with bounded claim) reached maximum retry limit without resolution\n- step_2: include in escalation package:\n  - Full raw error strings from all attempts\n  - Complete endpoint list tested with outcomes\n  - Request fingerprints (excluding private keys/secrets)\n  - Timestamped observations showing failure patterns\n  - What was ruled out at each troubleshooting stage\n- step_3: escalation_if_unresolved: provide package to Mantle support or relevant team with clear summary of:\n  - Initial failure context\n  - All diagnostic steps taken\n  - Evidence that issue persists across endpoints/methods\n  - Confidence assessment of remaining hypotheses\n\nEscalation is warranted when bounded troubleshooting fails to resolve read-path failures. The evidence package should demonstrate systematic investigation and rule out common causes before escalation.",
+      "bare_judgment": {
+        "verdict": "FAIL",
+        "expected_hits": [],
+        "expected_misses": [
+          "Escalate when the issue remains unresolved after bounded retries and targeted checks.",
+          "Include raw error strings, endpoints tested, request fingerprints, timestamped observations, and what was ruled out."
+        ],
+        "fail_triggers": [
+          "Never escalates unresolved issues.",
+          "Escalates without a captured evidence package."
+        ],
+        "reasoning": "The model answer fails to mention the bounded retries and targeted checks that should trigger escalation, instead suggesting escalation for 'complex interactions' or when 'cannot be resolved within the team.' It also omits the specific evidence package required: raw error strings, endpoints tested, request fingerprints, timestamped observations, and what was ruled out. Instead, it provides a generic list of debugging artifacts (logs, traces, configs, metrics) that don't match the expected evidence package. The answer escalates without the bounded retry condition and without the specific evidence package, triggering both fail conditions."
+      },
+      "skill_judgment": {
+        "verdict": "PASS",
+        "expected_hits": [
+          "Escalate when the issue remains unresolved after bounded retries and targeted checks.",
+          "Include raw error strings, endpoints tested, request fingerprints, timestamped observations, and what was ruled out."
+        ],
+        "expected_misses": [],
+        "fail_triggers": [],
+        "reasoning": "The answer correctly identifies that escalation is warranted when bounded troubleshooting fails to resolve read-path failures, which aligns with the expected fact about escalating after bounded retries and targeted checks. It also comprehensively lists the required evidence package including raw error strings, endpoints tested, request fingerprints, timestamped observations, and what was ruled out. The answer does not trigger any fail conditions as it properly escalates unresolved issues and includes a complete evidence package."
+      },
+      "comparison": "skill_better"
+    }
+  ]
+}

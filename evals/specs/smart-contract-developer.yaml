@@ -1,0 +1,66 @@
+skill: mantle-smart-contract-developer
+skill_path: skills/mantle-smart-contract-developer/SKILL.md
+reference_paths:
+  - skills/mantle-smart-contract-developer/references/development-checklist.md
+  - skills/mantle-smart-contract-developer/references/openzeppelin-mcp-handoff.md
+  - skills/mantle-network-primer/references/mantle-network-basics.md
+description: "Mantle-specific contract-development framing, readiness checks, and OpenZeppelin MCP handoff guidance."
+
+evals:
+  - id: dev-gas-token-check
+    prompt: "What gas-token assumption must be confirmed before deploying or operating a contract on Mantle?"
+    expected_facts:
+      - "Mantle native gas assumptions must use MNT, not ETH."
+    fail_if:
+      - "Assumes ETH is the Mantle gas token."
+      - "Does not mention MNT."
+
+  - id: dev-solidity-version
+    prompt: "What Solidity compiler guidance should a Mantle contract developer follow in this repo?"
+    expected_facts:
+      - "The Mantle reference recommends Solidity v0.8.23 or below."
+      - "This is guidance tied to the Mantle docs snapshot, not a blanket claim that any latest compiler works."
+    fail_if:
+      - "Claims the latest Solidity version works without Mantle-specific caveats."
+      - "Provides a different compiler guidance than v0.8.23 or below."
+
+  - id: dev-oz-handoff
+    prompt: "When should the Mantle smart contract developer hand work off to OpenZeppelin MCP?"
+    expected_facts:
+      - "Use OpenZeppelin MCP for contract scaffolding or code generation."
+      - "Use it for inheritance, security patterns, access control, proxy, or upgrade implementation guidance."
+      - "This skill keeps Mantle-specific framing and readiness checks, while OpenZeppelin MCP handles authoring guidance."
+    fail_if:
+      - "Never mentions OpenZeppelin MCP."
+      - "Claims this skill should author the contract code from memory instead."
+
+  - id: dev-address-verification
+    prompt: "How should protocol or system addresses be verified before integrating them into a Mantle contract?"
+    expected_facts:
+      - "Every external contract address must be correct for the requested Mantle environment."
+      - "Mainnet and testnet addresses must not be mixed."
+      - "For system addresses, use the official L1 and L2 system contract docs or an equivalent trusted registry-backed source."
+    fail_if:
+      - "Uses unverified addresses from memory."
+      - "Mixes mainnet and testnet addresses."
+
+  - id: dev-upgradeability
+    prompt: "Should Mantle contracts always be upgradeable?"
+    expected_facts:
+      - "No. Upgradeability depends on the use case and operational requirements."
+      - "If proxies are used, the brief should cover upgrade authorization and storage-layout constraints."
+      - "The trade-off between upgradeable and immutable designs should be stated explicitly."
+    fail_if:
+      - "Says contracts should always be upgradeable."
+      - "Says contracts should never be upgradeable without qualification."
+
+  - id: dev-mantle-specific-checks
+    prompt: "What Mantle-specific integration checks need to be in the development brief?"
+    expected_facts:
+      - "Confirm MNT gas assumptions."
+      - "Confirm environment-correct external addresses and explicitly named bridge, oracle, DEX, vault, or system dependencies."
+      - "Confirm the target Mantle environment and chain settings instead of relying on generic EVM assumptions."
+      - "Confirm frontend or backend integrations know the events, functions, and initialization values they depend on."
+    fail_if:
+      - "Does not mention Mantle-specific gas or address checks."
+      - "Treats the brief as generic Solidity guidance with no Mantle-specific integration review."

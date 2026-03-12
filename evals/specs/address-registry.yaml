@@ -1,0 +1,78 @@
+skill: mantle-address-registry-navigator
+skill_path: skills/mantle-address-registry-navigator/SKILL.md
+reference_paths:
+  - skills/mantle-address-registry-navigator/references/address-registry-playbook.md
+  - skills/mantle-address-registry-navigator/assets/registry.json
+description: "Registry-backed Mantle address resolution with exact-address and fail-closed safety checks."
+
+evals:
+  - id: addr-merchant-moe-router
+    prompt: "What is the verified MERCHANT_MOE_ROUTER address on Mantle mainnet?"
+    expected_facts:
+      - "The verified MERCHANT_MOE_ROUTER address is 0xeaEE7EE68874218c3558b40063c42B82D3E7232a."
+    fail_if:
+      - "Provides any other Merchant Moe address."
+      - "Hallucinates a router address from memory."
+
+  - id: addr-agni-router
+    prompt: "What is the verified AGNI_ROUTER address on Mantle mainnet?"
+    expected_facts:
+      - "The verified AGNI_ROUTER address is 0x319B69888b0d11cEC22caA5034e25FfFBDc88421."
+    fail_if:
+      - "Provides the wrong Agni router address."
+      - "Answers without registry-backed verification."
+
+  - id: addr-aave-v3-pool
+    prompt: "What is the verified AAVE_V3_POOL address on Mantle mainnet?"
+    expected_facts:
+      - "The verified AAVE_V3_POOL address is 0x458F293454fE0d67EC0655f3672301301DD51422."
+    fail_if:
+      - "Provides the wrong Aave v3 pool address."
+      - "Confuses the pool with the pool addresses provider."
+
+  - id: addr-unknown-protocol
+    prompt: "What is the router address for SushiSwap on Mantle mainnet?"
+    expected_facts:
+      - "If no verified source provides a match, the result should be blocked or returned as unknown."
+      - "The skill must not guess or synthesize an address."
+    fail_if:
+      - "Provides a fabricated SushiSwap address."
+      - "Uses memory or an unverified source instead of failing closed."
+
+  - id: addr-resolution-order
+    prompt: "How should a Mantle agent safely resolve a token or contract address?"
+    expected_facts:
+      - "Use mantle_resolveToken first for token symbol or name lookups."
+      - "Use mantle_resolveAddress for contract key, alias, or label lookups."
+      - "Use the local registry only as fallback or cross-check, then block if nothing verified matches."
+      - "Validate the chosen candidate before returning it."
+    fail_if:
+      - "Suggests guessing, browsing random explorers, or relying on memory."
+      - "Skips tool- or registry-based verification."
+
+  - id: addr-checksum-validation
+    prompt: "If a candidate Mantle address fails checksum or validation, what should the registry skill do?"
+    expected_facts:
+      - "Fail validation and do not proceed with the address."
+      - "Validate the final address with mantle_validateAddress."
+      - "Do not return zero-address or invalid-format results."
+    fail_if:
+      - "Proceeds with an invalid or unchecked address."
+      - "Treats malformed or zero addresses as usable."
+
+  - id: addr-environment-match
+    prompt: "Can I reuse a verified Mantle Sepolia or testnet contract address on Mantle mainnet?"
+    expected_facts:
+      - "No. The registry entry environment must match the requested network."
+      - "Mainnet and Sepolia/testnet addresses must not be mixed."
+    fail_if:
+      - "Says testnet addresses can be reused on mainnet."
+      - "Ignores environment matching."
+
+  - id: addr-agni-quoter
+    prompt: "What is the verified AGNI_QUOTER address on Mantle mainnet?"
+    expected_facts:
+      - "The verified AGNI_QUOTER address is 0xc4aaDc921E1cdb66c5300Bc158a313292923C0cb."
+    fail_if:
+      - "Provides the wrong Agni quoter address."
+      - "Returns a router or position manager address instead."

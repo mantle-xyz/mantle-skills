@@ -1,0 +1,61 @@
+skill: mantle-portfolio-analyst
+skill_path: skills/mantle-portfolio-analyst/SKILL.md
+reference_paths:
+  - skills/mantle-portfolio-analyst/references/rpc-readonly-workflow.md
+  - skills/mantle-portfolio-analyst/references/allowance-risk-rules.md
+description: "Read-only wallet balance, allowance, and approval-risk analysis on Mantle."
+
+evals:
+  - id: portfolio-balance-query
+    prompt: "How does the portfolio analyst check a wallet's native and token balances on Mantle?"
+    expected_facts:
+      - "Use mantle_getBalance for the native balance."
+      - "Use mantle_getTokenBalances for ERC-20 token balances."
+      - "This is a read-only workflow."
+    fail_if:
+      - "Fabricates a different API or direct execution flow."
+      - "Does not mention the balance tools."
+
+  - id: portfolio-allowance-risk-critical
+    prompt: "What makes an allowance exposure critical risk in the portfolio analyst?"
+    expected_facts:
+      - "Critical risk includes is_unlimited=true from tool output."
+      - "Critical risk also includes allowance values that are effectively near-max, such as greater than or equal to 2^255."
+    fail_if:
+      - "Uses a different threshold for critical unlimited approval risk."
+      - "Treats unlimited approvals as low or medium risk."
+
+  - id: portfolio-allowance-risk-levels
+    prompt: "What allowance risk levels does the portfolio analyst use?"
+    expected_facts:
+      - "The allowance risk levels are low, medium, high, and critical."
+    fail_if:
+      - "Uses a different risk-level set."
+      - "Omits critical from the risk levels."
+
+  - id: portfolio-network-scope
+    prompt: "What Mantle networks does the portfolio analyst support in this repo?"
+    expected_facts:
+      - "The supported networks are mainnet and sepolia."
+    fail_if:
+      - "Claims the skill supports other networks in this repo."
+      - "Does not mention mainnet and sepolia."
+
+  - id: portfolio-chain-info
+    prompt: "How does the portfolio analyst confirm chain context and chain status before querying balances or allowances?"
+    expected_facts:
+      - "Use mantle_getChainInfo to confirm the requested network context."
+      - "Use mantle_getChainStatus when available."
+    fail_if:
+      - "Fabricates chain-status tool names."
+      - "Skips chain-context confirmation."
+
+  - id: portfolio-address-validation
+    prompt: "What should happen before querying a wallet, token, or spender address in the portfolio analyst?"
+    expected_facts:
+      - "Use mantle_validateAddress before the read-only queries."
+      - "Validate wallet, token, and spender addresses instead of guessing."
+      - "If addresses are invalid, the workflow should not proceed as if they were trusted."
+    fail_if:
+      - "Does not include an address-validation step."
+      - "Guesses token or spender addresses."

@@ -1,0 +1,421 @@
+{
+  "generated_at_utc": "2026-03-12T04:38:58Z",
+  "model": "openrouter/arcee-ai/trinity-large-preview:free",
+  "judge_model": "openrouter/arcee-ai/trinity-large-preview:free",
+  "eval_slug": "defi-operator",
+  "eval_file": "evals/defi-operator.yaml",
+  "skill": "mantle-defi-operator",
+  "skill_path": "skills/mantle-defi-operator/SKILL.md",
+  "reference_paths": [
+    "skills/mantle-defi-operator/references/defi-execution-guardrails.md",
+    "skills/mantle-defi-operator/references/swap-sop.md",
+    "skills/mantle-defi-operator/references/liquidity-sop.md",
+    "skills/mantle-defi-operator/references/curated-defaults.yaml",
+    "skills/mantle-defi-operator/references/protocol-selection-policy.md"
+  ],
+  "description": "Deterministic Mantle DeFi planning, curated venue selection, and execution-handoff guardrails.",
+  "summary": {
+    "eval_count": 10,
+    "bare": {
+      "PASS": 3,
+      "PARTIAL": 1,
+      "FAIL": 6
+    },
+    "skill": {
+      "PASS": 10,
+      "PARTIAL": 0,
+      "FAIL": 0
+    },
+    "skill_better": 7,
+    "bare_better": 0,
+    "same": 3
+  },
+  "results": [
+    {
+      "id": "defi-swap-default-venue",
+      "prompt": "If I want to swap tokens on Mantle and have no other preference, where should the DeFi operator start?",
+      "expected_facts": [
+        "The curated swap defaults start with Merchant Moe and Agni.",
+        "These are the tier-1 curated swap venues in the repo."
+      ],
+      "fail_if": [
+        "Recommends an unverified or fabricated DEX as the default.",
+        "Ignores the curated defaults."
+      ],
+      "bare_answer": "The DeFi operator should start by using the native swap feature on the Mantle network. This allows for direct token swaps without the need for additional steps or preferences. The operator can access this feature through the Mantle wallet interface or by using compatible decentralized applications (dApps) built on the Mantle network. This approach ensures a straightforward and efficient token swap process within the Mantle ecosystem.",
+      "skill_answer": "Mantle DeFi Pre-Execution Report\n- operation_type: swap\n- planning_mode: discovery_only\n- environment: Mantle mainnet\n- intent_summary: Swap tokens on Mantle with no specific venue preference.\n- analyzed_at_utc: 2026-03-08T04:00:14Z\n\nPreparation\n- supporting_skills_used: None (discovery mode)\n- address_resolution_ref: Not applicable (discovery mode)\n- risk_report_ref: Not applicable (discovery mode)\n- portfolio_report_ref: Not applicable (discovery mode)\n- curated_defaults_considered: Yes (Merchant Moe, Agni)\n- quote_source: Not applicable (discovery mode)\n- expected_output_min: Not applicable (discovery mode)\n- allowance_status: Not applicable (discovery mode)\n- approval_plan: Not applicable (discovery mode)\n\nProtocol Selection\n- recommended: Merchant Moe (curated default)\n- also_viable: Agni (curated default)\n- discovery_only: DefiLlama ecosystem data\n- rationale: Starting with curated Mantle AMM defaults provides verified execution-ready venues. Merchant Moe is the primary recommendation as the curated default with verified router and quoter coverage.\n- data_freshness: Curated defaults retrieved 2026-03-08, review after 2026-04-07\n- confidence: High for curated defaults, discovery-only for broader ecosystem\n\nExecution Handoff\n- recommended_calls: Not applicable (discovery mode)\n- calldata_inputs: Not applicable (discovery mode)\n- registry_key: Not applicable (discovery mode)\n- sequencing_notes: Not applicable (discovery mode)\n- batched_execution_possible: Not applicable (discovery mode)\n- handoff_available: no\n\nPost-Execution Verification Plan\n- balances_to_recheck: Not applicable (discovery mode)\n- allowances_to_recheck: Not applicable (discovery mode)\n- slippage_checks: Not applicable (discovery mode)\n- anomalies_to_watch: Not applicable (discovery mode)\n\nStatus\n- preflight_verdict: unknown (discovery mode)\n- readiness: discovery_only\n- blocking_issues: None (discovery mode)\n- next_action: Provide token details for execution-ready planning or explore other venues via DefiLlama\n\nThe DeFi operator should start with the curated Mantle AMM defaults: Merchant Moe as the primary recommendation, with Agni as an alternative. These are verified venues with execution-ready contracts. For broader ecosystem discovery, DefiLlama data is available but not recommended for execution until contracts are verified.",
+      "bare_judgment": {
+        "verdict": "FAIL",
+        "expected_hits": [],
+        "expected_misses": [
+          "The curated swap defaults start with Merchant Moe and Agni.",
+          "These are the tier-1 curated swap venues in the repo."
+        ],
+        "fail_triggers": [
+          "Ignores the curated defaults."
+        ],
+        "reasoning": "The answer completely ignores the curated swap defaults (Merchant Moe and Agni) that are explicitly stated as the tier-1 venues to start with. Instead, it vaguely recommends a 'native swap feature' without naming any specific, verified DEX venues. This fails to meet the expected facts and triggers the 'Ignores the curated defaults' fail condition."
+      },
+      "skill_judgment": {
+        "verdict": "PASS",
+        "expected_hits": [
+          "The curated swap defaults start with Merchant Moe and Agni.",
+          "These are the tier-1 curated swap venues in the repo."
+        ],
+        "expected_misses": [],
+        "fail_triggers": [],
+        "reasoning": "The answer correctly identifies Merchant Moe as the primary recommendation and Agni as an alternative curated default, matching the expected facts. It explicitly states these are 'curated Mantle AMM defaults' and 'verified venues with execution-ready contracts,' which aligns with the tier-1 curated swap venues requirement. The answer does not recommend unverified or fabricated DEXes, and it does not ignore the curated defaults. The response maintains the correct safety posture by recommending the curated defaults as the starting point for a DeFi operator with no other preferences."
+      },
+      "comparison": "skill_better"
+    },
+    {
+      "id": "defi-lending-default",
+      "prompt": "If I want to lend on Mantle, what curated default should the DeFi operator consider first?",
+      "expected_facts": [
+        "Aave v3 is the curated lending default."
+      ],
+      "fail_if": [
+        "Recommends a non-existent or unverified lending protocol as the default.",
+        "Does not mention Aave v3."
+      ],
+      "bare_answer": "The DeFi operator should consider the following curated default first:\n\n1. USDC/USDT: These are stablecoins pegged to the US dollar, offering stability and liquidity. They are widely used in DeFi protocols and have high trading volumes.\n\n2. ETH: As the native token of the Ethereum network, ETH is a popular choice for lending and borrowing. It has a large market cap and is widely accepted across DeFi platforms.\n\n3. WBTC: Wrapped Bitcoin (WBTC) is an ERC-20 token that represents Bitcoin on the Ethereum blockchain. It allows users to interact with Bitcoin in DeFi applications while maintaining exposure to Bitcoin's price.\n\n4. DAI: DAI is a decentralized stablecoin created by MakerDAO. It is over-collateralized by other cryptocurrencies, primarily ETH, and maintains its peg to the US dollar through a system of smart contracts.\n\nThese curated defaults offer a balance of stability, liquidity, and potential for yield generation. They are widely used in the DeFi ecosystem and have established track records. However, it's important to note that the specific curated defaults may vary depending on the Mantle platform and its partnerships with other DeFi protocols.",
+      "skill_answer": "Based on the curated defaults in the reference material, the DeFi operator should consider **Aave V3** first for lending on Mantle.\n\nHere's the relevant information from the curated defaults:\n\n```yaml\nlending_defaults:\n  - protocol_id: aave_v3\n    tier: 1\n    source_url: https://github.com/bgd-labs/aave-address-book/blob/main/src/AaveV3Mantle.sol\n    retrieved_at: 2026-03-08T04:00:14Z\n    review_after: 2026-04-07\n    why_default: Curated Mantle lending default with verified pool and address-provider coverage.\n```\n\nThe Aave V3 protocol is designated as the curated default for lending with:\n- Tier 1 status (highest priority)\n- Verified contract coverage for Mantle\n- Recent retrieval and review schedule\n- Explicit rationale for being the default lending venue\n\nThe DeFi operator would use this as the primary candidate when planning lending operations, unless the user specifies a different protocol or there are specific reasons to consider alternatives.",
+      "bare_judgment": {
+        "verdict": "FAIL",
+        "expected_hits": [],
+        "expected_misses": [
+          "Aave v3 is the curated lending default."
+        ],
+        "fail_triggers": [
+          "Does not mention Aave v3."
+        ],
+        "reasoning": "The model answer lists various tokens (USDC/USDT, ETH, WBTC, DAI) as curated defaults for lending on Mantle, but completely fails to mention Aave v3, which is the specific curated lending protocol expected by the skill. The answer instead discusses general token types without identifying any lending protocol at all. This directly violates the fail condition requiring mention of Aave v3 and misses the core expected fact that Aave v3 is the curated lending default."
+      },
+      "skill_judgment": {
+        "verdict": "PASS",
+        "expected_hits": [
+          "Aave v3 is the curated lending default."
+        ],
+        "expected_misses": [],
+        "fail_triggers": [],
+        "reasoning": "The answer correctly identifies Aave V3 as the curated lending default for Mantle, which matches the expected fact. It provides supporting details from the curated defaults data including tier status, source URL, and rationale. The answer does not trigger any fail conditions and directly addresses the prompt's question about what curated default to consider first."
+      },
+      "comparison": "skill_better"
+    },
+    {
+      "id": "defi-execution-readiness",
+      "prompt": "Can the DeFi operator execute a swap or sign and broadcast a transaction for me?",
+      "expected_facts": [
+        "No. mantle-mcp v0.2 is read-only in this workflow.",
+        "The skill can produce an analysis and execution handoff plan, but not sign, broadcast, or execute."
+      ],
+      "fail_if": [
+        "Claims the DeFi operator can execute, sign, or broadcast transactions.",
+        "Fabricates tx hashes, receipts, or settlement outcomes."
+      ],
+      "bare_answer": "As a DeFi operator, I cannot execute swaps or sign and broadcast transactions on your behalf. My role is to provide information and guidance on DeFi protocols and transactions, but I do not have the capability to directly interact with blockchain networks or execute transactions.\n\nTo perform a swap or any other transaction on a DeFi platform, you would need to use a compatible wallet application or interface that can connect to the blockchain network. This typically involves:\n\n1. Setting up a wallet (e.g., MetaMask, Trust Wallet)\n2. Funding your wallet with the appropriate cryptocurrency\n3. Connecting your wallet to the DeFi platform\n4. Initiating and confirming the transaction yourself\n\nIt's important to note that DeFi transactions are irreversible and require your explicit approval. Always double-check transaction details before confirming, and be cautious of potential scams or phishing attempts. If you're new to DeFi, I recommend starting with small amounts and thoroughly researching the platforms and tokens you're interacting with.",
+      "skill_answer": "No, the DeFi operator cannot execute swaps or sign/broadcast transactions. It is designed to provide pre-execution planning and analysis only.\n\nThe operator follows a read-only approach where it:\n- Analyzes your DeFi intent (swap, add/remove liquidity, etc.)\n- Resolves verified contract addresses\n- Compares venues and provides recommendations\n- Creates execution-ready plans with deterministic call sequences\n- Defines post-execution verification steps\n\nHowever, it explicitly stops before any state-changing actions. You'll need to use an external wallet or signer to actually execute the transactions based on the provided plan.\n\nThe operator acts as a coordinator, assembling all necessary information for you to execute safely, but the actual execution must happen through your own wallet interface.",
+      "bare_judgment": {
+        "verdict": "PASS",
+        "expected_hits": [
+          "No. mantle-mcp v0.2 is read-only in this workflow.",
+          "The skill can produce an analysis and execution handoff plan, but not sign, broadcast, or execute."
+        ],
+        "expected_misses": [],
+        "fail_triggers": [],
+        "reasoning": "The answer correctly states that the DeFi operator cannot execute swaps or sign/broadcast transactions, which aligns with the read-only nature of mantle-mcp v0.2. It explains the operator's role as providing information and guidance without direct blockchain interaction. The answer does not fabricate any transaction hashes, receipts, or settlement outcomes, and does not claim the ability to execute, sign, or broadcast transactions. While it provides additional context about using wallet applications and DeFi best practices, this extra information does not contradict the core facts and maintains the correct safety posture."
+      },
+      "skill_judgment": {
+        "verdict": "PASS",
+        "expected_hits": [
+          "No. mantle-mcp v0.2 is read-only in this workflow.",
+          "The skill can produce an analysis and execution handoff plan, but not sign, broadcast, or execute."
+        ],
+        "expected_misses": [],
+        "fail_triggers": [],
+        "reasoning": "The answer correctly states that the DeFi operator cannot execute swaps or sign/broadcast transactions, matching the expected facts. It accurately describes the read-only nature and planning-only capabilities without fabricating any execution capabilities or outcomes. The explanation of the operator's role as providing analysis and handoff plans while requiring external execution aligns with the skill's design."
+      },
+      "comparison": "same"
+    },
+    {
+      "id": "defi-discovery-vs-execution",
+      "prompt": "What planning modes does the DeFi operator use, and when is execution handoff allowed?",
+      "expected_facts": [
+        "The planning modes are discovery_only, compare_only, and execution_ready.",
+        "Execution handoff is only available in execution_ready mode.",
+        "Execution_ready requires verified addresses and the required supporting evidence."
+      ],
+      "fail_if": [
+        "Does not distinguish the planning modes.",
+        "Claims handoff is available in discovery_only or compare_only."
+      ],
+      "bare_answer": "The DeFi operator uses two planning modes: \"auto\" and \"manual\". In \"auto\" mode, the operator automatically generates a plan based on the current state of the DeFi system. In \"manual\" mode, the operator allows the user to create a custom plan.\n\nExecution handoff is allowed when the plan is in a \"ready\" state. This means that all necessary conditions for execution have been met, such as having sufficient funds, meeting any required time constraints, and ensuring all dependencies are satisfied. Once the plan is ready, the operator can hand off execution to the appropriate smart contracts or other DeFi protocols to carry out the planned actions.",
+      "skill_answer": "The Mantle DeFi Operator uses three distinct planning modes to structure its pre-execution analysis:\n\n## Planning Modes\n\n**1. Discovery Only**\n- Purpose: High-level ecosystem exploration without execution readiness\n- Output: Venue suggestions, rationale, and discovery sources only\n- Restrictions: No router addresses, approval steps, calldata, or execution sequencing\n- Handoff: Not available (`handoff_available: no`)\n\n**2. Compare Only**\n- Purpose: Venue comparison when execution gating is incomplete\n- Output: Verified venue comparison with missing execution inputs called out\n- Restrictions: Verified registry keys/contract roles may be named, but executable calldata and approval instructions stay out of scope\n- Handoff: Not available (`handoff_available: no`)\n\n**3. Execution Ready**\n- Purpose: Full pre-execution planning with verified contracts and supporting evidence\n- Requirements:\n  - Verified address resolution from registry\n  - Risk report (unless explicitly unnecessary)\n  - Portfolio report when allowance scope or balance coverage matters\n- Output: Complete execution handoff plan with calls, parameters, sequencing\n- Handoff: Available (`handoff_available: yes`)\n\n## Execution Handoff Conditions\n\nExecution handoff is only allowed in `execution_ready` mode, which requires:\n\n1. **Verified Address Trust** - Contracts resolved from `mantle-address-registry-navigator`\n2. **Supporting Evidence** - Risk verdict and portfolio context when relevant\n3. **Complete Intent** - All mandatory fields (operation type, amounts, recipient, slippage, deadline)\n4. **Risk Clearance** - No `block` verdict; explicit confirmation for `warn`/`high-risk` outcomes\n\nThe skill acts as a coordinator, assembling final plans without signing, broadcasting, or executing transactions. It produces deterministic call sequences and post-execution verification plans for external execution by the user's wallet/signer.",
+      "bare_judgment": {
+        "verdict": "FAIL",
+        "expected_hits": [],
+        "expected_misses": [
+          "The planning modes are discovery_only, compare_only, and execution_ready.",
+          "Execution handoff is only available in execution_ready mode.",
+          "Execution_ready requires verified addresses and the required supporting evidence."
+        ],
+        "fail_triggers": [
+          "Does not distinguish the planning modes.",
+          "Claims handoff is available in discovery_only or compare_only."
+        ],
+        "reasoning": "The model answer describes completely different planning modes ('auto' and 'manual') that do not match the expected facts. It also fails to mention the three specific modes (discovery_only, compare_only, execution_ready) and incorrectly describes execution handoff conditions without referencing the required execution_ready mode or verified addresses. This triggers both fail conditions: it does not distinguish the planning modes and implies handoff is available without the proper mode restrictions."
+      },
+      "skill_judgment": {
+        "verdict": "PASS",
+        "expected_hits": [
+          "The planning modes are discovery_only, compare_only, and execution_ready.",
+          "Execution handoff is only available in execution_ready mode.",
+          "Execution_ready requires verified addresses and the required supporting evidence."
+        ],
+        "expected_misses": [],
+        "fail_triggers": [],
+        "reasoning": "The answer correctly identifies all three planning modes (discovery_only, compare_only, execution_ready) and clearly states that execution handoff is only available in execution_ready mode. It also specifies that execution_ready requires verified addresses and supporting evidence (risk report, portfolio report when relevant). The answer does not claim handoff is available in discovery_only or compare_only modes, and it accurately describes the restrictions and requirements for each mode. The information is presented clearly and matches the expected facts."
+      },
+      "comparison": "skill_better"
+    },
+    {
+      "id": "defi-defillama-trust",
+      "prompt": "Can the DeFi operator use DefiLlama as the source of truth for contract addresses?",
+      "expected_facts": [
+        "No. DefiLlama can be mentioned for broader ecosystem discovery or metrics.",
+        "DefiLlama is not a contract-truth or execution-readiness source."
+      ],
+      "fail_if": [
+        "Uses DefiLlama as the address source of truth.",
+        "Treats discovery metrics as address verification."
+      ],
+      "bare_answer": "No, the DeFi operator should not use DefiLlama as the source of truth for contract addresses. While DefiLlama is a popular platform for tracking DeFi protocols and their TVL (Total Value Locked), it is not designed to be a reliable source for contract addresses. The platform may contain outdated or incorrect information, and relying on it could lead to errors in the DeFi operator's operations.\n\nInstead, the DeFi operator should use official sources such as the project's documentation, GitHub repositories, or verified contract addresses on blockchain explorers like Etherscan. These sources are more likely to provide accurate and up-to-date information about contract addresses.",
+      "skill_answer": "No, the DeFi operator should not use DefiLlama as the source of truth for contract addresses. According to the skill documentation, DefiLlama is only mentioned for broader ecosystem discovery and should never be treated as contract truth or execution-readiness source. The skill explicitly states that execution-ready planning requires verified addresses from the shared `mantle-address-registry-navigator` registry, not from DefiLlama or other discovery sources.",
+      "bare_judgment": {
+        "verdict": "PASS",
+        "expected_hits": [
+          "No. DefiLlama can be mentioned for broader ecosystem discovery or metrics.",
+          "DefiLlama is not a contract-truth or execution-readiness source."
+        ],
+        "expected_misses": [],
+        "fail_triggers": [],
+        "reasoning": "The answer correctly states that DefiLlama should not be used as the source of truth for contract addresses, which aligns with the expected facts. It also appropriately mentions that DefiLlama can be used for broader ecosystem discovery or metrics, satisfying the first expected fact. The answer clearly explains that DefiLlama is not a contract-truth or execution-readiness source, fulfilling the second expected fact. Additionally, the answer does not trigger any fail conditions, as it does not use DefiLlama as the address source of truth or treat discovery metrics as address verification. The reasoning provided is sound and aligns with the expected facts."
+      },
+      "skill_judgment": {
+        "verdict": "PASS",
+        "expected_hits": [
+          "No. DefiLlama can be mentioned for broader ecosystem discovery or metrics.",
+          "DefiLlama is not a contract-truth or execution-readiness source."
+        ],
+        "expected_misses": [],
+        "fail_triggers": [],
+        "reasoning": "The answer correctly states that DefiLlama should not be used as the source of truth for contract addresses and aligns with both expected facts: it acknowledges DefiLlama can be used for broader ecosystem discovery/metrics, and it explicitly states DefiLlama is not a contract-truth or execution-readiness source. The answer also reinforces the correct guidance by mentioning the need for verified addresses from the shared registry, which is consistent with the skill's safety posture."
+      },
+      "comparison": "same"
+    },
+    {
+      "id": "defi-supporting-skills",
+      "prompt": "What supporting skills should the DeFi operator rely on for address trust, risk verdicts, and allowance or balance evidence?",
+      "expected_facts": [
+        "Use mantle-address-registry-navigator for verified address trust.",
+        "Use mantle-risk-evaluator for pass, warn, or block preflight verdicts.",
+        "Use mantle-portfolio-analyst for allowance scope or wallet coverage evidence."
+      ],
+      "fail_if": [
+        "Claims the DeFi operator should re-derive all of that evidence itself.",
+        "Omits the supporting skills entirely."
+      ],
+      "bare_answer": "To effectively support DeFi operations, an operator should rely on the following skills:\n\n1. Address Trust: Utilize on-chain analytics and reputation systems to assess the trustworthiness of addresses involved in transactions. This includes analyzing transaction history, network connections, and any associated risks.\n\n2. Risk Verdicts: Implement risk assessment models that consider factors such as market volatility, smart contract vulnerabilities, and potential for fraud or manipulation. This involves staying updated on the latest DeFi protocols and their associated risks.\n\n3. Allowance and Balance Evidence: Develop proficiency in reading and interpreting blockchain data to verify token allowances and account balances. This includes understanding how to interact with smart contracts and use blockchain explorers effectively.\n\n4. Transaction Analysis: Gain expertise in analyzing transaction patterns, identifying anomalies, and detecting potential security threats or fraudulent activities.\n\n5. Smart Contract Auditing: Acquire knowledge of smart contract code to identify potential vulnerabilities or exploits that could impact DeFi operations.\n\n6. Regulatory Compliance: Stay informed about evolving regulations in the DeFi space and implement compliance measures to ensure operations adhere to legal requirements.\n\n7. Data Visualization: Develop skills in creating clear and informative visualizations of complex DeFi data to aid in decision-making and risk assessment.\n\n8. Continuous Learning: Maintain a commitment to ongoing education in the rapidly evolving DeFi landscape, including new protocols, security practices, and emerging technologies.\n\nBy mastering these supporting skills, a DeFi operator can make more informed decisions, mitigate risks, and ensure the smooth operation of decentralized financial services.",
+      "skill_answer": "The DeFi operator should rely on these specialized skills:\n\n**Address trust**: Use `mantle-address-registry-navigator` to resolve execution-ready token/router/pool/position-manager addresses from the shared registry. Mark plans as blocked for unverified or malformed addresses.\n\n**Risk verdicts**: Use `$mantle-risk-evaluator` to obtain pass/warn/block preflight verdicts when a state-changing path is being prepared. For warn/high-risk outcomes, require explicit user confirmation before proceeding.\n\n**Allowance/balance evidence**: Use `$mantle-portfolio-analyst` when allowance scope, spender exposure, or balance coverage needs read-only evidence. This is essential when approval scope or wallet coverage matters for the operation.\n\nThe operator acts as a coordinator, citing or requesting output from these skills rather than re-deriving judgments from scratch.",
+      "bare_judgment": {
+        "verdict": "FAIL",
+        "expected_hits": [],
+        "expected_misses": [
+          "Use mantle-address-registry-navigator for verified address trust.",
+          "Use mantle-risk-evaluator for pass, warn, or block preflight verdicts.",
+          "Use mantle-portfolio-analyst for allowance scope or wallet coverage evidence."
+        ],
+        "fail_triggers": [
+          "Claims the DeFi operator should re-derive all of that evidence itself."
+        ],
+        "reasoning": "The model answer provides a generic list of DeFi operator skills but completely omits the three specific supporting skills required by the prompt: mantle-address-registry-navigator for address trust, mantle-risk-evaluator for risk verdicts, and mantle-portfolio-analyst for allowance/balance evidence. Instead, it suggests the operator should 're-derive all of that evidence itself' through general capabilities like on-chain analytics, risk assessment models, and blockchain data interpretation. This directly violates the fail condition that prohibits claiming the operator should re-derive the evidence independently. The answer is directionally related to DeFi operations but fails to identify the specific supporting skills that the prompt requires."
+      },
+      "skill_judgment": {
+        "verdict": "PASS",
+        "expected_hits": [
+          "Use mantle-address-registry-navigator for verified address trust.",
+          "Use mantle-risk-evaluator for pass, warn, or block preflight verdicts.",
+          "Use mantle-portfolio-analyst for allowance scope or wallet coverage evidence."
+        ],
+        "expected_misses": [],
+        "fail_triggers": [],
+        "reasoning": "The answer correctly identifies all three required supporting skills and their purposes: mantle-address-registry-navigator for address trust, mantle-risk-evaluator for risk verdicts, and mantle-portfolio-analyst for allowance/balance evidence. It also correctly emphasizes that the operator should coordinate rather than re-derive evidence, avoiding the fail condition of claiming the operator should do it themselves. The answer provides additional context about blocking unverified addresses and requiring confirmation for high-risk outcomes, which aligns with the skill's safety posture without contradicting any requirements."
+      },
+      "comparison": "skill_better"
+    },
+    {
+      "id": "defi-stale-metrics",
+      "prompt": "How fresh do live DeFi metrics need to be before they are considered stale in this repo's selection policy?",
+      "expected_facts": [
+        "The stale_metrics_max_age_hours threshold is 24 hours.",
+        "If metrics are stale or unavailable, the skill should fall back to curated defaults and say so explicitly."
+      ],
+      "fail_if": [
+        "Does not mention any staleness limit.",
+        "Claims stale metrics can still be used without calling out lower confidence."
+      ],
+      "bare_answer": "The freshness requirement for live DeFi metrics in this repo's selection policy is that they must be updated at least once every 24 hours. If a metric is not updated within this 24-hour window, it is considered stale and will be excluded from the selection process.",
+      "skill_answer": "According to the protocol selection policy in this repo, live DeFi metrics are considered stale after **24 hours**. This is specified in the `stale_metrics_max_age_hours` parameter in the `protocol-selection-policy.md` reference.",
+      "bare_judgment": {
+        "verdict": "PASS",
+        "expected_hits": [
+          "The stale_metrics_max_age_hours threshold is 24 hours."
+        ],
+        "expected_misses": [
+          "If metrics are stale or unavailable, the skill should fall back to curated defaults and say so explicitly."
+        ],
+        "fail_triggers": [],
+        "reasoning": "The answer correctly identifies the 24-hour staleness threshold and explains that stale metrics will be excluded. While it doesn't mention the fallback to curated defaults, this is not a fail condition - it's only an expected fact that was missed. The answer doesn't trigger any fail conditions and covers the core freshness requirement."
+      },
+      "skill_judgment": {
+        "verdict": "PASS",
+        "expected_hits": [
+          "The stale_metrics_max_age_hours threshold is 24 hours."
+        ],
+        "expected_misses": [],
+        "fail_triggers": [],
+        "reasoning": "The answer correctly identifies the 24-hour staleness threshold and references the specific parameter name from the policy. It does not trigger any fail conditions and covers the required expected fact about the staleness limit."
+      },
+      "comparison": "same"
+    },
+    {
+      "id": "defi-curated-score-delta",
+      "prompt": "When should a curated protocol stay preferred over a discovered alternative with similar scores?",
+      "expected_facts": [
+        "The selection policy prefers curated protocols when the score delta is within 150 bps.",
+        "If the score delta is small, the curated default stays first."
+      ],
+      "fail_if": [
+        "Says there is no curated preference logic.",
+        "Claims the discovered option should always replace the curated default."
+      ],
+      "bare_answer": "A curated protocol should remain preferred over a discovered alternative with similar scores in the following situations:\n\n1. When the curated protocol has been extensively validated and optimized over time, ensuring reliability and reproducibility.\n\n2. If the curated protocol is part of a larger, well-established workflow or system that would be disrupted by switching to a new method.\n\n3. When the discovered alternative lacks sufficient documentation or support, making it riskier to implement in critical applications.\n\n4. If the curated protocol has specific advantages in terms of cost, availability of reagents, or compatibility with existing equipment.\n\n5. When the discovered alternative requires significant changes to laboratory procedures or staff training, outweighing the benefits of switching.\n\n6. If the curated protocol has regulatory approval or is required by industry standards, making it necessary to maintain for compliance reasons.\n\n7. When the discovered alternative's performance is only marginally better, and the effort to switch is not justified by the potential gains.\n\n8. If the curated protocol has unique features or capabilities that are not replicated by the discovered alternative, even if scores are similar.\n\n9. When the discovered alternative is still in early stages of development or lacks long-term stability data.\n\n10. If the curated protocol is part of a proprietary or patented process that provides a competitive advantage.",
+      "skill_answer": "A curated protocol should stay preferred over a discovered alternative with similar scores when:\n\n**Score delta is small** - If the performance difference is within the threshold (e.g., 150 basis points per the selection policy), keep the curated default first to maintain consistency and reduce decision complexity.\n\n**Freshness and verification matter** - Curated protocols have verified contract addresses and recent metadata (retrieved_at, review_after). Discovered alternatives may lack this verification or have stale data, making the curated option more reliable.\n\n**Only one verified candidate fits** - When the requested action (swap, add liquidity, etc.) can only be satisfied by a single curated, verified protocol, recommend it first before asking about optimization preferences.\n\n**Missing execution evidence** - If the discovered alternative lacks required risk or portfolio evidence, downgrade its readiness and keep the curated protocol as the execution-ready recommendation.\n\n**User hasn't specified preference** - Without explicit user direction toward a discovered protocol, default to the curated option that's already vetted and ready for execution.\n\nThe key principle: curated defaults serve as execution-ready seeds, while discovered alternatives are for comparison only until they're verified and supported by complete evidence.",
+      "bare_judgment": {
+        "verdict": "PARTIAL",
+        "expected_hits": [],
+        "expected_misses": [
+          "The selection policy prefers curated protocols when the score delta is within 150 bps.",
+          "If the score delta is small, the curated default stays first."
+        ],
+        "fail_triggers": [],
+        "reasoning": "The model answer provides general reasons why a curated protocol might stay preferred, but it does not mention the specific score delta threshold (150 bps) or the explicit policy that curated protocols are preferred when the score delta is small. The answer is directionally helpful but misses the key expected facts about the specific selection policy criteria."
+      },
+      "skill_judgment": {
+        "verdict": "PASS",
+        "expected_hits": [
+          "The selection policy prefers curated protocols when the score delta is within 150 bps.",
+          "If the score delta is small, the curated default stays first."
+        ],
+        "expected_misses": [],
+        "fail_triggers": [],
+        "reasoning": "The answer correctly identifies that curated protocols should stay preferred when the score delta is small (within 150 bps threshold) and explicitly states this as the first principle. It also covers the broader context of why curated protocols remain preferred, including verification, evidence completeness, and user preference considerations. The answer does not trigger any fail conditions and maintains the correct safety posture of preferring curated protocols when scores are similar."
+      },
+      "comparison": "skill_better"
+    },
+    {
+      "id": "defi-swap-flow",
+      "prompt": "Walk me through an execution-ready Mantle token swap plan.",
+      "expected_facts": [
+        "Normalize the swap intent and run the DeFi pre-execution guardrails first.",
+        "Resolve verified router or quoter contracts through mantle-address-registry-navigator.",
+        "Use curated defaults and eligible live-signal ranking before choosing a route.",
+        "Pull risk evidence and allowance or portfolio evidence before producing the external execution handoff.",
+        "Keep approval scope minimal and state that execution happens externally."
+      ],
+      "fail_if": [
+        "Skips verified address resolution.",
+        "Skips risk evaluation or allowance evidence for an execution-ready plan.",
+        "Claims the skill executes the swap directly."
+      ],
+      "bare_answer": "Here's a step-by-step execution-ready plan for swapping Mantle tokens:\n\n1. Preparation:\n   - Ensure you have a compatible wallet (e.g., MetaMask, Trust Wallet)\n   - Verify you have sufficient ETH for gas fees\n   - Check current market conditions and token price\n\n2. Choose a DEX:\n   - Popular options: Uniswap, SushiSwap, or a Mantle-specific DEX\n   - Compare liquidity and slippage across platforms\n\n3. Connect Wallet:\n   - Access the chosen DEX interface\n   - Connect your wallet and ensure it's on the correct network (e.g., Ethereum mainnet)\n\n4. Input Swap Details:\n   - Select Mantle token as the input\n   - Choose the desired output token (e.g., ETH, USDC)\n   - Enter the amount to swap\n\n5. Review Transaction:\n   - Check the exchange rate and estimated output\n   - Review slippage tolerance and adjust if necessary\n   - Verify gas fees and transaction time\n\n6. Execute Swap:\n   - Confirm the transaction in your wallet\n   - Wait for blockchain confirmation (typically 1-5 minutes)\n\n7. Verify Completion:\n   - Check your wallet balance for the received tokens\n   - Ensure the transaction is reflected on a block explorer (e.g., Etherscan)\n\n8. Consider Tax Implications:\n   - Document the transaction for tax purposes\n   - Be aware of potential capital gains tax obligations\n\nRemember to always double-check addresses and amounts before confirming any transaction. Consider using limit orders or waiting for favorable market conditions to optimize your swap.",
+      "skill_answer": "Mantle DeFi Pre-Execution Report\n- operation_type: swap\n- planning_mode: execution_ready\n- environment: mainnet\n- intent_summary: Swap 1000 USDC for Mantle (MNT) via a verified Mantle AMM, targeting a 2% slippage cap and 30-minute deadline.\n- analyzed_at_utc: 2026-03-08T04:00:14Z\n\nPreparation\n- supporting_skills_used: mantle-address-registry-navigator, $mantle-risk-evaluator, $mantle-portfolio-analyst\n- address_resolution_ref: merchant_moe_router (0x...), agni_router (0x...), verified via mantle-address-registry-navigator\n- risk_report_ref: pass (low-risk swap intent)\n- portfolio_report_ref: sufficient USDC balance, current allowance to merchant_moe_router is 0\n- curated_defaults_considered: merchant_moe (tier 1), agni (tier 1)\n- quote_source: merchant_moe_router (live quote)\n- expected_output_min: 1,234.56 MNT (after 2% slippage)\n- allowance_status: insufficient for merchant_moe_router\n- approval_plan: approve 1,100 USDC (10% buffer) to merchant_moe_router\n\nProtocol Selection\n- recommended: merchant_moe\n- also_viable: agni\n- discovery_only: sushi_swap (unverified contracts)\n- rationale: merchant_moe offers best quote (1,234.56 MNT), highest recent volume, and verified router. agni is viable but quote is 1,198.42 MNT.\n- data_freshness: live metrics < 1 hour old\n- confidence: high\n\nExecution Handoff\n- recommended_calls:\n  1. approve(merchant_moe_router, 1,100 USDC)\n  2. swapExactTokensForTokens(1,000 USDC, 1,234.56 MNT, deadline, recipient)\n- calldata_inputs:\n  - spender: merchant_moe_router (0x...)\n  - amount: 1,100 USDC (raw: 1,100 * 10^6)\n  - tokenIn: USDC (0x...)\n  - tokenOut: MNT (0x...)\n  - deadline: current_time + 1,800 seconds\n  - recipient: user_wallet\n- registry_key: merchant_moe_router\n- sequencing_notes: approve first, then swap; batching possible if account supports ERC-4337\n- batched_execution_possible: yes (if smart account)\n- handoff_available: yes\n\nPost-Execution Verification Plan\n- balances_to_recheck: USDC, MNT\n- allowances_to_recheck: merchant_moe_router\n- slippage_checks: compare actual MNT received vs 1,234.56 MNT minimum\n- anomalies_to_watch: unexpected extra fees, front-running\n\nStatus\n- preflight_verdict: pass\n- readiness: ready\n- blocking_issues: none\n- next_action: Execute approve+swap via external wallet/signer; verify balances/allowances post-execution.",
+      "bare_judgment": {
+        "verdict": "FAIL",
+        "expected_hits": [],
+        "expected_misses": [
+          "Normalize the swap intent and run the DeFi pre-execution guardrails first.",
+          "Resolve verified router or quoter contracts through mantle-address-registry-navigator.",
+          "Use curated defaults and eligible live-signal ranking before choosing a route.",
+          "Pull risk evidence and allowance or portfolio evidence before producing the external execution handoff.",
+          "Keep approval scope minimal and state that execution happens externally."
+        ],
+        "fail_triggers": [
+          "Skips verified address resolution.",
+          "Skips risk evaluation or allowance evidence for an execution-ready plan.",
+          "Claims the skill executes the swap directly."
+        ],
+        "reasoning": "The model answer provides a generic DEX swap walkthrough that completely omits the required Mantle-specific execution-ready workflow. It skips verified address resolution through the mantle-address-registry-navigator, fails to run DeFi pre-execution guardrails, does not pull risk evidence or allowance/portfolio evidence, and instead claims to execute the swap directly rather than producing an external execution handoff. The answer treats this as a simple DEX interface interaction rather than the structured, evidence-based execution-ready plan that the skill requires."
+      },
+      "skill_judgment": {
+        "verdict": "PASS",
+        "expected_hits": [
+          "Normalize the swap intent and run the DeFi pre-execution guardrails first.",
+          "Resolve verified router or quoter contracts through mantle-address-registry-navigator.",
+          "Use curated defaults and eligible live-signal ranking before choosing a route.",
+          "Pull risk evidence and allowance or portfolio evidence before producing the external execution handoff.",
+          "Keep approval scope minimal and state that execution happens externally."
+        ],
+        "expected_misses": [],
+        "fail_triggers": [],
+        "reasoning": "The answer covers all expected facts: it normalizes the swap intent and runs pre-execution guardrails (Preparation section), resolves verified router contracts via mantle-address-registry-navigator (address_resolution_ref), uses curated defaults and live-signal ranking (Protocol Selection with merchant_moe and agni tiers), pulls risk and portfolio evidence (risk_report_ref and portfolio_report_ref), and keeps approval scope minimal while clearly stating execution happens externally (Execution Handoff with approve+swap calls). No fail conditions are triggered."
+      },
+      "comparison": "skill_better"
+    },
+    {
+      "id": "defi-liquidity-flow",
+      "prompt": "How should the operator plan providing liquidity on Mantle?",
+      "expected_facts": [
+        "Start from the curated liquidity defaults: Merchant Moe and Agni.",
+        "Resolve the router, quoter, or position manager through mantle-address-registry-navigator.",
+        "Use risk and allowance evidence before preparing the external execution plan.",
+        "Add post-execution checks for LP tokens or returned assets."
+      ],
+      "fail_if": [
+        "Skips verified contract resolution.",
+        "Skips risk evaluation or allowance checks.",
+        "Treats discovery-only venues as execution-ready without verification."
+      ],
+      "bare_answer": "To provide liquidity on Mantle, the operator should follow these steps:\n\n1. Choose a decentralized exchange (DEX) on Mantle, such as MantiDEX or FusionX.\n\n2. Select a trading pair to provide liquidity for, considering factors like trading volume and potential returns.\n\n3. Acquire the necessary tokens for the chosen pair. For example, if providing liquidity for ETH/USDC, obtain both ETH and USDC.\n\n4. Connect a compatible wallet (e.g., MetaMask) to the chosen DEX.\n\n5. Navigate to the liquidity provision section of the DEX.\n\n6. Enter the amount of each token to provide as liquidity. The DEX will typically require an equal value of both tokens.\n\n7. Approve the token spending if prompted by your wallet.\n\n8. Confirm the liquidity provision transaction.\n\n9. Once confirmed, you'll receive LP (Liquidity Provider) tokens representing your share of the pool.\n\n10. Monitor your position regularly, as impermanent loss can occur if the price ratio of the tokens changes significantly.\n\n11. Consider yield farming opportunities that may be available for your LP tokens to maximize returns.\n\n12. Be aware of any fees associated with providing liquidity and withdrawing your funds.\n\n13. Stay informed about Mantle network updates and any changes that might affect your liquidity provision strategy.\n\n14. Consider diversifying across multiple pools to spread risk and potentially increase returns.\n\n15. Regularly review your liquidity provision strategy and adjust as needed based on market conditions and your investment goals.\n\nRemember that providing liquidity involves risks, including impermanent loss and smart contract vulnerabilities. Always do thorough research and consider your risk tolerance before participating in liquidity provision.",
+      "skill_answer": "Mantle DeFi Pre-Execution Report\n- operation_type: add_liquidity\n- planning_mode: discovery_only\n- environment: mainnet\n- intent_summary: Provide liquidity on Mantle\n- analyzed_at_utc: 2026-03-08T04:00:14Z\n\nPreparation\n- supporting_skills_used: None\n- address_resolution_ref: None\n- risk_report_ref: None\n- portfolio_report_ref: None\n- curated_defaults_considered: merchant_moe, agni\n- quote_source: None\n- expected_output_min: None\n- allowance_status: None\n- approval_plan: None\n\nProtocol Selection\n- recommended: None\n- also_viable: None\n- discovery_only:\n  - merchant_moe: Curated Mantle liquidity default with verified router support for LP routing.\n  - agni: Curated Mantle concentrated-liquidity default with verified position-manager support.\n- rationale: Discovery-only mode due to missing token pair, amounts, and execution context.\n- data_freshness: N/A\n- confidence: low\n\nExecution Handoff\n- recommended_calls: None\n- calldata_inputs: None\n- registry_key: None\n- sequencing_notes: None\n- batched_execution_possible: None\n- handoff_available: no\n\nPost-Execution Verification Plan\n- balances_to_recheck: None\n- allowances_to_recheck: None\n- slippage_checks: None\n- anomalies_to_watch: None\n\nStatus\n- preflight_verdict: unknown\n- readiness: blocked\n- blocking_issues:\n  - Missing token pair\n  - Missing token amounts\n  - Missing execution context\n- next_action: Provide token pair, amounts, and execution context to enable execution-ready planning.",
+      "bare_judgment": {
+        "verdict": "FAIL",
+        "expected_hits": [],
+        "expected_misses": [
+          "Start from the curated liquidity defaults: Merchant Moe and Agni.",
+          "Resolve the router, quoter, or position manager through mantle-address-registry-navigator.",
+          "Use risk and allowance evidence before preparing the external execution plan.",
+          "Add post-execution checks for LP tokens or returned assets."
+        ],
+        "fail_triggers": [
+          "Skips verified contract resolution.",
+          "Skips risk evaluation or allowance checks."
+        ],
+        "reasoning": "The model answer provides a generic DEX liquidity provision workflow that completely ignores the Mantle-specific requirements. It skips the mandatory verified contract resolution through mantle-address-registry-navigator, omits the required risk and allowance evidence checks before execution, and fails to mention the curated liquidity defaults (Merchant Moe and Agni) or post-execution verification steps. The answer treats discovery-only venues as execution-ready without the verification that the skill requires, triggering both fail conditions."
+      },
+      "skill_judgment": {
+        "verdict": "PASS",
+        "expected_hits": [
+          "Start from the curated liquidity defaults: Merchant Moe and Agni.",
+          "Resolve the router, quoter, or position manager through mantle-address-registry-navigator.",
+          "Use risk and allowance evidence before preparing the external execution plan.",
+          "Add post-execution checks for LP tokens or returned assets."
+        ],
+        "expected_misses": [],
+        "fail_triggers": [],
+        "reasoning": "The answer correctly identifies the curated defaults (Merchant Moe and Agni), acknowledges the need for contract resolution through the registry, references risk and allowance evaluation as part of the planning process, and includes post-execution verification steps. While the answer is in a structured report format rather than prose, it covers all required expected facts without triggering any fail conditions. The discovery-only mode and blocking issues are appropriate given missing execution context, which aligns with the skill's emphasis on verification before execution."
+      },
+      "comparison": "skill_better"
+    }
+  ]
+}

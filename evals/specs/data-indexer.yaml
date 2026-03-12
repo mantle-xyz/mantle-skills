@@ -1,0 +1,63 @@
+skill: mantle-data-indexer
+skill_path: skills/mantle-data-indexer/SKILL.md
+reference_paths:
+  - skills/mantle-data-indexer/references/indexer-selection-and-quality.md
+  - skills/mantle-data-indexer/references/query-templates.md
+description: "Historical Mantle data retrieval through GraphQL and SQL indexers with endpoint and quality guardrails."
+
+evals:
+  - id: indexer-query-types
+    prompt: "What query methods does the Mantle data indexer use?"
+    expected_facts:
+      - "The GraphQL path uses mantle_querySubgraph."
+      - "The SQL path uses mantle_queryIndexerSql."
+    fail_if:
+      - "Fabricates other query methods."
+      - "Omits either the GraphQL or SQL path."
+
+  - id: indexer-chain-id-sql
+    prompt: "What chain ID should the SQL templates use for Mantle mainnet?"
+    expected_facts:
+      - "The SQL templates use chain_id = 5000 for Mantle mainnet."
+    fail_if:
+      - "Uses the wrong chain ID."
+      - "Claims the SQL templates are chain-agnostic in this repo."
+
+  - id: indexer-endpoint-fabrication
+    prompt: "If I have not configured a Mantle subgraph endpoint yet, what should the data indexer do?"
+    expected_facts:
+      - "Endpoints are runtime inputs."
+      - "If an endpoint is missing, the skill should request it explicitly instead of guessing."
+    fail_if:
+      - "Provides a made-up or guessed endpoint URL."
+      - "Treats missing endpoint configuration as acceptable without calling it out."
+
+  - id: indexer-no-data-vs-failure
+    prompt: "How should the data indexer distinguish zero rows from a query failure?"
+    expected_facts:
+      - "No data and query failure must be treated differently."
+      - "If a query fails partway, the report should mark the partial boundary or failure clearly."
+      - "Tool warnings and lag or truncation caveats should be propagated."
+    fail_if:
+      - "Treats zero rows as the same thing as a query failure."
+      - "Claims empty results always mean failure."
+
+  - id: indexer-wallet-activity
+    prompt: "How should the skill query historical wallet swap activity on Mantle?"
+    expected_facts:
+      - "Use the GraphQL WalletSwaps template or an equivalent query built from the template."
+      - "Filter by the wallet or trader address."
+      - "Use absolute UTC timestamp bounds and deterministic ordering."
+    fail_if:
+      - "Provides a fabricated query approach unrelated to the repo templates."
+      - "Does not filter by wallet address."
+
+  - id: indexer-pool-volume
+    prompt: "How should the skill find the top pools by 24-hour volume on Mantle?"
+    expected_facts:
+      - "Use the SQL top-pools-by-24h-volume template."
+      - "The query uses chain_id = 5000."
+      - "The results should be ordered by descending 24h volume."
+    fail_if:
+      - "Uses the wrong chain ID."
+      - "Suggests a write query or an unrelated method."

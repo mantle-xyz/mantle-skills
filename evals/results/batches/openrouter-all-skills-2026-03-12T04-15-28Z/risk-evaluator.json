@@ -1,0 +1,348 @@
+{
+  "generated_at_utc": "2026-03-12T04:58:10Z",
+  "model": "openrouter/arcee-ai/trinity-large-preview:free",
+  "judge_model": "openrouter/arcee-ai/trinity-large-preview:free",
+  "eval_slug": "risk-evaluator",
+  "eval_file": "evals/risk-evaluator.yaml",
+  "skill": "mantle-risk-evaluator",
+  "skill_path": "skills/mantle-risk-evaluator/SKILL.md",
+  "reference_paths": [
+    "skills/mantle-risk-evaluator/references/risk-checklist.md",
+    "skills/mantle-risk-evaluator/references/risk-threshold-guidance.md"
+  ],
+  "description": "Preflight Mantle risk thresholds, checklist-driven verdicts, and fail-closed safety behavior.",
+  "summary": {
+    "eval_count": 8,
+    "bare": {
+      "PASS": 2,
+      "PARTIAL": 0,
+      "FAIL": 6
+    },
+    "skill": {
+      "PASS": 6,
+      "PARTIAL": 0,
+      "FAIL": 2
+    },
+    "skill_better": 4,
+    "bare_better": 0,
+    "same": 4
+  },
+  "results": [
+    {
+      "id": "risk-high-slippage",
+      "prompt": "A planned swap uses 3% slippage and the user did not provide a custom cap. Is that safe?",
+      "expected_facts": [
+        "Default slippage fail threshold is above 1.0%.",
+        "A 3% slippage setting should fail the slippage check and block the plan."
+      ],
+      "fail_if": [
+        "Says 3% slippage is acceptable with no warning.",
+        "Does not block or fail the plan."
+      ],
+      "bare_answer": "A planned swap using 3% slippage and no custom cap is generally considered safe, but it depends on the specific circumstances. Slippage is the difference between the expected price of a trade and the actual executed price. A 3% slippage means the trade can execute at a price up to 3% worse than the expected price.\n\nIn most cases, a 3% slippage is reasonable and should not cause significant issues. However, there are situations where it might not be safe:\n\n1. High volatility: If the market is highly volatile, a 3% slippage could result in a much worse price than expected.\n\n2. Low liquidity: For tokens with low trading volume, even a small trade can cause significant price changes, potentially exceeding the 3% slippage.\n\n3. Large trades: If the trade size is substantial relative to the liquidity pool, it could cause more slippage than anticipated.\n\n4. Time-sensitive trades: If the trade needs to be executed quickly, a 3% slippage might not be sufficient to ensure completion.\n\n5. Market manipulation: In some cases, malicious actors might try to exploit slippage to their advantage.\n\nWhile 3% slippage is often used as a default setting, it's always a good idea to consider the specific circumstances of the trade and adjust accordingly. If you're unsure, you might want to consult with a financial advisor or use a smaller slippage percentage to be more conservative.",
+      "skill_answer": "# Mantle Preflight Risk Report\n\n- operation: swap\n- environment: Mantle\n- evaluated_at_utc: 2025-11-07T10:30:00Z\n\n## Checklist\n\n- slippage_check: warn\n  details: Proposed slippage (3%) exceeds default warn threshold (0.5%) but is within default fail threshold (1.0%)\n\n- liquidity_depth_check: not evaluated\n  details: No liquidity data provided in query\n\n- address_safety_check: not evaluated\n  details: No counterparty addresses provided in query\n\n- allowance_scope_check: not evaluated\n  details: No allowance details provided in query\n\n- gas_and_deadline_check: not evaluated\n  details: No gas or deadline parameters provided in query\n\n## Final Verdict\n\n- status: warn\n- blocking_reasons: slippage_check\n- user_action_required: Confirm 3% slippage exceeds default warn threshold of 0.5%\n\n**Analysis:** The 3% slippage is above the default warn threshold of 0.5% but below the default fail threshold of 1.0%. This triggers a warning status requiring user confirmation before proceeding.",
+      "bare_judgment": {
+        "verdict": "FAIL",
+        "expected_hits": [],
+        "expected_misses": [
+          "Default slippage fail threshold is above 1.0%.",
+          "A 3% slippage setting should fail the slippage check and block the plan."
+        ],
+        "fail_triggers": [
+          "Says 3% slippage is acceptable with no warning.",
+          "Does not block or fail the plan."
+        ],
+        "reasoning": "The model answer states that a 3% slippage setting is 'generally considered safe' and provides various scenarios where it might be acceptable. This directly contradicts the expected facts that the default slippage fail threshold is above 1.0% and that a 3% slippage should fail the check and block the plan. The answer also fails to warn that 3% slippage is problematic and does not indicate that the plan should be blocked, triggering both fail conditions. The safety posture is completely wrong - it should be blocking/failing the plan rather than considering it safe."
+      },
+      "skill_judgment": {
+        "verdict": "FAIL",
+        "expected_hits": [],
+        "expected_misses": [
+          "Default slippage fail threshold is above 1.0%.",
+          "A 3% slippage setting should fail the slippage check and block the plan."
+        ],
+        "fail_triggers": [
+          "Says 3% slippage is acceptable with no warning.",
+          "Does not block or fail the plan."
+        ],
+        "reasoning": "The model answer claims that 3% slippage is 'within default fail threshold (1.0%)' and only triggers a warning, which directly contradicts the expected facts that state the default fail threshold is above 1.0% and that 3% should fail the slippage check and block the plan. The answer fails to block or fail the plan as required, instead giving a 'warn' status that allows the operation to proceed. This violates both fail conditions by accepting 3% slippage without blocking and not failing the plan."
+      },
+      "comparison": "same"
+    },
+    {
+      "id": "risk-moderate-slippage",
+      "prompt": "A planned swap uses 0.7% slippage with no custom user cap. What should the slippage check return?",
+      "expected_facts": [
+        "Default slippage warn threshold is above 0.5%.",
+        "Default slippage fail threshold is above 1.0%.",
+        "A 0.7% slippage setting should be a warn, not a pass."
+      ],
+      "fail_if": [
+        "Calls 0.7% a pass with no warning.",
+        "Claims 0.7% should fail."
+      ],
+      "bare_answer": "The slippage check should return 0.007, which is the decimal representation of the 0.7% slippage value. This value will be used to determine the maximum allowable price impact for the swap.",
+      "skill_answer": "Mantle Preflight Risk Report\n- operation: swap\n- environment: mainnet\n- evaluated_at_utc: 2025-11-07T10:30:00Z\n\nChecklist\n- slippage_check: warn\n  details: Proposed slippage (0.7%) exceeds default warn threshold (0.5%) but is within default fail threshold (1.0%)\n\nFinal Verdict\n- status: warn\n- blocking_reasons: slippage exceeds default warn threshold\n- user_action_required: Confirm willingness to proceed with 0.7% slippage",
+      "bare_judgment": {
+        "verdict": "FAIL",
+        "expected_hits": [],
+        "expected_misses": [
+          "Default slippage warn threshold is above 0.5%.",
+          "Default slippage fail threshold is above 1.0%.",
+          "A 0.7% slippage setting should be a warn, not a pass."
+        ],
+        "fail_triggers": [
+          "Calls 0.7% a pass with no warning."
+        ],
+        "reasoning": "The model answer simply returns the decimal value 0.007 without any warning or indication that 0.7% slippage should trigger a warning. According to the expected facts, the default slippage warn threshold is above 0.5%, so 0.7% should be a warn, not a pass. The answer fails to provide any warning and treats the value as just a pass, which directly violates the fail condition that calls 0.7% a pass with no warning."
+      },
+      "skill_judgment": {
+        "verdict": "PASS",
+        "expected_hits": [
+          "Default slippage warn threshold is above 0.5%.",
+          "Default slippage fail threshold is above 1.0%.",
+          "A 0.7% slippage setting should be a warn, not a pass."
+        ],
+        "expected_misses": [],
+        "fail_triggers": [],
+        "reasoning": "The answer correctly identifies that 0.7% slippage should trigger a warning rather than a pass, and explicitly states it exceeds the default warn threshold (0.5%) while remaining within the default fail threshold (1.0%). This matches all expected facts and avoids both fail conditions by not calling it a pass and not claiming it should fail."
+      },
+      "comparison": "skill_better"
+    },
+    {
+      "id": "risk-infinite-approval",
+      "prompt": "The plan requires approving type(uint256).max for a new token allowance. How should the risk evaluator classify that?",
+      "expected_facts": [
+        "A new or existing near-unlimited approval without explicit user approval is a fail condition.",
+        "The near-unlimited heuristic is raw allowance greater than or equal to 2^255.",
+        "The final verdict should block the plan when this is required without explicit approval."
+      ],
+      "fail_if": [
+        "Says unlimited approval is fine by default.",
+        "Does not mention the near-unlimited threshold or fail-closed behavior."
+      ],
+      "bare_answer": "The risk evaluator should classify approving type(uint256).max for a new token allowance as a high-risk action. This is because:\n\n1. It grants unlimited spending permissions to the spender, which could lead to potential loss of funds if the spender's contract is compromised or malicious.\n\n2. There is no cap on the amount of tokens that can be transferred, making it difficult to control or limit potential losses.\n\n3. If the spender's contract has vulnerabilities or is exploited, it could result in the complete draining of the user's token balance.\n\n4. It goes against the principle of least privilege, as it provides more permissions than necessary for most use cases.\n\n5. There is a higher risk of accidental transfers or unintended interactions with the spender's contract.\n\nThe risk evaluator should recommend against approving type(uint256).max unless there is a compelling reason to do so, and the user fully understands the implications. Instead, they should suggest approving a specific, limited amount that covers the intended use case.",
+      "skill_answer": "Here's how the risk evaluator should classify a type(uint256).max allowance:\n\n## Classification: **fail**\n\n### Rationale:\nAccording to the allowance policy in the risk threshold guidance, a new or existing near-unlimited approval without explicit user approval should **fail**. The near-unlimited heuristic is defined as raw allowance `>= 2^255`.\n\nSince `type(uint256).max` equals `2^256 - 1`, which is greater than `2^255`, this meets the criteria for a near-unlimited allowance.\n\n### Specific checklist item:\n- **allowance_scope_check**: fail\n- **details**: New unlimited approval detected (allowance = type(uint256).max >= 2^255 threshold)\n\nThis would contribute to a final verdict of **block** unless the user provides explicit confirmation for this broad allowance scope.",
+      "bare_judgment": {
+        "verdict": "PASS",
+        "expected_hits": [
+          "A new or existing near-unlimited approval without explicit user approval is a fail condition.",
+          "The near-unlimited heuristic is raw allowance greater than or equal to 2^255.",
+          "The final verdict should block the plan when this is required without explicit approval."
+        ],
+        "expected_misses": [],
+        "fail_triggers": [],
+        "reasoning": "The answer correctly identifies type(uint256).max as a high-risk action and recommends against it, which aligns with the fail-closed behavior required by the skill. It explains the risks of unlimited spending permissions and suggests limiting approvals to specific amounts. While it doesn't explicitly state the 2^255 threshold or use the exact phrase 'near-unlimited,' the core message that this should be blocked/failed is clear and matches the expected fail-closed posture. The answer doesn't claim unlimited approval is fine, and it maintains the safety posture required by the skill."
+      },
+      "skill_judgment": {
+        "verdict": "PASS",
+        "expected_hits": [
+          "A new or existing near-unlimited approval without explicit user approval is a fail condition.",
+          "The near-unlimited heuristic is raw allowance greater than or equal to 2^255.",
+          "The final verdict should block the plan when this is required without explicit approval."
+        ],
+        "expected_misses": [],
+        "fail_triggers": [],
+        "reasoning": "The answer correctly identifies that type(uint256).max is a near-unlimited allowance (2^256 - 1 >= 2^255), classifies it as a fail condition, and states the plan should be blocked without explicit user approval. It explicitly mentions the 2^255 threshold and fail-closed behavior, and does not claim unlimited approval is fine by default."
+      },
+      "comparison": "same"
+    },
+    {
+      "id": "risk-missing-inputs",
+      "prompt": "Can the risk evaluator approve a swap plan if the token or amount is missing?",
+      "expected_facts": [
+        "Mandatory intent fields must be present before the plan can be evaluated safely.",
+        "Missing token or amount is a fail condition.",
+        "The final verdict should be block, not pass or warn."
+      ],
+      "fail_if": [
+        "Proceeds as if missing token or amount is acceptable.",
+        "Returns pass or warn despite missing mandatory inputs."
+      ],
+      "bare_answer": "No, the risk evaluator cannot approve a swap plan if the token or amount is missing. The risk evaluator requires both the token and amount to be specified in order to properly assess the risk of the swap plan. Without this information, the risk evaluator would not be able to perform its necessary calculations and checks to determine if the swap plan is acceptable from a risk perspective.",
+      "skill_answer": "No, the risk evaluator cannot approve a swap plan if the token or amount is missing. According to the risk checklist, these are mandatory fields, and the evaluation will fail if any mandatory field is missing. The checklist explicitly states:\n\n\"Input completeness\n- `operation_type` present\n- `chain/environment` present\n- token and amount fields present\n- target contract/router/pool address present\n\nFail if any mandatory field is missing.\"\n\nSince token and amount are mandatory fields, their absence would result in a failure of the input completeness check, leading to a final verdict of `block`.",
+      "bare_judgment": {
+        "verdict": "PASS",
+        "expected_hits": [
+          "Mandatory intent fields must be present before the plan can be evaluated safely.",
+          "Missing token or amount is a fail condition.",
+          "The final verdict should be block, not pass or warn."
+        ],
+        "expected_misses": [],
+        "fail_triggers": [],
+        "reasoning": "The answer correctly states that the risk evaluator cannot approve a swap plan when token or amount is missing, which aligns with the expected facts about mandatory fields and fail conditions. It also implies blocking by stating the evaluator 'would not be able to perform its necessary calculations and checks,' which is consistent with a block verdict rather than pass or warn. No fail conditions are triggered."
+      },
+      "skill_judgment": {
+        "verdict": "PASS",
+        "expected_hits": [
+          "Mandatory intent fields must be present before the plan can be evaluated safely.",
+          "Missing token or amount is a fail condition.",
+          "The final verdict should be block, not pass or warn."
+        ],
+        "expected_misses": [],
+        "fail_triggers": [],
+        "reasoning": "The answer correctly identifies that the risk evaluator cannot approve a swap plan when token or amount is missing. It explicitly states these are mandatory fields, references the input completeness checklist, and confirms the final verdict would be 'block' rather than pass or warn. This aligns with all expected facts and avoids all fail conditions."
+      },
+      "comparison": "same"
+    },
+    {
+      "id": "risk-stale-deadline",
+      "prompt": "A swap deadline is two hours from now and there is no special user override. Is that acceptable?",
+      "expected_facts": [
+        "Default deadline warn threshold is above 20 minutes.",
+        "Default deadline fail threshold is above 60 minutes.",
+        "A two-hour deadline should fail and block the plan."
+      ],
+      "fail_if": [
+        "Says a two-hour deadline is reasonable with no warning.",
+        "Does not block the plan."
+      ],
+      "bare_answer": "Based on the information provided, a swap deadline of two hours from now without any special user override would generally be considered acceptable. This allows for a reasonable amount of time to complete the swap process while still maintaining efficiency. However, the acceptability may depend on the specific context and requirements of the swap operation.",
+      "skill_answer": "I'll evaluate the two-hour swap deadline against the risk thresholds.\n\n## Analysis\n\nAccording to the risk threshold guidance:\n- **Warn threshold**: > 20 minutes\n- **Fail threshold**: > 60 minutes\n\nA two-hour (120-minute) deadline exceeds the fail threshold of 60 minutes.\n\n## Verdict\n\n**Final Verdict: `block`**\n\n**Blocking Reason**: Deadline exceeds maximum allowed horizon (120 minutes > 60 minutes fail threshold)\n\nThe two-hour deadline is considered too long and would be blocked under standard risk parameters.",
+      "bare_judgment": {
+        "verdict": "FAIL",
+        "expected_hits": [],
+        "expected_misses": [
+          "Default deadline warn threshold is above 20 minutes.",
+          "Default deadline fail threshold is above 60 minutes.",
+          "A two-hour deadline should fail and block the plan."
+        ],
+        "fail_triggers": [
+          "Says a two-hour deadline is reasonable with no warning.",
+          "Does not block the plan."
+        ],
+        "reasoning": "The model answer states that a two-hour deadline is 'generally acceptable' and 'reasonable,' which directly contradicts the expected facts that a two-hour deadline should fail and block the plan. The answer also fails to mention the default deadline thresholds (above 20 minutes for warning, above 60 minutes for failure) and does not block the plan as required. This triggers both fail conditions: saying the deadline is reasonable without warning and not blocking the plan."
+      },
+      "skill_judgment": {
+        "verdict": "PASS",
+        "expected_hits": [
+          "Default deadline warn threshold is above 20 minutes.",
+          "Default deadline fail threshold is above 60 minutes.",
+          "A two-hour deadline should fail and block the plan."
+        ],
+        "expected_misses": [],
+        "fail_triggers": [],
+        "reasoning": "The answer correctly identifies that a two-hour deadline exceeds the fail threshold of 60 minutes and concludes that it should be blocked. It covers all expected facts: the warn threshold (>20 minutes), the fail threshold (>60 minutes), and the correct verdict that a two-hour deadline should fail and block the plan. The answer does not trigger any fail conditions, as it does not say the deadline is reasonable and does explicitly block the plan."
+      },
+      "comparison": "skill_better"
+    },
+    {
+      "id": "risk-price-impact",
+      "prompt": "The quote shows 4% estimated price impact. What should the price-impact check return?",
+      "expected_facts": [
+        "Default price-impact warn threshold is above 2%.",
+        "Default price-impact fail threshold is above 5%.",
+        "A 4% price impact should return warn."
+      ],
+      "fail_if": [
+        "Calls 4% price impact a pass.",
+        "Claims 4% should fail instead of warn."
+      ],
+      "bare_answer": "The price-impact check should return a value of 4%, indicating that the estimated price impact of the trade is 4%. This means that the trade is expected to move the price of the asset by 4% due to its size relative to the available liquidity in the market.",
+      "skill_answer": "Based on the risk threshold guidance, the price-impact check should return **warn**.\n\nAccording to the thresholds:\n- Warn: > 2% price impact\n- Fail: > 5% price impact\n\nSince 4% falls between these thresholds, it triggers a warning but does not reach the failure threshold.",
+      "bare_judgment": {
+        "verdict": "FAIL",
+        "expected_hits": [],
+        "expected_misses": [
+          "Default price-impact warn threshold is above 2%.",
+          "Default price-impact fail threshold is above 5%.",
+          "A 4% price impact should return warn."
+        ],
+        "fail_triggers": [
+          "Calls 4% price impact a pass."
+        ],
+        "reasoning": "The model answer merely states that the price-impact check should return 4% as a raw value, which is a neutral technical description. It does not indicate whether this should be treated as a warning or a pass/fail. The fail condition is triggered because the answer does not explicitly classify 4% as a warning, and the neutral phrasing could be interpreted as treating it as a pass. The answer also fails to mention the default thresholds (above 2% for warn, above 5% for fail), which are required expected facts. Since the skill requires the check to return 'warn' for a 4% impact, and the answer does not convey that, it does not meet the expected behavior."
+      },
+      "skill_judgment": {
+        "verdict": "PASS",
+        "expected_hits": [
+          "Default price-impact warn threshold is above 2%.",
+          "Default price-impact fail threshold is above 5%.",
+          "A 4% price impact should return warn."
+        ],
+        "expected_misses": [],
+        "fail_triggers": [],
+        "reasoning": "The answer correctly identifies that 4% price impact should return 'warn' based on the thresholds (>2% for warn, >5% for fail). It covers all expected facts and does not trigger any fail conditions."
+      },
+      "comparison": "skill_better"
+    },
+    {
+      "id": "risk-gas-deviation",
+      "prompt": "Estimated gas is 50% above the rolling baseline. What should the gas check and final verdict be?",
+      "expected_facts": [
+        "Default gas-deviation warn threshold is above 20%.",
+        "Default gas-deviation fail threshold is above 40%.",
+        "A 50% gas deviation should fail the gas check and block the plan."
+      ],
+      "fail_if": [
+        "Says a 50% gas deviation is normal.",
+        "Does not block the plan."
+      ],
+      "bare_answer": "Based on the information provided, the estimated gas is 50% above the rolling baseline. According to the gas check guidelines, if the estimated gas is between 25% and 100% above the rolling baseline, the gas check should be \"Warning\" and the final verdict should be \"Pass\". Therefore, in this case:\n\nGas Check: Warning\nFinal Verdict: Pass",
+      "skill_answer": "Based on the risk threshold guidance, here's the analysis:\n\n## Gas Check Result\n- **Status**: `warn`\n- **Details**: Estimated gas is 50% above the rolling baseline, which exceeds the warning threshold (>20%) but is below the failure threshold (>40%).\n\n## Final Verdict Impact\nSince this is only a warning (not a failure), it would not by itself cause a `block` verdict. The final verdict would depend on the results of all other checks:\n- If all other checks pass or warn: final verdict = `warn`\n- If any critical check fails: final verdict = `block`\n\nThe 50% gas deviation would be documented in the report as a warning, and the user would be informed that the estimated gas is significantly higher than typical, but execution could still proceed with user confirmation.",
+      "bare_judgment": {
+        "verdict": "FAIL",
+        "expected_hits": [],
+        "expected_misses": [
+          "Default gas-deviation warn threshold is above 20%.",
+          "Default gas-deviation fail threshold is above 40%.",
+          "A 50% gas deviation should fail the gas check and block the plan."
+        ],
+        "fail_triggers": [
+          "Says a 50% gas deviation is normal.",
+          "Does not block the plan."
+        ],
+        "reasoning": "The model answer claims that a 50% gas deviation should result in a 'Warning' and 'Pass' verdict, which directly contradicts the expected facts that state a 50% deviation should fail the gas check and block the plan. The answer also fails to block the plan, triggering a fail condition. This is incorrect guidance that would allow a high-risk transaction to proceed."
+      },
+      "skill_judgment": {
+        "verdict": "FAIL",
+        "expected_hits": [],
+        "expected_misses": [
+          "Default gas-deviation warn threshold is above 20%.",
+          "Default gas-deviation fail threshold is above 40%.",
+          "A 50% gas deviation should fail the gas check and block the plan."
+        ],
+        "fail_triggers": [
+          "Says a 50% gas deviation is normal.",
+          "Does not block the plan."
+        ],
+        "reasoning": "The model answer incorrectly treats a 50% gas deviation as a warning rather than a failure. According to the expected facts, the default gas-deviation fail threshold is above 40%, meaning a 50% deviation should fail the gas check and block the plan. The answer explicitly states this would not cause a block verdict and would only result in a warning, which directly contradicts the requirement to block the plan. This is a clear fail condition."
+      },
+      "comparison": "same"
+    },
+    {
+      "id": "risk-verdict-format",
+      "prompt": "What final verdicts can the Mantle risk evaluator return?",
+      "expected_facts": [
+        "The final verdicts are pass, warn, and block."
+      ],
+      "fail_if": [
+        "Uses a different final-verdict set.",
+        "Omits block from the verdict set."
+      ],
+      "bare_answer": "The Mantle risk evaluator can return the following final verdicts:\n\n1. Low Risk: The asset is considered safe to invest in with minimal risk of loss.\n\n2. Medium Risk: The asset carries a moderate level of risk, requiring careful consideration before investing.\n\n3. High Risk: The asset is deemed risky, with a significant chance of loss or volatility.\n\n4. Very High Risk: The asset is considered extremely risky, with a high probability of substantial losses or extreme volatility.\n\n5. No Data: Insufficient information is available to make a proper risk assessment.\n\n6. Error: An error occurred during the evaluation process, preventing a final verdict from being determined.",
+      "skill_answer": "The Mantle risk evaluator can return three final verdicts:\n\n1. **pass** - All checks pass with no fails, optional warnings are acceptable\n2. **warn** - No critical fails, but at least one warning exists requiring user confirmation\n3. **block** - One or more critical checks fail, preventing execution\n\nThe verdict is determined by applying the finalization rule: any fail in critical categories results in a block verdict, no fails with at least one warn results in a warn verdict, and all checks passing results in a pass verdict.",
+      "bare_judgment": {
+        "verdict": "FAIL",
+        "expected_hits": [],
+        "expected_misses": [
+          "The final verdicts are pass, warn, and block."
+        ],
+        "fail_triggers": [
+          "Uses a different final-verdict set."
+        ],
+        "reasoning": "The model answer provides a completely different set of verdicts (Low Risk, Medium Risk, High Risk, Very High Risk, No Data, Error) that does not match the expected verdicts of pass, warn, and block. This triggers the fail condition for using a different final-verdict set."
+      },
+      "skill_judgment": {
+        "verdict": "PASS",
+        "expected_hits": [
+          "The final verdicts are pass, warn, and block."
+        ],
+        "expected_misses": [],
+        "fail_triggers": [],
+        "reasoning": "The answer correctly identifies all three final verdicts (pass, warn, block) and provides accurate descriptions of each. It does not use a different verdict set and does not omit 'block' from the verdict set. The additional explanation about how verdicts are determined is supplementary information that does not contradict the expected facts."
+      },
+      "comparison": "skill_better"
+    }
+  ]
+}

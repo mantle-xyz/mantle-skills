@@ -1,0 +1,87 @@
+{
+  "generated_at_utc": "2026-03-12T05:13:23Z",
+  "label": "openrouter-all-skills",
+  "batch_dir": "./results/batches/openrouter-all-skills-2026-03-12T04-15-28Z",
+  "models": [
+    "openrouter/arcee-ai/trinity-large-preview:free"
+  ],
+  "model": "openrouter/arcee-ai/trinity-large-preview:free",
+  "judge_model": "openrouter/arcee-ai/trinity-large-preview:free",
+  "evals_dir": "./evals",
+  "runner": "./runner/run.sh",
+  "skills_total": 10,
+  "skills_succeeded": 10,
+  "skills_failed": 0,
+  "runs": {
+    "address-registry": {
+      "status": "success",
+      "eval_file": "./evals/address-registry.yaml",
+      "output_path": "./results/batches/openrouter-all-skills-2026-03-12T04-15-28Z/address-registry.json",
+      "stdout_log": "./results/batches/openrouter-all-skills-2026-03-12T04-15-28Z/logs/address-registry.stdout.log",
+      "stderr_log": "./results/batches/openrouter-all-skills-2026-03-12T04-15-28Z/logs/address-registry.stderr.log"
+    },
+    "data-indexer": {
+      "status": "success",
+      "eval_file": "./evals/data-indexer.yaml",
+      "output_path": "./results/batches/openrouter-all-skills-2026-03-12T04-15-28Z/data-indexer.json",
+      "stdout_log": "./results/batches/openrouter-all-skills-2026-03-12T04-15-28Z/logs/data-indexer.stdout.log",
+      "stderr_log": "./results/batches/openrouter-all-skills-2026-03-12T04-15-28Z/logs/data-indexer.stderr.log"
+    },
+    "defi-operator": {
+      "status": "success",
+      "eval_file": "./evals/defi-operator.yaml",
+      "output_path": "./results/batches/openrouter-all-skills-2026-03-12T04-15-28Z/defi-operator.json",
+      "stdout_log": "./results/batches/openrouter-all-skills-2026-03-12T04-15-28Z/logs/defi-operator.stdout.log",
+      "stderr_log": "./results/batches/openrouter-all-skills-2026-03-12T04-15-28Z/logs/defi-operator.stderr.log"
+    },
+    "network-primer": {
+      "status": "success",
+      "eval_file": "./evals/network-primer.yaml",
+      "output_path": "./results/batches/openrouter-all-skills-2026-03-12T04-15-28Z/network-primer.json",
+      "stdout_log": "./results/batches/openrouter-all-skills-2026-03-12T04-15-28Z/logs/network-primer.stdout.log",
+      "stderr_log": "./results/batches/openrouter-all-skills-2026-03-12T04-15-28Z/logs/network-primer.stderr.log"
+    },
+    "portfolio-analyst": {
+      "status": "success",
+      "eval_file": "./evals/portfolio-analyst.yaml",
+      "output_path": "./results/batches/openrouter-all-skills-2026-03-12T04-15-28Z/portfolio-analyst.json",
+      "stdout_log": "./results/batches/openrouter-all-skills-2026-03-12T04-15-28Z/logs/portfolio-analyst.stdout.log",
+      "stderr_log": "./results/batches/openrouter-all-skills-2026-03-12T04-15-28Z/logs/portfolio-analyst.stderr.log"
+    },
+    "readonly-debugger": {
+      "status": "success",
+      "eval_file": "./evals/readonly-debugger.yaml",
+      "output_path": "./results/batches/openrouter-all-skills-2026-03-12T04-15-28Z/readonly-debugger.json",
+      "stdout_log": "./results/batches/openrouter-all-skills-2026-03-12T04-15-28Z/logs/readonly-debugger.stdout.log",
+      "stderr_log": "./results/batches/openrouter-all-skills-2026-03-12T04-15-28Z/logs/readonly-debugger.stderr.log"
+    },
+    "risk-evaluator": {
+      "status": "success",
+      "eval_file": "./evals/risk-evaluator.yaml",
+      "output_path": "./results/batches/openrouter-all-skills-2026-03-12T04-15-28Z/risk-evaluator.json",
+      "stdout_log": "./results/batches/openrouter-all-skills-2026-03-12T04-15-28Z/logs/risk-evaluator.stdout.log",
+      "stderr_log": "./results/batches/openrouter-all-skills-2026-03-12T04-15-28Z/logs/risk-evaluator.stderr.log"
+    },
+    "smart-contract-deployer": {
+      "status": "success",
+      "eval_file": "./evals/smart-contract-deployer.yaml",
+      "output_path": "./results/batches/openrouter-all-skills-2026-03-12T04-15-28Z/smart-contract-deployer.json",
+      "stdout_log": "./results/batches/openrouter-all-skills-2026-03-12T04-15-28Z/logs/smart-contract-deployer.stdout.log",
+      "stderr_log": "./results/batches/openrouter-all-skills-2026-03-12T04-15-28Z/logs/smart-contract-deployer.stderr.log"
+    },
+    "smart-contract-developer": {
+      "status": "success",
+      "eval_file": "./evals/smart-contract-developer.yaml",
+      "output_path": "./results/batches/openrouter-all-skills-2026-03-12T04-15-28Z/smart-contract-developer.json",
+      "stdout_log": "./results/batches/openrouter-all-skills-2026-03-12T04-15-28Z/logs/smart-contract-developer.stdout.log",
+      "stderr_log": "./results/batches/openrouter-all-skills-2026-03-12T04-15-28Z/logs/smart-contract-developer.stderr.log"
+    },
+    "tx-simulator": {
+      "status": "success",
+      "eval_file": "./evals/tx-simulator.yaml",
+      "output_path": "./results/batches/openrouter-all-skills-2026-03-12T04-15-28Z/tx-simulator.json",
+      "stdout_log": "./results/batches/openrouter-all-skills-2026-03-12T04-15-28Z/logs/tx-simulator.stdout.log",
+      "stderr_log": "./results/batches/openrouter-all-skills-2026-03-12T04-15-28Z/logs/tx-simulator.stderr.log"
+    }
+  }
+}

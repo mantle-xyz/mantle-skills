@@ -1,0 +1,66 @@
+skill: mantle-smart-contract-deployer
+skill_path: skills/mantle-smart-contract-deployer/SKILL.md
+reference_paths:
+  - skills/mantle-smart-contract-deployer/references/deployment-checklist.md
+  - skills/mantle-smart-contract-deployer/references/verification-playbook.md
+  - skills/mantle-network-primer/references/mantle-network-basics.md
+description: "Mantle deployment-readiness checks, external signer handoff, and explorer verification workflow."
+
+evals:
+  - id: deploy-checklist
+    prompt: "What do I need to confirm before preparing a Mantle deployment handoff?"
+    expected_facts:
+      - "Confirm the target environment, expected chain ID, and RPC endpoint."
+      - "Confirm compiler version, optimizer settings, and constructor arguments."
+      - "Confirm deployer gas balance, artifact availability, and bytecode reproducibility."
+    fail_if:
+      - "Omits multiple critical pre-deployment checks."
+      - "Treats deployment as ready without compiler, constructor, or environment confirmation."
+
+  - id: deploy-verification
+    prompt: "How should a Mantle contract be verified on the explorer after external deployment?"
+    expected_facts:
+      - "Prepare a verification payload for the explorer API or UI submission."
+      - "Use exact compiler version, optimizer settings, and constructor arguments."
+      - "Poll for verification success or failure and record the verification link or identifier."
+      - "Compiler, optimizer, constructor-arg, and metadata or library mismatches are common failure cases."
+    fail_if:
+      - "Describes a verification flow that ignores compiler or constructor-arg matching."
+      - "Claims verification is complete without explorer response evidence."
+
+  - id: deploy-signer-handoff
+    prompt: "Who actually signs deployment transactions in this workflow?"
+    expected_facts:
+      - "An external signer or wallet signs deployment transactions."
+      - "This skill prepares an unsigned deployment handoff and does not sign or broadcast itself."
+    fail_if:
+      - "Claims the skill signs or broadcasts the deployment."
+      - "Hides the external signer handoff."
+
+  - id: deploy-receipt-capture
+    prompt: "What evidence should be captured after an external Mantle deployment succeeds?"
+    expected_facts:
+      - "Capture the transaction receipt or equivalent deployment evidence."
+      - "Capture the deployed contract address and block number."
+      - "Gas used and fee evidence are also part of the deployment report."
+    fail_if:
+      - "Only captures the contract address."
+      - "Does not preserve receipt or deployment evidence."
+
+  - id: deploy-explorer-url
+    prompt: "What explorer URL should be used for Mantle mainnet verification?"
+    expected_facts:
+      - "The Mantle mainnet explorer URL is https://mantlescan.xyz/."
+    fail_if:
+      - "Provides the wrong explorer URL."
+      - "Answers with a generic explorer or a Sepolia explorer instead of Mantle mainnet."
+
+  - id: deploy-after-developer
+    prompt: "What should be complete before the deployer skill takes over for a Mantle contract?"
+    expected_facts:
+      - "Contract architecture and implementation decisions should already be finalized."
+      - "The handoff should come from mantle-smart-contract-developer or an equivalent finalized development brief."
+      - "The deployer skill starts after design and authoring decisions are complete."
+    fail_if:
+      - "Treats the deployer skill as the place to design or write the contract."
+      - "Does not mention the dependency on finalized build inputs or the developer handoff."

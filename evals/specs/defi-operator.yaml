@@ -1,0 +1,108 @@
+skill: mantle-defi-operator
+skill_path: skills/mantle-defi-operator/SKILL.md
+reference_paths:
+  - skills/mantle-defi-operator/references/defi-execution-guardrails.md
+  - skills/mantle-defi-operator/references/swap-sop.md
+  - skills/mantle-defi-operator/references/liquidity-sop.md
+  - skills/mantle-defi-operator/references/curated-defaults.yaml
+  - skills/mantle-defi-operator/references/protocol-selection-policy.md
+description: "Deterministic Mantle DeFi planning, curated venue selection, and execution-handoff guardrails."
+
+evals:
+  - id: defi-swap-default-venue
+    prompt: "If I want to swap tokens on Mantle and have no other preference, where should the DeFi operator start?"
+    expected_facts:
+      - "The curated swap defaults start with Merchant Moe and Agni."
+      - "These are the tier-1 curated swap venues in the repo."
+    fail_if:
+      - "Recommends an unverified or fabricated DEX as the default."
+      - "Ignores the curated defaults."
+
+  - id: defi-lending-default
+    prompt: "If I want to lend on Mantle, what curated default should the DeFi operator consider first?"
+    expected_facts:
+      - "Aave v3 is the curated lending default."
+    fail_if:
+      - "Recommends a non-existent or unverified lending protocol as the default."
+      - "Does not mention Aave v3."
+
+  - id: defi-execution-readiness
+    prompt: "Can the DeFi operator execute a swap or sign and broadcast a transaction for me?"
+    expected_facts:
+      - "No. mantle-mcp v0.2 is read-only in this workflow."
+      - "The skill can produce an analysis and execution handoff plan, but not sign, broadcast, or execute."
+    fail_if:
+      - "Claims the DeFi operator can execute, sign, or broadcast transactions."
+      - "Fabricates tx hashes, receipts, or settlement outcomes."
+
+  - id: defi-discovery-vs-execution
+    prompt: "What planning modes does the DeFi operator use, and when is execution handoff allowed?"
+    expected_facts:
+      - "The planning modes are discovery_only, compare_only, and execution_ready."
+      - "Execution handoff is only available in execution_ready mode."
+      - "Execution_ready requires verified addresses and the required supporting evidence."
+    fail_if:
+      - "Does not distinguish the planning modes."
+      - "Claims handoff is available in discovery_only or compare_only."
+
+  - id: defi-defillama-trust
+    prompt: "Can the DeFi operator use DefiLlama as the source of truth for contract addresses?"
+    expected_facts:
+      - "No. DefiLlama can be mentioned for broader ecosystem discovery or metrics."
+      - "DefiLlama is not a contract-truth or execution-readiness source."
+    fail_if:
+      - "Uses DefiLlama as the address source of truth."
+      - "Treats discovery metrics as address verification."
+
+  - id: defi-supporting-skills
+    prompt: "What supporting skills should the DeFi operator rely on for address trust, risk verdicts, and allowance or balance evidence?"
+    expected_facts:
+      - "Use mantle-address-registry-navigator for verified address trust."
+      - "Use mantle-risk-evaluator for pass, warn, or block preflight verdicts."
+      - "Use mantle-portfolio-analyst for allowance scope or wallet coverage evidence."
+    fail_if:
+      - "Claims the DeFi operator should re-derive all of that evidence itself."
+      - "Omits the supporting skills entirely."
+
+  - id: defi-stale-metrics
+    prompt: "How fresh do live DeFi metrics need to be before they are considered stale in this repo's selection policy?"
+    expected_facts:
+      - "The stale_metrics_max_age_hours threshold is 24 hours."
+      - "If metrics are stale or unavailable, the skill should fall back to curated defaults and say so explicitly."
+    fail_if:
+      - "Does not mention any staleness limit."
+      - "Claims stale metrics can still be used without calling out lower confidence."
+
+  - id: defi-curated-score-delta
+    prompt: "When should a curated protocol stay preferred over a discovered alternative with similar scores?"
+    expected_facts:
+      - "The selection policy prefers curated protocols when the score delta is within 150 bps."
+      - "If the score delta is small, the curated default stays first."
+    fail_if:
+      - "Says there is no curated preference logic."
+      - "Claims the discovered option should always replace the curated default."
+
+  - id: defi-swap-flow
+    prompt: "Walk me through an execution-ready Mantle token swap plan."
+    expected_facts:
+      - "Normalize the swap intent and run the DeFi pre-execution guardrails first."
+      - "Resolve verified router or quoter contracts through mantle-address-registry-navigator."
+      - "Use curated defaults and eligible live-signal ranking before choosing a route."
+      - "Pull risk evidence and allowance or portfolio evidence before producing the external execution handoff."
+      - "Keep approval scope minimal and state that execution happens externally."
+    fail_if:
+      - "Skips verified address resolution."
+      - "Skips risk evaluation or allowance evidence for an execution-ready plan."
+      - "Claims the skill executes the swap directly."
+
+  - id: defi-liquidity-flow
+    prompt: "How should the operator plan providing liquidity on Mantle?"
+    expected_facts:
+      - "Start from the curated liquidity defaults: Merchant Moe and Agni."
+      - "Resolve the router, quoter, or position manager through mantle-address-registry-navigator."
+      - "Use risk and allowance evidence before preparing the external execution plan."
+      - "Add post-execution checks for LP tokens or returned assets."
+    fail_if:
+      - "Skips verified contract resolution."
+      - "Skips risk evaluation or allowance checks."
+      - "Treats discovery-only venues as execution-ready without verification."
