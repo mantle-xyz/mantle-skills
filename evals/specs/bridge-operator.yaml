@@ -1,0 +1,104 @@
+skill: mantle-bridge-operator
+skill_path: skills/mantle-bridge-operator/SKILL.md
+reference_paths:
+  - skills/mantle-bridge-operator/references/bridge-fee-guide.md
+  - skills/mantle-bridge-operator/references/bridge-token-mappings.md
+  - skills/mantle-bridge-operator/references/third-party-bridges.md
+description: "Read-only Mantle L1-L2 bridge analysis, cost estimation, withdrawal tracking, and third-party bridge comparison."
+
+evals:
+  - id: bridge-deposit-flow
+    prompt: "How does a user deposit ETH from Ethereum to Mantle using the native bridge?"
+    expected_facts:
+      - "The deposit goes through the L1 Standard Bridge contract."
+      - "ETH appears as WETH on Mantle L2."
+      - "Deposits arrive on L2 in approximately 2 minutes."
+      - "The user pays ETH gas on Ethereum L1."
+    fail_if:
+      - "Claims deposits require MNT gas."
+      - "Fabricates a deposit transaction hash or receipt."
+
+  - id: bridge-withdrawal-steps
+    prompt: "What are the steps to withdraw assets from Mantle L2 back to Ethereum L1?"
+    expected_facts:
+      - "Withdrawals require three steps: initiate, prove, and finalize."
+      - "The initiate step is on Mantle L2 and costs MNT gas."
+      - "The prove and finalize steps are on Ethereum L1 and cost ETH gas."
+      - "There is a waiting period between steps."
+    fail_if:
+      - "Claims withdrawal is a single-step process."
+      - "Claims the skill can execute the withdrawal directly."
+
+  - id: bridge-challenge-period
+    prompt: "How long does a Mantle L2 to L1 withdrawal take from start to finish?"
+    expected_facts:
+      - "The current execution delay is 12 hours under ZK validity proof mode."
+      - "There is also a ~60-minute wait before the proof can be submitted."
+    fail_if:
+      - "Claims withdrawals complete instantly."
+      - "Only mentions the legacy 7-day challenge period without noting the current 12-hour mode."
+
+  - id: bridge-fee-structure
+    prompt: "Does the native Mantle bridge charge a protocol fee?"
+    expected_facts:
+      - "The native bridge charges no protocol fee."
+      - "Users pay only gas costs."
+    fail_if:
+      - "Claims the bridge charges a percentage fee."
+      - "Fabricates fee amounts not grounded in the references."
+
+  - id: bridge-gas-requirements
+    prompt: "What gas tokens does a user need on each chain for a complete L2 to L1 withdrawal?"
+    expected_facts:
+      - "MNT on Mantle L2 for the initiate step."
+      - "ETH on Ethereum L1 for the prove and finalize steps."
+    fail_if:
+      - "Claims only one gas token is needed."
+      - "Confuses MNT and ETH gas requirements."
+
+  - id: bridge-read-only
+    prompt: "Can the bridge operator skill execute or sign bridge transactions?"
+    expected_facts:
+      - "No. The skill is read-only with mantle-mcp v0.1."
+      - "It can produce analysis and an external execution handoff, but cannot sign, broadcast, or execute."
+    fail_if:
+      - "Claims the skill can execute bridge transactions."
+      - "Fabricates transaction hashes or bridge receipts."
+
+  - id: bridge-third-party-comparison
+    prompt: "When should a user consider a third-party bridge instead of the native Mantle bridge?"
+    expected_facts:
+      - "When the user needs funds on L1 within minutes, not hours."
+      - "When bridging between Mantle and a non-Ethereum chain."
+      - "Third-party bridges charge fees but are faster for withdrawals."
+    fail_if:
+      - "Claims third-party bridges are always better."
+      - "Recommends a third-party bridge without noting independent trust assumptions."
+
+  - id: bridge-unsupported-tokens
+    prompt: "What token types are NOT supported by the Mantle native bridge?"
+    expected_facts:
+      - "Fee-on-transfer tokens are not supported."
+      - "Rebasing tokens are not supported."
+      - "Tokens without a corresponding OptimismMintableERC20 on the destination chain are not supported."
+    fail_if:
+      - "Claims all ERC-20 tokens can be bridged."
+      - "Does not mention any unsupported token types."
+
+  - id: bridge-first-time-user
+    prompt: "What should a first-time user know about depositing to Mantle for the first time?"
+    expected_facts:
+      - "Mantle provides 1 MNT to new wallets on first deposit for gas."
+      - "MNT is the gas token on Mantle, not ETH."
+    fail_if:
+      - "Claims the user needs to acquire MNT before their first deposit."
+      - "Claims ETH is the gas token on Mantle."
+
+  - id: bridge-large-transfer
+    prompt: "What does the bridge operator recommend for transferring over $100K from Mantle to Ethereum?"
+    expected_facts:
+      - "For amounts over $100K, the native bridge is recommended for security."
+      - "Third-party bridges may have liquidity limits and slippage for large transfers."
+    fail_if:
+      - "Recommends a third-party bridge for large amounts without security caveats."
+      - "Does not mention the native bridge as the safer option for large transfers."

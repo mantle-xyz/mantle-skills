@@ -63,6 +63,15 @@ OPENROUTER_JUDGE_MODEL=openrouter/openai/gpt-5.4 \
 ./evals/runner/presets/run-all-skills-openrouter.sh
 ```
 
+Run all evals with Anthropic Claude (via OpenRouter):
+
+```bash
+OPENROUTER_API_KEY=... \
+ANTHROPIC_MODEL=openrouter/anthropic/claude-sonnet-4 \
+ANTHROPIC_JUDGE_MODEL=openrouter/anthropic/claude-sonnet-4 \
+./evals/runner/presets/run-all-skills-anthropic.sh
+```
+
 If you want full control over labels or non-default directory paths, call the batch runner directly:
 
 ```bash
