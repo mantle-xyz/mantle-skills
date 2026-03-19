@@ -1,0 +1,5 @@
+interface:
+  display_name: "Mantle Bridge Operator"
+  short_description: "Plan and analyze Mantle L1-L2 bridge operations"
+  default_prompt: "Use $mantle-bridge-operator when a task involves bridging assets between Ethereum L1 and Mantle L2, checking bridge status, estimating bridge costs, or comparing native vs third-party bridge options."
+  model_hint: "claude-sonnet-4-20250514"
