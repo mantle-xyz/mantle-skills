@@ -20,6 +20,7 @@ Options:
   --model <value>         Target model in provider/model format (for example: openai/gpt-5.2 or openrouter/openai/gpt-5.2)
   --judge-model <value>   Judge model in provider/model format (defaults to --model)
   --output <path>         Write JSON report to this path instead of evals/results/<skill>-<timestamp>.json
+  --skill-only            Only run the skill-loaded model (skip bare-model comparison)
   --list-skills           List available eval slugs and exit
   --help                  Show this help text
 
@@ -214,7 +215,7 @@ provider_model() {
   fi
 }
 
-api_request() {
+api_request_once() {
   local provider="$1"
   local endpoint="$2"
   local payload="$3"
@@ -228,7 +229,7 @@ api_request() {
       [[ "$endpoint" == "responses" ]] || die "unsupported endpoint '$endpoint' for provider 'openai'"
       request_url="$(openai_responses_url)"
       curl_args=(
-        -fsS "$request_url"
+        -sS -w '\n%{http_code}' "$request_url"
         -H "Authorization: Bearer $api_key"
         -H "Content-Type: application/json"
       )
@@ -242,7 +243,7 @@ api_request() {
       [[ "$endpoint" == "chat/completions" ]] || die "unsupported endpoint '$endpoint' for provider 'openrouter'"
 
       curl_args=(
-        -fsS "${base_url%/}/chat/completions"
+        -sS -w '\n%{http_code}' "${base_url%/}/chat/completions"
         -H "Authorization: Bearer $api_key"
         -H "Content-Type: application/json"
       )
@@ -262,6 +263,56 @@ api_request() {
       die "unsupported provider '$provider'; currently supported: openai, openrouter"
       ;;
   esac
+}
+
+api_request() {
+  local provider="$1"
+  local endpoint="$2"
+  local payload="$3"
+  local max_retries="${API_RETRY_MAX:-5}"
+  local base_delay="${API_RETRY_BASE_DELAY:-10}"
+  local attempt=0
+  local response body http_code delay
+
+  while true; do
+    set +e
+    response=$(api_request_once "$provider" "$endpoint" "$payload" 2>&1)
+    local curl_exit=$?
+    set -e
+
+    if (( curl_exit != 0 )); then
+      attempt=$((attempt + 1))
+      if (( attempt > max_retries )); then
+        printf 'api_request: curl failed after %d retries (exit %d)\n' "$max_retries" "$curl_exit" >&2
+        return 1
+      fi
+      delay=$(( base_delay * (2 ** (attempt - 1)) ))
+      printf 'api_request: curl error (exit %d), retry %d/%d in %ds\n' "$curl_exit" "$attempt" "$max_retries" "$delay" >&2
+      sleep "$delay"
+      continue
+    fi
+
+    http_code=$(printf '%s' "$response" | tail -n1)
+    body=$(printf '%s' "$response" | sed '$d')
+
+    if [[ "$http_code" == 2* ]]; then
+      printf '%s\n' "$body"
+      return 0
+    elif [[ "$http_code" == "429" ]] || [[ "$http_code" == 5* ]]; then
+      attempt=$((attempt + 1))
+      if (( attempt > max_retries )); then
+        printf 'api_request: HTTP %s after %d retries\n' "$http_code" "$max_retries" >&2
+        return 1
+      fi
+      delay=$(( base_delay * (2 ** (attempt - 1)) ))
+      printf 'api_request: HTTP %s, retry %d/%d in %ds\n' "$http_code" "$attempt" "$max_retries" "$delay" >&2
+      sleep "$delay"
+    else
+      printf 'api_request: HTTP %s\n' "$http_code" >&2
+      printf '%s\n' "$body" >&2
+      return 1
+    fi
+  done
 }
 
 request_and_parse_judge_json() {
@@ -535,6 +586,7 @@ main() {
   local judge_model=""
   local output_path=""
   local list_only=0
+  local skill_only=0
 
   while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -557,6 +609,10 @@ main() {
         [[ $# -ge 2 ]] || die "--output requires a value"
         output_path="$2"
         shift 2
+        ;;
+      --skill-only)
+        skill_only=1
+        shift
         ;;
       --list-skills)
         list_only=1
@@ -632,15 +688,21 @@ main() {
     expected_json=$(jq -c '.expected_facts' <<<"$eval_json")
     fail_json=$(jq -c '.fail_if' <<<"$eval_json")
 
-    bare_answer=$(chat_completion "$model" "$BARE_SYSTEM_PROMPT" "$prompt")
     skill_answer=$(chat_completion "$model" "$skill_system_prompt" "$prompt")
-
-    bare_judge=$(judge_answer "$judge_model" "$judge_prompt" "$prompt" "$bare_answer" "$expected_json" "$fail_json")
     skill_judge=$(judge_answer "$judge_model" "$judge_prompt" "$prompt" "$skill_answer" "$expected_json" "$fail_json")
-
-    bare_verdict=$(jq -r '.verdict' <<<"$bare_judge")
     skill_verdict=$(jq -r '.verdict' <<<"$skill_judge")
-    comparison=$(compare_verdicts "$bare_verdict" "$skill_verdict")
+
+    if (( skill_only == 1 )); then
+      bare_answer=""
+      bare_judge='{"verdict":"SKIPPED","expected_hits":[],"expected_misses":[],"fail_triggers":[],"reasoning":"bare model skipped (--skill-only)"}'
+      bare_verdict="SKIPPED"
+      comparison="skill_only"
+    else
+      bare_answer=$(chat_completion "$model" "$BARE_SYSTEM_PROMPT" "$prompt")
+      bare_judge=$(judge_answer "$judge_model" "$judge_prompt" "$prompt" "$bare_answer" "$expected_json" "$fail_json")
+      bare_verdict=$(jq -r '.verdict' <<<"$bare_judge")
+      comparison=$(compare_verdicts "$bare_verdict" "$skill_verdict")
+    fi
 
     jq -n \
       --argjson eval_case "$eval_json" \

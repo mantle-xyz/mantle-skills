@@ -103,6 +103,7 @@ main() {
   local evals_dir="$DEFAULT_EVALS_DIR"
   local results_dir="$DEFAULT_RESULTS_DIR"
   local runner="$DEFAULT_RUNNER"
+  local skill_only=0
 
   while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -135,6 +136,10 @@ main() {
         [[ $# -ge 2 ]] || die "--runner requires a value"
         runner="$2"
         shift 2
+        ;;
+      --skill-only)
+        skill_only=1
+        shift
         ;;
       --help|-h)
         usage
@@ -198,6 +203,10 @@ main() {
       --judge-model "$judge_model"
       --output "$output_file"
     )
+
+    if (( skill_only == 1 )); then
+      runner_args+=(--skill-only)
+    fi
 
     skills_total=$((skills_total + 1))
 

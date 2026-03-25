@@ -22,6 +22,7 @@ Run deterministic troubleshooting for pre-execution failures and provide the sma
    - onchain revert or call exception
    - quote/liquidity failure
    - balance/nonce inconsistency
+   - other/unclassified (use when the error does not match any category above; describe the nature of the error in `issue_type`)
 3. Run targeted checks from `references/troubleshooting-playbook.md`.
 4. Return root-cause hypothesis with confidence and immediate next step.
 5. If unresolved, return a bounded escalation checklist.
@@ -29,11 +30,13 @@ Run deterministic troubleshooting for pre-execution failures and provide the sma
 ## Guardrails
 
 - Do not claim definitive root cause without evidence.
-- Preserve original error strings in output.
+- Preserve original error strings verbatim in the `raw_error` field — copy-paste the exact text, do not paraphrase or summarize.
 - Keep remediation read-only unless user explicitly requests execution.
 - Prefer smallest reversible diagnostic step first.
 
 ## Output Format
+
+**You MUST respond using EXACTLY this template. Do not add prose before or after. Fill in every field. If a value is unknown, write "unknown".**
 
 ```text
 Mantle Read-Only Debug Report

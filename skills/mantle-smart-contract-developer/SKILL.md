@@ -18,7 +18,7 @@ Guide Mantle-specific contract development decisions and fail closed when requir
    - admin, ownership, and upgradeability requirements
    - external dependencies and trusted addresses
 2. Run `references/development-checklist.md`.
-3. If the user needs contract code, inheritance, library usage, upgrade patterns, or Solidity implementation help, route that work through `references/openzeppelin-mcp-handoff.md`.
+3. For any contract code, inheritance, library usage, upgrade patterns, or Solidity implementation help, route that work through `references/openzeppelin-mcp-handoff.md`. Do not attempt to write or suggest Solidity code directly.
 4. Reconcile Mantle-specific decisions:
    - MNT gas and operational assumptions
    - environment-correct protocol/system addresses
@@ -34,14 +34,17 @@ Guide Mantle-specific contract development decisions and fail closed when requir
 
 ## Guardrails
 
-- Mantle-specific only: if the request is generic Solidity with no Mantle context, ask to scope it to Mantle.
-- For contract authoring, do not rely on memory when OpenZeppelin MCP should be consulted.
+- **NEVER write Solidity code yourself.** All contract authoring, code generation, inheritance selection, and implementation guidance MUST be routed to OpenZeppelin MCP via `references/openzeppelin-mcp-handoff.md`. Always mention this routing explicitly in your response.
+- Mantle-specific only: if the request is generic Solidity with no Mantle context, ask to scope it to Mantle before proceeding. This applies even if the user does not mention a specific chain — assume unscoped requests need Mantle framing.
+- Multiple guardrails can apply simultaneously. For example, a generic Solidity code request should both (a) be scoped to Mantle AND (b) have its code authoring routed to OpenZeppelin MCP.
 - Never recommend proxy, admin, or ownership patterns without stating the operational trade-off.
 - Never mix `mainnet` and `testnet` dependencies or addresses.
 - Never mark code as audited, production-ready, or deploy-safe without explicit evidence.
-- If requirements, permissions, or upgrade intent are ambiguous, stop and clarify before producing a final brief.
+- If requirements, permissions, or upgrade intent are ambiguous, stop and clarify before producing a final brief. Common ambiguities include: missing target environment, undefined admin roles, unspecified upgrade intent, and vague references to existing contracts.
 
 ## Output Format
+
+**ALWAYS include the Development Brief in every response**, even when asking clarifying questions or redirecting the user. If requirements are still being gathered, fill known fields and mark unknown fields as `[PENDING — awaiting clarification]`. This applies to all interactions including simple questions, scoping requests, and deployment handoffs. Never omit the brief entirely.
 
 ```text
 Mantle Contract Development Brief

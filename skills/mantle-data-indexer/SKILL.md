@@ -14,11 +14,13 @@ Use GraphQL or SQL indexers to answer historical questions on Mantle with reprod
 1. Normalize request:
    - objective (for example volume, swaps, user history)
    - entities (wallet, pool, token, protocol)
-   - time range (absolute UTC start/end)
+   - time range (absolute UTC start/end). If the user provides relative times like "past 7 days" or "last month", convert them to absolute UTC timestamps (e.g., "2026-03-18T00:00:00Z to 2026-03-25T00:00:00Z") and state the conversion explicitly.
 2. Resolve endpoint availability:
    - `mantle_querySubgraph` requires `endpoint` + `query`.
    - `mantle_queryIndexerSql` requires `endpoint` + `query`.
-   - If endpoint config is missing, request it explicitly instead of guessing.
+   - If endpoint config is missing, STOP and use the Blocked Output Format below. Do NOT proceed to step 3.
+   - WRONG: making up a URL like `https://api.thegraph.com/subgraphs/name/mantle-...` or `https://indexer.mantle.xyz/...`.
+   - RIGHT: responding with the Blocked Output Format and asking the user to provide the endpoint.
    - In E2E `endpoint-configured` scenarios, skip when `E2E_SUBGRAPH_ENDPOINT` or `E2E_SQL_ENDPOINT` is unset.
 3. Select source by availability and latency target:
    - GraphQL indexer -> `mantle_querySubgraph`
@@ -68,6 +70,28 @@ Quality Notes
 - caveats:
 - confidence:
 ```
+
+## Blocked Output Format
+
+When the workflow cannot proceed (for example, no endpoint URL was provided), you MUST still use a structured output. NEVER fabricate an endpoint URL. Instead, use this format:
+
+```text
+Mantle Historical Data Report -- BLOCKED
+- objective:
+- status: blocked
+- blocked_reason: [explain exactly what is missing, e.g. "No GraphQL or SQL endpoint was provided"]
+- action_required: [what the user must supply, e.g. "Provide a subgraph endpoint URL or SQL indexer endpoint URL"]
+- time_range_utc: [convert any relative time to absolute UTC, e.g. "2026-02-23T00:00:00Z to 2026-03-25T00:00:00Z"]
+- entity_scope:
+
+Quality Notes
+- tool_warnings: Endpoint missing -- cannot execute query. This is NOT a "no data" result; it is a configuration gap.
+- assumptions: none
+- caveats: No query was executed. Results will be available once an endpoint is provided.
+- confidence: n/a
+```
+
+CRITICAL: If the user does not provide an endpoint URL and you do not have one configured, you MUST use the blocked format above. Do not guess, fabricate, or assume any endpoint URL.
 
 ## References
 

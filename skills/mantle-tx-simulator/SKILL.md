@@ -30,7 +30,12 @@ Prepare simulation handoff packages for external backends and translate returned
    - logs/events
    - state diffs
 6. Convert technical result into WYSIWYS summary with `references/wysiwys-template.md`.
+   - **ALWAYS produce a WYSIWYS section**, even before external simulation results arrive.
+   - If no external evidence exists yet, produce a **preliminary WYSIWYS** based on the request parameters, clearly labeled: "PRELIMINARY — not yet verified by simulation."
+   - Pre-simulation WYSIWYS must still populate `what_user_gives`, `what_user_gets_min` (mark as "pending simulation"), and `plain_language_outcome`.
 7. If simulation evidence is missing, fails, or confidence is low, return `do_not_execute`.
+   - Set `do_not_execute_reason` with a specific explanation (e.g., "No external simulation evidence provided", "Simulation reverted", "Incomplete calldata").
+   - **Still produce the full Simulation Report output format** even when returning `do_not_execute`.
 
 ## Guardrails
 
@@ -41,6 +46,7 @@ Prepare simulation handoff packages for external backends and translate returned
 - If token decimals/pricing context is incomplete, state uncertainty explicitly.
 - For bundle flows, describe each step and net effect.
 - If asked to run simulation via MCP tool, explain v0.2 has no tx simulation execution tool and provide external handoff instructions.
+- **Always output the full Simulation Report format** for every response, regardless of whether simulation evidence exists, the request is incomplete, or execution is declined. Never respond with only prose — always include the structured report.
 
 ## Output Format
 
@@ -59,7 +65,7 @@ State Diff Summary
 - approvals_changed:
 - contract_state_changes:
 
-Execution Estimates
+Execution Estimates (simulated — not guaranteed)
 - gas_estimate:
 - estimated_fee_native:
 - slippage_or_price_impact_note:
@@ -69,6 +75,7 @@ WYSIWYS
 - what_user_gives:
 - what_user_gets_min:
 - do_not_execute_reason: <empty if safe>
+- disclaimer: Simulation results are estimates only and do not guarantee on-chain execution outcomes.
 ```
 
 ## References

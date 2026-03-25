@@ -20,11 +20,12 @@ Coordinate deterministic pre-execution planning for Mantle DeFi intents. This sk
 
 - `discovery_only`
   - Return venue suggestions, rationale, and discovery sources only.
-  - Do not return router addresses, approval steps, calldata, or sequencing.
+  - Do not return router addresses, hex contract addresses (0x...), approval steps, calldata, or sequencing anywhere in the response.
   - Set `handoff_available` to `no`.
 - `compare_only`
   - Compare verified venues and call out missing execution inputs.
-  - Allow verified registry keys or contract roles, but stop short of approval instructions or calldata.
+  - Allow verified registry keys or contract roles (by name, not hex address), but stop short of approval instructions or calldata.
+  - Do not include hex contract addresses (0x...) anywhere in the response -- not in rationale, not in fields. Use protocol and role names only.
   - Leave `risk_report_ref` / `portfolio_report_ref` empty or explicitly missing when evidence is not available.
   - Set `handoff_available` to `no`.
 - `execution_ready`
@@ -42,8 +43,8 @@ Coordinate deterministic pre-execution planning for Mantle DeFi intents. This sk
 3. Resolve candidate protocol contracts from `mantle-address-registry-navigator` using the required registry key or protocol role for the requested action.
 4. Classify the planning mode:
    - `execution_ready`: verified addresses plus enough quote/risk evidence to produce a handoff
-   - `compare_only`: venue comparison is possible, but execution gating is incomplete
-   - `discovery_only`: high-level ecosystem exploration without execution readiness
+   - `compare_only`: venue comparison is possible, but execution gating is incomplete; also use this mode when the user names an unverified protocol -- list it under `discovery_only` in Protocol Selection, set `readiness: blocked`, and recommend verified curated alternatives
+   - `discovery_only`: high-level ecosystem exploration without execution readiness (no specific venue comparison requested)
 5. Build the candidate set from `references/curated-defaults.yaml`; carry forward each default's freshness metadata and rationale, and if the user names another protocol, keep it `compare_only` until its contracts are verified.
 6. Rank only eligible candidates with live signals from `references/protocol-selection-policy.md`:
    - swaps: quote quality, recent volume, pool depth, slippage risk
@@ -71,7 +72,7 @@ Coordinate deterministic pre-execution planning for Mantle DeFi intents. This sk
 
 ## Guardrails
 
-- This skill is read-only with mantle-mcp v0.2: never claim signed/broadcast/deployed/executed transactions.
+- NEVER claim to have signed, broadcast, deployed, or executed any transaction. Do not use phrases like "I executed the swap", "the transaction was submitted", "swap complete", or "funds have been transferred." This skill produces plans only; an external signer/wallet must execute them.
 - Act as a coordinator: when specialized address, risk, or portfolio skills apply, cite or request their output instead of re-deriving those judgments from scratch.
 - In `discovery_only`, do not provide router addresses, approval steps, calldata, or execution sequencing.
 - In `compare_only`, verified registry keys or contract roles may be named, but executable calldata and approval instructions stay out until execution evidence is complete.
@@ -84,6 +85,8 @@ Coordinate deterministic pre-execution planning for Mantle DeFi intents. This sk
 - If the user asks for onchain execution, provide a handoff checklist and state that an external signer/wallet is required.
 
 ## Output Format
+
+**MANDATORY:** Every response MUST use this exact structured template. Do not use prose or free-form text instead of this template. Fill every field; use "not applicable in {planning_mode} mode" for fields that do not apply to the current mode. In `discovery_only` mode, fields under Execution Handoff and Post-Execution Verification Plan must all say "not applicable in discovery_only mode."
 
 ```text
 Mantle DeFi Pre-Execution Report
