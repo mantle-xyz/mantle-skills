@@ -11,6 +11,12 @@ swap_defaults:
     retrieved_at: 2026-03-08T04:00:14Z
     review_after: 2026-04-07
     why_default: Curated Mantle concentrated-liquidity default with verified router and quoter coverage for swap planning.
+  - protocol_id: fluxion
+    tier: 1
+    source_url: https://app.fluxion.network
+    retrieved_at: 2026-04-09T00:00:00Z
+    review_after: 2026-05-09
+    why_default: Curated Mantle V3 DEX with xStocks RWA pairs and DeFi pools (WMNT, WETH, mETH, stablecoins).
 liquidity_defaults:
   - protocol_id: merchant_moe
     tier: 1
@@ -24,6 +30,12 @@ liquidity_defaults:
     retrieved_at: 2026-03-08T04:00:14Z
     review_after: 2026-04-07
     why_default: Curated Mantle concentrated-liquidity default with verified position-manager support.
+  - protocol_id: fluxion
+    tier: 1
+    source_url: https://app.fluxion.network
+    retrieved_at: 2026-04-09T00:00:00Z
+    review_after: 2026-05-09
+    why_default: Curated Mantle V3 liquidity default with verified position-manager support.
 lending_defaults:
   - protocol_id: aave_v3
     tier: 1

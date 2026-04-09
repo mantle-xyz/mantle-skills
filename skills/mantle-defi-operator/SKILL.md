@@ -9,6 +9,42 @@ description: Use when a Mantle DeFi task needs discovery, venue comparison, or e
 
 Coordinate deterministic pre-execution planning for Mantle DeFi intents. This skill should orchestrate verified address lookup, preflight evidence, and execution handoff steps instead of duplicating specialized address, risk, or portfolio analysis.
 
+## CLI-First Transaction Building
+
+**ALWAYS use `mantle-cli` commands to build unsigned transactions.** The CLI produces correct calldata with verified addresses and ABI encoding. Do NOT:
+- Manually construct calldata or hex-encode function calls
+- Extract contract addresses from text responses and build transactions yourself
+- Add a `from` field to unsigned transactions — this breaks Privy and other signers
+
+### Available CLI commands for DeFi operations:
+
+```bash
+# Swap operations
+mantle-cli swap build-swap --provider <dex> --in <token> --out <token> --amount <n> --recipient <addr> --json
+mantle-cli swap approve --token <token> --spender <router> --amount <n> --json
+mantle-cli swap wrap-mnt --amount <n> --json
+mantle-cli swap unwrap-mnt --amount <n> --json
+mantle-cli swap pairs --json
+
+# Aave V3 lending
+mantle-cli aave supply --asset <token> --amount <n> --on-behalf-of <addr> --json
+mantle-cli aave borrow --asset <token> --amount <n> --on-behalf-of <addr> --json
+mantle-cli aave repay --asset <token> --amount <n|max> --on-behalf-of <addr> --json
+mantle-cli aave withdraw --asset <token> --amount <n|max> --to <addr> --json
+mantle-cli aave markets --json
+
+# Liquidity provision
+mantle-cli lp add --provider <dex> --token-a <t> --token-b <t> --amount-a <n> --amount-b <n> --recipient <addr> --json
+mantle-cli lp remove --provider <dex> --recipient <addr> [--token-id <id> --liquidity <n>] --json
+
+# Read operations (no signing needed)
+mantle-cli defi swap-quote --in <token> --out <token> --amount <n> --provider best --json
+mantle-cli defi lending-markets --json
+mantle-cli account balance <addr> --tokens USDC,USDT0 --json
+```
+
+All `--json` outputs contain `unsigned_tx` with `to`, `data`, `value`, `chainId` — pass this directly to the signer **without adding `from`**.
+
 ## When Not to Use
 
 - Use `mantle-address-registry-navigator` when the task is only address lookup, whitelist validation, or anti-phishing review.
@@ -64,6 +100,7 @@ Coordinate deterministic pre-execution planning for Mantle DeFi intents. This sk
 9. Load operation SOP only for `execution_ready` planning:
    - swap: `references/swap-sop.md`
    - liquidity: `references/liquidity-sop.md`
+   - lending (supply/borrow/repay/withdraw): `references/lending-sop.md`
 10. Resolve quote, pool, or market route only after the protocol choice is gated by verified contracts and supporting evidence.
 11. If an approval is required, carry forward the allowance evidence and prepare the smallest viable `approve` step.
 12. If account supports batching (for example ERC-4337 smart account), note whether approve+action can be safely batched by the external executor.
@@ -72,6 +109,8 @@ Coordinate deterministic pre-execution planning for Mantle DeFi intents. This sk
 
 ## Guardrails
 
+- **CLI-FIRST RULE**: ALWAYS use `mantle-cli` commands with `--json` to build unsigned transactions. NEVER manually construct calldata, hex-encode function calls, or extract addresses from text to build transactions yourself. The CLI handles ABI encoding, address validation, pool parameter resolution, and whitelist checks.
+- **NO `from` FIELD**: NEVER add a `from` field to `unsigned_tx` objects. The signer determines `from` from the signing key. Adding `from` breaks Privy and other embedded wallet signers.
 - NEVER claim to have signed, broadcast, deployed, or executed any transaction. Do not use phrases like "I executed the swap", "the transaction was submitted", "swap complete", or "funds have been transferred." This skill produces plans only; an external signer/wallet must execute them.
 - Act as a coordinator: when specialized address, risk, or portfolio skills apply, cite or request their output instead of re-deriving those judgments from scratch.
 - In `discovery_only`, do not provide router addresses, approval steps, calldata, or execution sequencing.
@@ -141,5 +180,6 @@ Status
 - `references/defi-execution-guardrails.md`
 - `references/swap-sop.md`
 - `references/liquidity-sop.md`
+- `references/lending-sop.md`
 - `references/curated-defaults.yaml`
 - `references/protocol-selection-policy.md`
