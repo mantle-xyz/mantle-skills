@@ -9,6 +9,40 @@ description: Use when OpenClaw needs to execute DeFi operations for the asset ac
 
 This skill provides everything OpenClaw needs to execute DeFi operations in the Mantle asset accumulation competition. Each participant starts with 100 MNT in a fresh wallet and competes to grow total portfolio value (USD) through whitelisted protocol interactions.
 
+## Tooling — CLI Only (Mandatory)
+
+**DO NOT enable or connect the `mantle-mcp` MCP server.** All on-chain operations MUST be performed via the `mantle-cli` command-line tool with `--json` output. This eliminates MCP tool-schema overhead and reduces per-session token cost.
+
+### Setup
+
+```bash
+npm install mantle-mcp        # installs both the MCP server (unused) and mantle-cli
+npx mantle-cli --help          # verify the CLI is available
+```
+
+### Key rules
+
+- **Always append `--json`** to every command so the output is machine-parseable JSON.
+- **Never start or connect to the MCP server.** Do not configure `mantle-mcp` in any MCP client settings.
+- **Never fabricate calldata** — always use `mantle-cli` build commands.
+- **Never add a `from` field** to unsigned transactions — the signer determines `from`.
+
+### Discover available commands
+
+Before using the CLI for the first time, run:
+
+```bash
+mantle-cli catalog list --json          # list all 37 capabilities with category, auth, and CLI command template
+mantle-cli catalog search "swap" --json # find swap-related capabilities
+mantle-cli catalog show <tool-id> --json # full details for a specific capability
+```
+
+Each catalog entry includes:
+- `category`: `query` (read-only) | `analyze` (computed insights) | `execute` (builds unsigned tx)
+- `auth`: `none` | `optional` | `required` (whether a wallet address is needed)
+- `cli_command`: the exact CLI command template with placeholders
+- `workflow_before`: which tools to call before this one
+
 ## When to Use
 
 - User asks to swap tokens on Mantle
@@ -101,55 +135,63 @@ Only these assets count toward the competition score:
 **Pre-condition:** You have the input token in your wallet.
 
 ```
-1. mantle_getSwapPairs({ provider: "<dex>" })
+1. mantle-cli swap pairs --json
    → Find the pair and its params (bin_step or fee_tier)
 
-2. mantle_getSwapQuote({ provider: "<dex>", token_in: "X", token_out: "Y", amount_in: "10" })
+2. mantle-cli defi swap-quote --in X --out Y --amount 10 --provider best --json
    → Get the expected output and minimum_out
 
-3. mantle_getAllowances({ owner: "<wallet>", token: "X", spender: "<router>" })
+3. mantle-cli account allowances <wallet> --pairs X:<router> --json
    → Check if already approved
 
 4. IF allowance < amount:
-   mantle_buildApprove({ token: "X", spender: "<router>", amount: "<amount>" })
+   mantle-cli swap approve --token X --spender <router> --amount <amount> --json
    → Sign and broadcast
 
-5. mantle_buildSwap({ provider: "<dex>", token_in: "X", token_out: "Y", amount_in: "10", recipient: "<wallet>", amount_out_min: "<from_quote>" })
+5. mantle-cli swap build-swap --provider <dex> --in X --out Y --amount 10 --recipient <wallet> --amount-out-min <from_quote> --json
    → Sign and broadcast
 ```
 
-**For MNT → Token swaps:** Wrap MNT first with `mantle_buildWrapMnt`, then swap WMNT.
+**For MNT → Token swaps:** Wrap MNT first with `mantle-cli swap wrap-mnt --amount <n> --json`, then swap WMNT.
 
 ### How to Add Liquidity
 
 **Agni / Fluxion (V3 concentrated liquidity):**
 ```
 1. Approve both tokens for the PositionManager
-2. mantle_buildAddLiquidity({
-     provider: "agni",
-     token_a: "WMNT", token_b: "USDC",
-     amount_a: "5", amount_b: "4",
-     recipient: "<wallet>",
-     fee_tier: 10000,
-     tick_lower: <lower>, tick_upper: <upper>
-   })
+   mantle-cli swap approve --token <tokenA> --spender <position_manager> --amount <n> --json
+   mantle-cli swap approve --token <tokenB> --spender <position_manager> --amount <n> --json
+
+2. mantle-cli lp add \
+     --provider agni \
+     --token-a WMNT --token-b USDC \
+     --amount-a 5 --amount-b 4 \
+     --recipient <wallet> \
+     --fee-tier 10000 \
+     --tick-lower <lower> --tick-upper <upper> \
+     --json
+
 3. Sign and broadcast → Receive NFT position
 ```
 
 **Merchant Moe (Liquidity Book):**
 ```
 1. Approve both tokens for LB Router (0x013e138EF6008ae5FDFDE29700e3f2Bc61d21E3a)
-2. mantle_buildAddLiquidity({
-     provider: "merchant_moe",
-     token_a: "WMNT", token_b: "USDe",
-     amount_a: "5", amount_b: "4",
-     recipient: "<wallet>",
-     bin_step: 20,
-     active_id: <from_pool>,
-     delta_ids: [-5,-4,-3,-2,-1,0,1,2,3,4,5],
-     distribution_x: [0,0,0,0,0,0,1e17,1e17,2e17,2e17,3e17],
-     distribution_y: [3e17,2e17,2e17,1e17,1e17,0,0,0,0,0,0]
-   })
+   mantle-cli swap approve --token <tokenA> --spender 0x013e138EF6008ae5FDFDE29700e3f2Bc61d21E3a --amount <n> --json
+   mantle-cli swap approve --token <tokenB> --spender 0x013e138EF6008ae5FDFDE29700e3f2Bc61d21E3a --amount <n> --json
+
+2. mantle-cli lp add \
+     --provider merchant_moe \
+     --token-a WMNT --token-b USDe \
+     --amount-a 5 --amount-b 4 \
+     --recipient <wallet> \
+     --bin-step 20 \
+     --active-id <from_pool> \
+     --delta-ids '[-5,-4,-3,-2,-1,0,1,2,3,4,5]' \
+     --distribution-x '[0,0,0,0,0,0,1e17,1e17,2e17,2e17,3e17]' \
+     --distribution-y '[3e17,2e17,2e17,1e17,1e17,0,0,0,0,0,0]' \
+     --json
+
 3. Sign and broadcast → Receive LB tokens
 ```
 
@@ -157,42 +199,58 @@ Only these assets count toward the competition score:
 
 **Supply (earn interest):**
 ```
-1. mantle_buildApprove({ token: "USDC", spender: "0x458F293454fE0d67EC0655f3672301301DD51422", amount: "100" })
+1. mantle-cli swap approve --token USDC --spender 0x458F293454fE0d67EC0655f3672301301DD51422 --amount 100 --json
    → Sign and broadcast
 
-2. mantle_buildAaveSupply({ asset: "USDC", amount: "100", on_behalf_of: "<wallet>" })
+2. mantle-cli aave supply --asset USDC --amount 100 --on-behalf-of <wallet> --json
    → Sign and broadcast → Receive aUSDC (grows with interest)
 ```
 
 **Borrow (leverage):**
 ```
 1. Supply collateral first (see above)
-2. mantle_buildAaveBorrow({ asset: "USDC", amount: "50", on_behalf_of: "<wallet>" })
+2. mantle-cli aave borrow --asset USDC --amount 50 --on-behalf-of <wallet> --json
    → Sign and broadcast → Receive USDC, incur variableDebtUSDC
 ```
 
 **Repay:**
 ```
-1. mantle_buildApprove({ token: "USDC", spender: "0x458F293454fE0d67EC0655f3672301301DD51422", amount: "50" })
-2. mantle_buildAaveRepay({ asset: "USDC", amount: "50", on_behalf_of: "<wallet>" })
-   OR amount: "max" to repay full debt
+1. mantle-cli swap approve --token USDC --spender 0x458F293454fE0d67EC0655f3672301301DD51422 --amount 50 --json
+2. mantle-cli aave repay --asset USDC --amount 50 --on-behalf-of <wallet> --json
+   OR --amount max to repay full debt
 ```
 
 **Withdraw:**
 ```
-1. mantle_buildAaveWithdraw({ asset: "USDC", amount: "50", to: "<wallet>" })
-   OR amount: "max" for full balance
+1. mantle-cli aave withdraw --asset USDC --amount 50 --to <wallet> --json
+   OR --amount max for full balance
+```
+
+### How to Analyze Pools Before LP
+
+Before adding liquidity, analyze the pool to choose the best range and estimate returns:
+
+```
+1. mantle-cli lp find-pools --token-a WMNT --token-b USDC --json
+   → Discover all available pools across Agni, Fluxion, Merchant Moe
+
+2. mantle-cli defi analyze-pool --token-a WMNT --token-b USDC --fee-tier 3000 --provider agni --investment 1000 --json
+   → Get fee APR, multi-range comparison, risk assessment, investment projections
+
+3. mantle-cli lp suggest-ticks --token-a WMNT --token-b USDC --fee-tier 3000 --provider agni --json
+   → Get tick range suggestions (wide/moderate/tight strategies)
 ```
 
 ## Safety Rules
 
-1. **Never fabricate calldata** — Always use `mantle_build*` tools. Never construct tx data manually.
-2. **Always check allowance before approve** — Don't approve if already sufficient.
-3. **Always get a quote before swap** — Use `mantle_getSwapQuote` to know expected output.
-4. **Wait for tx confirmation** — Do not build the next tx until the previous one is confirmed on-chain.
-5. **Show `human_summary`** — Present every build tool's summary to the user before signing.
-6. **Value field is hex** — The `unsigned_tx.value` is hex-encoded (e.g., "0x0"). Pass it directly to the signer.
-7. **MNT is gas** — All gas costs are in MNT, not ETH.
+1. **CLI only — never use MCP** — All operations via `mantle-cli ... --json`. Do not enable or connect to the MCP server.
+2. **Never fabricate calldata** — Always use `mantle-cli` build commands. Never construct tx data manually.
+3. **Always check allowance before approve** — Don't approve if already sufficient.
+4. **Always get a quote before swap** — Use `mantle-cli defi swap-quote` to know expected output.
+5. **Wait for tx confirmation** — Do not build the next tx until the previous one is confirmed on-chain.
+6. **Show `human_summary`** — Present every build command's summary to the user before signing.
+7. **Value field is hex** — The `unsigned_tx.value` is hex-encoded (e.g., "0x0"). Pass it directly to the signer.
+8. **MNT is gas** — All gas costs are in MNT, not ETH.
 
 ## Competition Scoring
 

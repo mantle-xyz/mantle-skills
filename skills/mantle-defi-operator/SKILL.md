@@ -18,12 +18,21 @@ Coordinate deterministic pre-execution planning for Mantle DeFi intents. This sk
 
 ### Tool Discovery via Capability Catalog
 
-Before building any transaction, consult the **Capability Catalog** resource (`mantle://registry/capabilities`) for the authoritative list of available tools, their read/write nature, wallet requirements, and call ordering. This eliminates guesswork about which tool to use.
+Before building any transaction, consult the **Capability Catalog** via CLI for the authoritative list of available tools, their read/write nature, wallet requirements, and call ordering:
 
+```bash
+mantle-cli catalog list --json                    # all capabilities
+mantle-cli catalog list --category execute --json  # only tx-building commands
+mantle-cli catalog search "swap" --json            # keyword search
+mantle-cli catalog show mantle_buildSwap --json    # full details + CLI command template
+```
+
+Each entry includes:
 - `category: query` — read-only, no state change, no wallet needed for most
 - `category: analyze` — computed insights (APR, risk, recommendations), read-only
 - `category: execute` — builds unsigned transactions, requires wallet address
 - `workflow_before` — tells you which tools to call before a given tool
+- `cli_command` — the exact CLI command template with placeholders
 
 ### Available CLI commands for DeFi operations:
 
@@ -127,8 +136,8 @@ All `--json` outputs contain `unsigned_tx` with `to`, `data`, `value`, `chainId`
 - **CLI-FIRST RULE**: ALWAYS use `mantle-cli` commands with `--json` to build unsigned transactions. NEVER manually construct calldata, hex-encode function calls, or extract addresses from text to build transactions yourself. The CLI handles ABI encoding, address validation, pool parameter resolution, and whitelist checks.
 - **NO `from` FIELD**: NEVER add a `from` field to `unsigned_tx` objects. The signer determines `from` from the signing key. Adding `from` breaks Privy and other embedded wallet signers.
 - **NO MANUAL ROUTING**: NEVER manually discover intermediate pools, split multi-hop swaps into separate transactions, or use external aggregators/routing services. The CLI auto-discovers 2-hop routes via bridge tokens (WMNT, USDC, USDT0, USDe, WETH) when no direct pair exists. Just pass `--in` and `--out` — the CLI handles the routing.
-- **FACTORY-FIRST POOL DISCOVERY**: When looking for LP pools, ALWAYS use `mantle-cli lp find-pools` (or `mantle_findPools` MCP tool) which queries factory contracts on-chain. Do NOT rely on DexScreener, subgraphs, or hardcoded lists — they have incomplete coverage.
-- **ANALYZE BEFORE LP**: Before adding liquidity, ALWAYS run `mantle-cli lp analyze` (or `mantle_analyzePool` MCP tool) to get fee APR, multi-range comparison, risk scoring, and investment projections. Do NOT add liquidity based on guesswork about which range or how much to invest.
+- **FACTORY-FIRST POOL DISCOVERY**: When looking for LP pools, ALWAYS use `mantle-cli lp find-pools --json` which queries factory contracts on-chain. Do NOT rely on DexScreener, subgraphs, or hardcoded lists — they have incomplete coverage.
+- **ANALYZE BEFORE LP**: Before adding liquidity, ALWAYS run `mantle-cli defi analyze-pool --json` to get fee APR, multi-range comparison, risk scoring, and investment projections. Do NOT add liquidity based on guesswork about which range or how much to invest.
 - **USD AMOUNT MODE**: When the user specifies an investment in USD (e.g. "invest $1000"), use `--amount-usd` instead of manually computing token amounts. The CLI reads pool state and computes the correct token ratio for the target tick range. Do NOT blindly split 50/50.
 - **PERCENTAGE REMOVAL**: When the user wants to remove a fraction of a V3 position (e.g. "remove half"), use `--percentage 50` instead of manually reading and computing liquidity amounts. The CLI reads the position on-chain and calculates the exact liquidity to remove.
 - **WETH EXISTS ON MANTLE**: WETH (bridged ETH) is at `0xdEAddEaDdeadDEadDEADDEAddEADDEAddead1111` with ~125K ETH supply and pools on all DEXes. Do NOT claim WETH doesn't exist. MNT being the gas token does not mean ETH is absent — ETH is bridged from L1.

@@ -11,9 +11,10 @@ Apply these controls before any potential state-changing DeFi action.
 - For simple read-only tasks (query/analyze), the Capability Catalog is sufficient — no skill loading needed.
 - For execution planning, continue with the guardrails below.
 
-## Capability boundary (mantle-mcp v0.2)
+## Capability boundary (CLI-only)
 
-- `mantle-mcp` v0.2 in this repo is read-focused and does not sign, broadcast, deploy, or execute transactions.
+- All on-chain operations use `mantle-cli` commands with `--json`. Do NOT enable or connect to the MCP server.
+- The CLI is read-focused for queries and builds unsigned transactions for writes — it does not sign, broadcast, deploy, or execute transactions.
 - This skill must stop at analysis + plan generation.
 - Never fabricate tx hashes, receipts, or settlement outcomes.
 

@@ -8,7 +8,7 @@ Use these rules to classify spender approval exposure.
 - Spender address
 - Allowance raw value
 - Token decimals (if known)
-- `is_unlimited` flag from `mantle_getAllowances` (preferred when present)
+- `is_unlimited` flag from `mantle-cli account allowances` output (preferred when present)
 
 ## Risk levels
 

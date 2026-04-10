@@ -1,7 +1,7 @@
 # Simulation Backends
 
 Choose backend by availability, fidelity, and reproducibility requirements.
-These backends are external to mantle-mcp v0.2 and must be run outside this server.
+These backends are external and must be run outside the CLI toolchain.
 
 ## Backend options
 

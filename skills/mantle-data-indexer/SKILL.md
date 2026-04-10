@@ -16,15 +16,15 @@ Use GraphQL or SQL indexers to answer historical questions on Mantle with reprod
    - entities (wallet, pool, token, protocol)
    - time range (absolute UTC start/end). If the user provides relative times like "past 7 days" or "last month", convert them to absolute UTC timestamps (e.g., "2026-03-18T00:00:00Z to 2026-03-25T00:00:00Z") and state the conversion explicitly.
 2. Resolve endpoint availability:
-   - `mantle_querySubgraph` requires `endpoint` + `query`.
-   - `mantle_queryIndexerSql` requires `endpoint` + `query`.
+   - `mantle-cli indexer subgraph --endpoint <url> --query <graphql> --json` requires an endpoint URL + query.
+   - `mantle-cli indexer sql --endpoint <url> --query <sql> --json` requires an endpoint URL + query.
    - If endpoint config is missing, STOP and use the Blocked Output Format below. Do NOT proceed to step 3.
    - WRONG: making up a URL like `https://api.thegraph.com/subgraphs/name/mantle-...` or `https://indexer.mantle.xyz/...`.
    - RIGHT: responding with the Blocked Output Format and asking the user to provide the endpoint.
    - In E2E `endpoint-configured` scenarios, skip when `E2E_SUBGRAPH_ENDPOINT` or `E2E_SQL_ENDPOINT` is unset.
 3. Select source by availability and latency target:
-   - GraphQL indexer -> `mantle_querySubgraph`
-   - SQL indexer -> `mantle_queryIndexerSql`
+   - GraphQL indexer -> `mantle-cli indexer subgraph --endpoint <url> --query <graphql> --json`
+   - SQL indexer -> `mantle-cli indexer sql --endpoint <url> --query <sql> --json`
 4. Build query from `references/query-templates.md`.
 5. Execute with pagination and deterministic ordering.
 6. Normalize units and decimals before aggregation.

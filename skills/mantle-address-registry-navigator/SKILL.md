@@ -11,11 +11,11 @@ Resolve addresses from trusted sources only and fail closed when data is missing
 
 ## Source Priority
 
-1. `mantle_resolveToken` for token symbol/name requests.
-2. `mantle_resolveAddress` for contract key, alias, or label requests.
+1. `mantle-cli token resolve <symbol> --json` for token symbol/name requests.
+2. `mantle-cli registry resolve <identifier> --json` for contract key, alias, or label requests.
 3. Local registry file: `assets/registry.json` (fallback/manual cross-check only).
 4. If no source provides a verified match, stop and return a blocked result.
-5. **If MCP tools are unavailable** (connection error, tool not found, or offline mode), skip to the local registry fallback (step 3) and cap confidence at `medium`. Note the tool unavailability in the response `notes` field.
+5. **If CLI commands fail** (connection error, tool not found, or offline mode), skip to the local registry fallback (step 3) and cap confidence at `medium`. Note the CLI unavailability in the response `notes` field.
 
 ## Lookup Workflow
 
@@ -25,7 +25,7 @@ Resolve addresses from trusted sources only and fail closed when data is missing
    - `category` (system, token, bridge, `defi`, or `any`)
    - optional `protocol_id` + `contract_role` when a DeFi request names a protocol but not a registry key
 2. Resolve candidates via source priority. For local DeFi fallback, prefer exact `key` matches first, then exact `protocol_id` + `contract_role`.
-3. Validate the chosen candidate with `mantle_validateAddress` and registry metadata:
+3. Validate the chosen candidate with `mantle-cli registry validate <address> --json` and registry metadata:
    - `valid_format` is `true`.
    - Address is not the zero address.
    - Entry environment matches request.

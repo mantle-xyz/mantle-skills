@@ -4,8 +4,8 @@ Use this guide to choose index sources and communicate confidence.
 
 ## Tool mapping and endpoint availability
 
-- GraphQL path: use `mantle_querySubgraph` (`querySubgraph`) with required args `endpoint` and `query`.
-- SQL path: use `mantle_queryIndexerSql` (`queryIndexerSql`) with required args `endpoint` and `query`.
+- GraphQL path: use `mantle-cli indexer subgraph --endpoint <url> --query <graphql> --json`.
+- SQL path: use `mantle-cli indexer sql --endpoint <url> --query <sql> --json`.
 - Endpoints are runtime inputs; do not fabricate URLs when missing.
 - For E2E `endpoint-configured` scenarios, `E2E_SUBGRAPH_ENDPOINT` / `E2E_SQL_ENDPOINT` may be unset and those scenarios should be skipped.
 

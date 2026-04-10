@@ -33,5 +33,5 @@ Use this workflow to plan or validate verification of externally deployed contra
 
 - Keep full request payload snapshot (excluding secrets).
 - Keep explorer response body and timestamp.
-- In mantle-mcp v0.2, do not claim the agent submitted deployment/verification transactions; execution happens externally.
+- Do not claim the agent submitted deployment/verification transactions; execution happens externally.
 - Do not claim "verified" without explicit success response.

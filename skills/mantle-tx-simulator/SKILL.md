@@ -39,13 +39,13 @@ Prepare simulation handoff packages for external backends and translate returned
 
 ## Guardrails
 
-- This skill is read-only with mantle-mcp v0.2: it cannot execute transaction simulations directly.
+- This skill is read-only: it cannot execute transaction simulations directly. Use `mantle-cli` commands for any on-chain reads. Do NOT enable or connect to the MCP server.
 - Never broadcast real transactions from this skill.
 - Never claim a simulation has run unless external backend output is provided.
 - Distinguish simulated estimate from guaranteed execution result.
 - If token decimals/pricing context is incomplete, state uncertainty explicitly.
 - For bundle flows, describe each step and net effect.
-- If asked to run simulation via MCP tool, explain v0.2 has no tx simulation execution tool and provide external handoff instructions.
+- If asked to run simulation via CLI tools, explain that `mantle-cli` has no tx simulation execution tool and provide external handoff instructions.
 - **Always output the full Simulation Report format** for every response, regardless of whether simulation evidence exists, the request is incomplete, or execution is declined. Never respond with only prose — always include the structured report.
 
 ## Output Format

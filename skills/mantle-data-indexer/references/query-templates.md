@@ -2,16 +2,16 @@
 
 Use these templates as starting points. Replace placeholders explicitly.
 
-## Tool argument mapping (mantle-mcp v0.2)
+## Tool argument mapping (CLI)
 
-- GraphQL template -> `mantle_querySubgraph` (`querySubgraph`) with:
-  - `endpoint` (required)
-  - `query` (required)
-  - `variables` (optional)
-- SQL template -> `mantle_queryIndexerSql` (`queryIndexerSql`) with:
-  - `endpoint` (required)
-  - `query` (required, read-only SQL only)
-  - `params` (optional)
+- GraphQL template -> `mantle-cli indexer subgraph --json` with:
+  - `--endpoint <url>` (required)
+  - `--query <graphql>` (required)
+  - `--variables <json>` (optional)
+- SQL template -> `mantle-cli indexer sql --json` with:
+  - `--endpoint <url>` (required)
+  - `--query <sql>` (required, read-only SQL only)
+  - `--params <json>` (optional)
 - In E2E `endpoint-configured` scenarios, endpoint placeholders come from `E2E_SUBGRAPH_ENDPOINT` / `E2E_SQL_ENDPOINT`; if unset, those scenarios are skipped.
 
 ## GraphQL: wallet swap history (template)

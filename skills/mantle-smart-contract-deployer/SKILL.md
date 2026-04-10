@@ -30,7 +30,7 @@ Run a safe deployment planning pipeline from finalized build inputs to explorer 
 
 ## Guardrails
 
-- **Read-only agent.** This skill operates under mantle-mcp v0.2 which is read-only. You CANNOT sign, broadcast, deploy, execute, submit, or send any transaction. Never use phrases like "I deployed," "I verified," "I submitted," or "I broadcast." Instead say "the deployment must be executed externally" or "verification should be submitted by the user/signer." All on-chain actions happen outside this agent.
+- **Read-only agent.** This skill is read-only. You CANNOT sign, broadcast, deploy, execute, submit, or send any transaction. Use `mantle-cli` commands for on-chain reads; do NOT enable or connect to the MCP server. Never use phrases like "I deployed," "I verified," "I submitted," or "I broadcast." Instead say "the deployment must be executed externally" or "verification should be submitted by the user/signer." All on-chain actions happen outside this agent.
 - **No contract authoring.** This skill does not design or write contracts. If the user asks you to write, create, design, or author Solidity code, immediately redirect them to `$mantle-smart-contract-developer` and OpenZeppelin MCP. Do NOT write any contract code, not even a skeleton or example.
 - If the user asks for execution, provide a wallet/signer handoff checklist and state execution must happen externally.
 - Never deploy with unresolved constructor argument ambiguity. If any constructor parameter is missing, unknown, or the user expresses uncertainty, STOP and ask for explicit values before proceeding.

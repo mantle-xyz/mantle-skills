@@ -4,11 +4,10 @@ Use this file with `assets/registry.json` to keep address lookups deterministic 
 
 ## Resolution Policy
 
-- Runtime tools in mantle-mcp v0.2:
-  - Use `mantle_resolveToken` for token symbols/names.
-  - Use `mantle_resolveAddress` for contract key/alias/label lookups.
-  - Use `mantle_validateAddress` before returning any final address.
-  - Do not reference `get_contract_address` (not available in v0.2).
+- CLI commands for address resolution (do NOT use MCP server):
+  - Use `mantle-cli token resolve <symbol> --json` for token symbols/names.
+  - Use `mantle-cli registry resolve <identifier> --json` for contract key/alias/label lookups.
+  - Use `mantle-cli registry validate <address> --json` before returning any final address.
 - Prefer machine-readable sources over free text.
 - Treat missing or stale provenance as a safety failure.
 - Fail closed: no verified entry means no address output.
@@ -33,7 +32,7 @@ Each `contracts[]` entry should include:
 
 ## Lookup Strategy
 
-1. If MCP tools are available, resolve through `mantle_resolveToken`/`mantle_resolveAddress` first.
+1. If CLI is available, resolve through `mantle-cli token resolve`/`mantle-cli registry resolve` first.
 2. Local fallback: exact match on `key`.
 3. For `defi` lookups, if the request includes a protocol and role, filter by exact `protocol_id` + `contract_role`.
 4. Local fallback: exact match on alias/symbol.
