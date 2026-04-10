@@ -16,6 +16,15 @@ Coordinate deterministic pre-execution planning for Mantle DeFi intents. This sk
 - Extract contract addresses from text responses and build transactions yourself
 - Add a `from` field to unsigned transactions — this breaks Privy and other signers
 
+### Tool Discovery via Capability Catalog
+
+Before building any transaction, consult the **Capability Catalog** resource (`mantle://registry/capabilities`) for the authoritative list of available tools, their read/write nature, wallet requirements, and call ordering. This eliminates guesswork about which tool to use.
+
+- `category: query` — read-only, no state change, no wallet needed for most
+- `category: analyze` — computed insights (APR, risk, recommendations), read-only
+- `category: execute` — builds unsigned transactions, requires wallet address
+- `workflow_before` — tells you which tools to call before a given tool
+
 ### Available CLI commands for DeFi operations:
 
 ```bash
@@ -37,9 +46,10 @@ mantle-cli aave markets --json
 mantle-cli lp find-pools --token-a <t> --token-b <t> --json           # ALWAYS START HERE — discover ALL pools
 mantle-cli lp pool-state <pool-or-tokens> --json
 mantle-cli lp suggest-ticks <pool-or-tokens> --json
+mantle-cli lp analyze <pool-or-tokens> [--investment-usd <n>] --json  # Deep pool analysis: APR, risk, range comparison
 mantle-cli lp positions --owner <addr> --json
-mantle-cli lp add --provider <dex> --token-a <t> --token-b <t> --amount-a <n> --amount-b <n> --recipient <addr> --json
-mantle-cli lp remove --provider <dex> --recipient <addr> [--token-id <id> --liquidity <n>] --json
+mantle-cli lp add --provider <dex> --token-a <t> --token-b <t> (--amount-a <n> --amount-b <n> | --amount-usd <n>) --recipient <addr> --json
+mantle-cli lp remove --provider <dex> --recipient <addr> --token-id <id> (--liquidity <n> | --percentage <1-100>) --json
 mantle-cli lp collect-fees --provider <p> --token-id <id> --recipient <addr> --json
 
 # Read operations (no signing needed)
@@ -118,6 +128,9 @@ All `--json` outputs contain `unsigned_tx` with `to`, `data`, `value`, `chainId`
 - **NO `from` FIELD**: NEVER add a `from` field to `unsigned_tx` objects. The signer determines `from` from the signing key. Adding `from` breaks Privy and other embedded wallet signers.
 - **NO MANUAL ROUTING**: NEVER manually discover intermediate pools, split multi-hop swaps into separate transactions, or use external aggregators/routing services. The CLI auto-discovers 2-hop routes via bridge tokens (WMNT, USDC, USDT0, USDe, WETH) when no direct pair exists. Just pass `--in` and `--out` — the CLI handles the routing.
 - **FACTORY-FIRST POOL DISCOVERY**: When looking for LP pools, ALWAYS use `mantle-cli lp find-pools` (or `mantle_findPools` MCP tool) which queries factory contracts on-chain. Do NOT rely on DexScreener, subgraphs, or hardcoded lists — they have incomplete coverage.
+- **ANALYZE BEFORE LP**: Before adding liquidity, ALWAYS run `mantle-cli lp analyze` (or `mantle_analyzePool` MCP tool) to get fee APR, multi-range comparison, risk scoring, and investment projections. Do NOT add liquidity based on guesswork about which range or how much to invest.
+- **USD AMOUNT MODE**: When the user specifies an investment in USD (e.g. "invest $1000"), use `--amount-usd` instead of manually computing token amounts. The CLI reads pool state and computes the correct token ratio for the target tick range. Do NOT blindly split 50/50.
+- **PERCENTAGE REMOVAL**: When the user wants to remove a fraction of a V3 position (e.g. "remove half"), use `--percentage 50` instead of manually reading and computing liquidity amounts. The CLI reads the position on-chain and calculates the exact liquidity to remove.
 - **WETH EXISTS ON MANTLE**: WETH (bridged ETH) is at `0xdEAddEaDdeadDEadDEADDEAddEADDEAddead1111` with ~125K ETH supply and pools on all DEXes. Do NOT claim WETH doesn't exist. MNT being the gas token does not mean ETH is absent — ETH is bridged from L1.
 - NEVER claim to have signed, broadcast, deployed, or executed any transaction. Do not use phrases like "I executed the swap", "the transaction was submitted", "swap complete", or "funds have been transferred." This skill produces plans only; an external signer/wallet must execute them.
 - Act as a coordinator: when specialized address, risk, or portfolio skills apply, cite or request their output instead of re-deriving those judgments from scratch.

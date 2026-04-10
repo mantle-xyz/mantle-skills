@@ -2,6 +2,15 @@
 
 Apply these controls before any potential state-changing DeFi action.
 
+## Tool discovery via Capability Catalog
+
+- Read `mantle://registry/capabilities` to discover available tools before constructing any plan.
+- Use `category` to filter: `query` for reads, `analyze` for insights, `execute` for transaction building.
+- Use `auth` to check wallet requirements: `required` tools need a wallet address, `none` tools don't.
+- Use `workflow_before` to understand call ordering (e.g., `getSwapQuote` before `buildSwap`).
+- For simple read-only tasks (query/analyze), the Capability Catalog is sufficient — no skill loading needed.
+- For execution planning, continue with the guardrails below.
+
 ## Capability boundary (mantle-mcp v0.2)
 
 - `mantle-mcp` v0.2 in this repo is read-focused and does not sign, broadcast, deploy, or execute transactions.
