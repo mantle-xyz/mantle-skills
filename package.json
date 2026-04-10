@@ -1,0 +1,12 @@
+{
+  "name": "mantle-skills",
+  "version": "0.1.2",
+  "private": true,
+  "description": "Mantle AI agent skills — installs mantle-cli automatically",
+  "dependencies": {
+    "mantle-mcp": "github:mantle-xyz/mantle-agent-scaffold"
+  },
+  "scripts": {
+    "postinstall": "mantle-cli --help > /dev/null 2>&1 && echo 'mantle-cli ready' || echo 'mantle-cli not found — run: npm install'"
+  }
+}
