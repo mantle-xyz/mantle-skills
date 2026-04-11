@@ -1,13 +1,13 @@
 ---
 name: mantle-portfolio-analyst
-description: Use when a Mantle task needs wallet balances, token holdings, allowance exposure, or unlimited-approval review before a DeFi or security decision.
+description: Use when a Mantle task needs wallet balances, token holdings, DeFi positions (Aave, LP), allowance exposure, or unlimited-approval review before a DeFi or security decision.
 ---
 
 # Mantle Portfolio Analyst
 
 ## Overview
 
-Build deterministic, read-only wallet analysis on Mantle. Enumerate balances and allowances, then highlight approval risk in a structured report.
+Build deterministic, read-only wallet analysis on Mantle. Enumerate balances, DeFi positions (Aave V3 lending, V3 LP, Merchant Moe LB LP), and allowances, then highlight approval risk in a structured report.
 
 ## Workflow
 
@@ -24,9 +24,19 @@ Build deterministic, read-only wallet analysis on Mantle. Enumerate balances and
    - spender list from user input or `mantle://registry/protocols`
 4. Fetch native balance with `mantle-cli account balance <address> --json`.
 5. Fetch ERC-20 balances with `mantle-cli account token-balances <address> --tokens <list> --json`.
-6. Fetch token-spender allowances with `mantle-cli account allowances <owner> --pairs <token:spender,...> --json`.
-7. If a token's metadata is missing, use `mantle-cli token info <token> --json` for that token and keep missing fields as `unknown` when unresolved.
-8. Classify approval risk using these rules:
+6. Fetch Aave V3 positions with `mantle-cli aave positions --user <address> --json`.
+   - This returns aggregate account data (total collateral/debt USD, health factor) and per-reserve supplied/borrowed amounts.
+   - aToken balances are **positive assets** (collateral), debtToken balances are **liabilities** (debt).
+   - Include health_status in the report. Flag `at_risk` or `liquidatable` positions prominently.
+7. Fetch V3 LP positions with `mantle-cli lp positions --owner <address> --json`.
+   - Returns positions across Agni and Fluxion DEXes with tick ranges, liquidity, and in-range status.
+   - Include as LP assets in the portfolio.
+8. Fetch Merchant Moe LB positions with `mantle-cli lp lb-positions --owner <address> --json`.
+   - Returns LB bin positions with user share percentage and estimated token amounts.
+   - Include as LP assets in the portfolio.
+9. Fetch token-spender allowances with `mantle-cli account allowances <owner> --pairs <token:spender,...> --json`.
+10. If a token's metadata is missing, use `mantle-cli token info <token> --json` for that token and keep missing fields as `unknown` when unresolved.
+11. Classify approval risk using these rules:
    - `low`: allowance is zero, or tightly bounded and clearly below wallet balance/expected use.
    - `medium`: allowance is non-zero and larger than immediate expected use, but still bounded.
    - `high`: allowance is very large relative to expected use, or intentionally broad with unclear user intent.
@@ -35,11 +45,16 @@ Build deterministic, read-only wallet analysis on Mantle. Enumerate balances and
    - Mark spender trust as `unknown` unless verified from `mantle://registry/protocols` or user-confirmed.
    - Highlight all `high` and `critical` approvals at top of summary.
    - If token decimals are missing, classify using raw value and downgrade confidence.
-9. Return a formatted report with findings, confidence, and explicit coverage/partial gaps.
+12. Handle partial results from DeFi position tools:
+   - If `mantle-cli aave positions` returns `partial: true`, note which reserves had errors and state that per-reserve breakdowns may be incomplete while aggregate USD totals (from `getUserAccountData`) remain accurate.
+   - If `mantle-cli aave positions` returns `possible_missing_reserves: true`, warn that Aave governance may have added new reserves not yet tracked by this tool. Aggregate USD totals are still accurate.
+   - If `mantle-cli lp lb-positions` returns positions, note the `coverage: "known_pairs_only"` and `scan_radius` limitations. Explicitly state that positions in distant bins or unlisted pairs are NOT checked.
+   - If `mantle-cli lp lb-positions` returns `total_positions: 0`, do NOT conclude the wallet has no LB exposure — only state that no positions were found within the scan range.
+13. Return a formatted report with findings, confidence, and explicit coverage/partial gaps.
 
 ## Guardrails
 
-- Use `mantle-cli` read-only commands only for this skill (`mantle-cli account balance`, `mantle-cli account token-balances`, `mantle-cli account allowances`, `mantle-cli token info`, chain/address validation helpers). Do NOT enable or connect to the MCP server.
+- Use `mantle-cli` read-only commands only for this skill (`mantle-cli account balance`, `mantle-cli account token-balances`, `mantle-cli account allowances`, `mantle-cli aave positions`, `mantle-cli lp positions`, `mantle-cli lp lb-positions`, `mantle-cli token info`, chain/address validation helpers). Do NOT enable or connect to the MCP server.
 - Stay read-only; do not construct or send transactions.
 - Do not reference direct JSON-RPC calls (`eth_*`) as if they are callable tools in this workflow.
 - Do not guess token decimals or symbols if calls fail.
@@ -71,6 +86,33 @@ Token Balances
   decimals:
   balance_normalized:
 
+Aave V3 Positions
+- health_factor:
+- health_status: no_debt | safe | moderate | at_risk | liquidatable
+- total_collateral_usd:
+- total_debt_usd:
+- available_borrows_usd:
+- positions:
+  - symbol:
+    supplied:
+    borrowed:
+
+V3 LP Positions (Agni / Fluxion)
+- total_positions:
+- positions:
+  - provider:
+    pool:
+    token0/token1:
+    liquidity:
+    in_range:
+
+Merchant Moe LB Positions
+- total_positions:
+- positions:
+  - pair:
+    token_x/token_y:
+    bins_with_liquidity:
+
 Allowance Exposure
 - token:
   spender:
@@ -81,6 +123,9 @@ Allowance Exposure
 
 Summary
 - tokens_with_balance:
+- aave_health_status:
+- v3_lp_positions:
+- lb_positions:
 - allowances_checked:
 - unlimited_or_near_unlimited_count:
 - key_risks:

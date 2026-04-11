@@ -1,6 +1,6 @@
 {
   "name": "mantle-skills",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "private": true,
   "description": "Mantle AI agent skills — installs @0xwh1sker/mantle-cli automatically",
   "dependencies": {
