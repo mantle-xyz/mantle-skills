@@ -2,6 +2,9 @@
 
 .idea/
 .vscode/
+.claude/
+*.tgz
+tmp/
 
 *.swp
 *.swo

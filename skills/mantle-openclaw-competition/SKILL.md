@@ -17,7 +17,7 @@ This skill provides everything OpenClaw needs to execute DeFi operations in the 
 
 ```bash
 # Install mantle-cli (CLI only, no MCP server overhead)
-npm install @0xwh1sker/mantle-cli
+npm install @mantleio/mantle-cli
 npx mantle-cli --help   # verify
 ```
 
