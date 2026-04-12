@@ -217,9 +217,21 @@ Only these assets count toward the competition score:
 **Borrow (leverage):**
 ```
 1. Supply collateral first (see above)
-2. mantle-cli aave borrow --asset USDC --amount 50 --on-behalf-of <wallet> --json
+
+2. mantle-cli aave positions --user <wallet> --json
+   → Verify collateral_enabled=YES for the supplied asset
+   → If collateral_enabled=NO or total_collateral_usd=0:
+
+3. mantle-cli aave set-collateral --asset WMNT --user <wallet> --json
+   → Runs preflight diagnostics (checks aToken balance, LTV, reserve status)
+   → Sign and broadcast → Enables the supplied asset as collateral
+
+4. mantle-cli aave borrow --asset USDC --amount 50 --on-behalf-of <wallet> --json
    → Sign and broadcast → Receive USDC, incur variableDebtUSDC
 ```
+
+NOTE: Step 3 is only needed if collateral was NOT auto-enabled after supply. This is
+especially common with Isolation Mode assets (WMNT, WETH). Always verify with positions first.
 
 **Repay:**
 ```

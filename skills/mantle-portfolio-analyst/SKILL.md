@@ -48,6 +48,7 @@ Build deterministic, read-only wallet analysis on Mantle. Enumerate balances, De
 12. Handle partial results from DeFi position tools:
    - If `mantle-cli aave positions` returns `partial: true`, note which reserves had errors and state that per-reserve breakdowns may be incomplete while aggregate USD totals (from `getUserAccountData`) remain accurate.
    - If `mantle-cli aave positions` returns `possible_missing_reserves: true`, warn that Aave governance may have added new reserves not yet tracked by this tool. Aggregate USD totals are still accurate.
+   - Check each position's `collateral_enabled` field. If any position has `supplied > 0` but `collateral_enabled: false`, flag it as a **collateral warning** — the user has deposited tokens but they are NOT counting toward borrowing capacity. This can cause borrow failures.
    - If `mantle-cli lp lb-positions` returns positions, note the `coverage: "known_pairs_only"` and `scan_radius` limitations. Explicitly state that positions in distant bins or unlisted pairs are NOT checked.
    - If `mantle-cli lp lb-positions` returns `total_positions: 0`, do NOT conclude the wallet has no LB exposure — only state that no positions were found within the scan range.
 13. Return a formatted report with findings, confidence, and explicit coverage/partial gaps.
@@ -96,6 +97,8 @@ Aave V3 Positions
   - symbol:
     supplied:
     borrowed:
+    collateral_enabled: true | false | null (null = could not read)
+- collateral_warnings:  # flag any position where supplied > 0 but collateral_enabled = false
 
 V3 LP Positions (Agni / Fluxion)
 - total_positions:

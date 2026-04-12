@@ -8,13 +8,15 @@ Use this standard flow for Aave V3 lending operations (supply, borrow, repay, wi
 
 ```bash
 # All commands support --json for structured output
-mantle-cli aave supply   --asset USDC --amount 1.0 --on-behalf-of 0x... --json
-mantle-cli aave borrow   --asset USDC --amount 0.5 --on-behalf-of 0x... --json
-mantle-cli aave repay    --asset USDC --amount 0.5 --on-behalf-of 0x... --json
-mantle-cli aave repay    --asset USDC --amount max --on-behalf-of 0x... --json
-mantle-cli aave withdraw --asset USDC --amount 1.0 --to 0x... --json
-mantle-cli aave withdraw --asset USDC --amount max --to 0x... --json
-mantle-cli aave markets  --json  # check APY/TVL before deciding
+mantle-cli aave supply          --asset USDC --amount 1.0 --on-behalf-of 0x... --json
+mantle-cli aave set-collateral  --asset WMNT --user 0x... --json  # enable collateral (diagnostics)
+mantle-cli aave borrow          --asset USDC --amount 0.5 --on-behalf-of 0x... --json
+mantle-cli aave repay           --asset USDC --amount 0.5 --on-behalf-of 0x... --json
+mantle-cli aave repay           --asset USDC --amount max --on-behalf-of 0x... --json
+mantle-cli aave withdraw        --asset USDC --amount 1.0 --to 0x... --json
+mantle-cli aave withdraw        --asset USDC --amount max --to 0x... --json
+mantle-cli aave positions       --user 0x... --json  # check positions + collateral flags
+mantle-cli aave markets         --json  # check APY/TVL before deciding
 ```
 
 For approvals (required before supply/repay):
@@ -113,6 +115,43 @@ Use the appropriate CLI command:
 
 Always use `--json` to get structured output for the signer.
 
+## Step 5b: Verify and enable collateral (before borrowing)
+
+After supplying an asset, Aave V3 normally auto-enables it as collateral. However, this auto-enablement can fail (especially for Isolation Mode assets like WMNT/WETH). **Before attempting a borrow, always verify collateral status.**
+
+### Check positions
+
+```bash
+mantle-cli aave positions --user <wallet> --json
+```
+
+- Check the `collateral_enabled` field for the supplied asset (YES / NO)
+- Check `total_collateral_usd` > 0 in the account summary
+- If `collateral_enabled` is NO and `total_collateral_usd` is 0: collateral was NOT auto-enabled
+
+### Diagnose and fix with set-collateral
+
+```bash
+mantle-cli aave set-collateral --asset WMNT --user <wallet> --json
+```
+
+This tool runs **preflight diagnostics** before building the transaction:
+
+| Check | Failure | Meaning |
+|-------|---------|---------|
+| aToken balance | `NO_SUPPLY_BALANCE` | User hasn't supplied this asset — supply first |
+| Reserve active | `RESERVE_NOT_ACTIVE` | Reserve deactivated by governance — cannot use |
+| Reserve LTV | `LTV_IS_ZERO` | LTV=0 on-chain — this asset **cannot** be collateral (root cause is governance config, not the collateral flag) |
+| Reserve frozen | Warning | Supply/borrow frozen but collateral toggle may work |
+| Collateral already enabled | `NO-OP` warning | Flag already set — borrow failure has a different root cause (likely oracle pricing) |
+
+**Important:** The `--user` flag is for diagnostics only. The actual transaction operates on `msg.sender` (the signing wallet).
+
+If diagnostics show collateral is NOT enabled and LTV > 0:
+1. Sign and broadcast the `set-collateral` unsigned_tx
+2. Re-check positions to confirm `collateral_enabled` is now YES
+3. Proceed to borrow
+
 ## Step 6: Sign and broadcast
 
 - Pass the `unsigned_tx` object directly to the external signer.
@@ -122,7 +161,8 @@ Always use `--json` to get structured output for the signer.
 ## Step 7: Post-execution verification
 
 - Re-read token balance and aToken balance to confirm the operation.
-- For supply: verify aToken balance increased.
+- For supply: verify aToken balance increased **and check `collateral_enabled` in positions output**.
+- For set-collateral: verify `collateral_enabled` changed and `total_collateral_usd` > 0.
 - For borrow: verify token balance increased and debt token appeared.
 - For repay: verify debt token balance decreased.
 - For withdraw: verify aToken balance decreased and token balance increased.
@@ -131,6 +171,7 @@ Always use `--json` to get structured output for the signer.
 ## Common pitfalls
 
 - **Missing approve**: supply and repay require prior ERC-20 approval for the Aave Pool.
+- **Missing collateral enablement**: after supply, always verify `collateral_enabled=YES` before borrowing. If it's NO, use `set-collateral` to enable. If `set-collateral` throws `LTV_IS_ZERO`, the asset cannot be used as collateral by governance design.
 - **`from` field in unsigned_tx**: NEVER add `from` — this breaks Privy and some signers.
 - **Stale allowance**: use `--owner` flag in approve to auto-skip if sufficient.
 - **Health factor**: borrow and withdraw reduce health factor — check before proceeding.

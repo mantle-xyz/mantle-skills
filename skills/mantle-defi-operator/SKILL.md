@@ -46,9 +46,11 @@ mantle-cli swap pairs --json
 
 # Aave V3 lending
 mantle-cli aave supply --asset <token> --amount <n> --on-behalf-of <addr> --json
+mantle-cli aave set-collateral --asset <token> [--user <addr>] [--disable] --json  # enable/disable collateral + diagnostics
 mantle-cli aave borrow --asset <token> --amount <n> --on-behalf-of <addr> --json
 mantle-cli aave repay --asset <token> --amount <n|max> --on-behalf-of <addr> --json
 mantle-cli aave withdraw --asset <token> --amount <n|max> --to <addr> --json
+mantle-cli aave positions --user <addr> --json   # positions + per-reserve collateral_enabled
 mantle-cli aave markets --json
 
 # Liquidity provision
