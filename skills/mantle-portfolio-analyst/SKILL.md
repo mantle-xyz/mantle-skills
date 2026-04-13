@@ -1,6 +1,6 @@
 ---
 name: mantle-portfolio-analyst
-version: 0.1.7
+version: 0.1.8
 description: "Use when a Mantle task needs wallet balances, token holdings, DeFi positions (Aave, LP), allowance exposure, or unlimited-approval review before a DeFi or security decision."
 ---
 
