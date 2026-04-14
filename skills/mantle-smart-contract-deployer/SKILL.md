@@ -1,6 +1,6 @@
 ---
 name: mantle-smart-contract-deployer
-version: 0.1.9
+version: 0.1.10
 description: "Use when a finalized Mantle contract build needs deployment-readiness checks, external signer handoff, receipt capture, or explorer verification."
 ---
 

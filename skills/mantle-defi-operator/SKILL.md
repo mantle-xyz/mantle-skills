@@ -1,6 +1,6 @@
 ---
 name: mantle-defi-operator
-version: 0.1.9
+version: 0.1.10
 description: "Use when a Mantle DeFi task needs discovery, venue comparison, or execution-ready planning with verified contracts, preflight evidence, and an external handoff."
 ---
 
@@ -59,7 +59,8 @@ mantle-cli aave positions --user <addr> --json   # positions + per-reserve colla
 mantle-cli aave markets --json
 
 # Liquidity provision
-mantle-cli lp find-pools --token-a <t> --token-b <t> --json           # ALWAYS START HERE — discover ALL pools
+mantle-cli lp top-pools [--sort-by volume|apr|tvl] [--limit <n>] [--provider <dex>] [--min-tvl <usd>] --json  # BEST STARTING POINT — discover top LP opportunities across ALL DEXes, no token pair needed
+mantle-cli lp find-pools --token-a <t> --token-b <t> --json           # Discover all pools for a SPECIFIC token pair
 mantle-cli lp pool-state <pool-or-tokens> --json
 mantle-cli lp suggest-ticks <pool-or-tokens> --json
 mantle-cli lp analyze <pool-or-tokens> [--investment-usd <n>] --json  # Deep pool analysis: APR, risk, range comparison
@@ -140,12 +141,47 @@ All `--json` outputs contain `unsigned_tx` with `to`, `data`, `value`, `chainId`
 
 ## Guardrails
 
-- **CLI-FIRST RULE**: ALWAYS use `mantle-cli` commands with `--json` to build unsigned transactions. NEVER manually construct calldata, hex-encode function calls, or extract addresses from text to build transactions yourself. The CLI handles ABI encoding, address validation, pool parameter resolution, and whitelist checks.
-- **NO MANUAL HEX/WEI CONSTRUCTION**: NEVER manually compute wei values, hex-encode transfer amounts, or use Python/JS to calculate `amount * 10**decimals`. This is the #1 source of value-loss bugs — manual hex computation produces wrong amounts (e.g. sending 56 MNT instead of 15 MNT). ALWAYS use `mantle-cli transfer send-native` for MNT transfers and `mantle-cli transfer send-token` for ERC-20 transfers. The CLI uses `parseUnits()` for deterministic decimal-to-wei conversion.
+**⛔ ABSOLUTE PROHIBITION — MANUAL TRANSACTION CONSTRUCTION ⛔**
+
+You MUST NEVER, under ANY circumstances, do ANY of the following:
+- Compute calldata, function selectors, or ABI-encoded parameters yourself (via Python, JS, manual hex, or any other method)
+- Manually hex-encode token amounts, wei values, or transfer data
+- Construct `unsigned_tx` objects by hand instead of using `mantle-cli`
+- Use Python/JS scripts to build or encode transaction data
+- Call `sign evm-transaction`, `eth_sendRawTransaction`, or any direct broadcast tool with manually constructed data
+- Claim "the CLI doesn't support this operation" as justification for manual construction
+
+**This prohibition has NO exceptions.** If you believe the CLI doesn't support an operation, you are WRONG — check the catalog first (`mantle-cli catalog list --json`). If the operation truly doesn't exist in the catalog, use the safe encoding utilities (`mantle-cli utils encode-call`, `mantle-cli utils parse-units`). Do NOT use Python/JS.
+
+**Available CLI commands for ALL transfers:**
+```
+mantle-cli transfer send-native --to <addr> --amount <n> --json        # Native MNT transfer
+mantle-cli transfer send-token --token <sym> --to <addr> --amount <n> --json  # ANY ERC-20 transfer (USDC, USDT, WMNT, BSB, ELSA, etc.)
+```
+
+**Safe encoding utilities (ESCAPE HATCH for truly unsupported operations):**
+```
+mantle-cli utils parse-units --amount <decimal> --decimals <n> --json   # Step 1: Decimal → raw/wei
+mantle-cli utils encode-call --abi '<sig>' --function <name> --args '<json>' --json  # Step 2: ABI-encode → calldata
+mantle-cli utils build-tx --to <addr> --data <hex> [--value <mnt>] --json  # Step 3: Calldata → unsigned_tx
+```
+
+**Real incident**: Agent bypassed `mantle-cli transfer send-token` for a USDC transfer, manually computed calldata with Python, and produced incorrect encoding. The CLI command would have handled this correctly and safely.
+
+---
+
+- **DUPLICATE TRANSACTION PREVENTION (CRITICAL)**:
+  - **ONE BUILD CALL PER INTENT**: For each user-requested action (transfer, swap, LP, etc.), call the corresponding build tool EXACTLY ONCE. NEVER call the same build tool a second time with the same or similar parameters for the same user request. If you already obtained an `unsigned_tx`, use that result — do not "verify" or "retry" by calling the builder again.
+  - **IDEMPOTENCY KEY**: Every build-tool response includes an `idempotency_key` (deterministic hash scoped to the signing wallet). ALWAYS pass `sender=<signing_wallet_address>` when calling build tools — this ensures different wallets can independently execute identical payloads without false deduplication. If you accidentally call a builder twice from the same wallet and get the same `idempotency_key`, the external signer MUST execute only ONE of them.
+  - **NO SPECULATIVE BUILDS**: Do NOT build transactions "to see what they look like" and then build them again for real. Each build call may result in execution.
+  - **WAIT BEFORE NEXT STEP**: After a transaction is signed and broadcast, ALWAYS verify its receipt (`mantle-cli chain tx --hash <hash>`) before proceeding to the next step. NEVER submit the next transaction until the previous one is confirmed on-chain.
+  - **TIMEOUT ≠ FAILURE**: If a transaction submission times out or you lose track of it, do NOT rebuild and resubmit. Instead, check the wallet's recent transactions or use the transaction hash to verify status. Rebuilding creates a NEW transaction with a different nonce that will ALSO execute, causing duplicate transfers.
+- **CLI-FIRST RULE**: ALWAYS use `mantle-cli` commands with `--json` to build unsigned transactions. For standard operations (transfer, swap, LP, Aave), use the dedicated commands. For unsupported operations, use the utils pipeline: `utils parse-units` → `utils encode-call` → `utils build-tx`. NEVER use Python/JS/manual hex to construct calldata.
+- **NO MANUAL HEX/WEI CONSTRUCTION**: NEVER manually compute wei values, hex-encode transfer amounts, or use Python/JS to calculate `amount * 10**decimals`. Use `mantle-cli utils parse-units` for decimal→raw conversion. Use `mantle-cli transfer send-native` for MNT and `mantle-cli transfer send-token` for any ERC-20. The CLI uses `parseUnits()` for deterministic decimal-to-wei conversion.
 - **NO `from` FIELD**: NEVER add a `from` field to `unsigned_tx` objects. The signer determines `from` from the signing key. Adding `from` breaks Privy and other embedded wallet signers.
 - **NO MANUAL ROUTING**: NEVER manually discover intermediate pools, split multi-hop swaps into separate transactions, or use external aggregators/routing services. The CLI auto-discovers 2-hop routes via bridge tokens (WMNT, USDC, USDT0, USDT, USDe, WETH) when no direct pair exists. Just pass `--in` and `--out` — the CLI handles the routing.
 - **USDT vs USDT0**: Mantle has two official USDT variants — USDT (bridged Tether, `0x201E...`) and USDT0 (LayerZero OFT, `0x779D...`). Both have deep DEX liquidity. **Only USDT0 works on Aave V3.** If a user holds USDT and wants to use Aave, guide them to swap USDT → USDT0 first via Merchant Moe (USDT/USDT0 pool, bin_step=1).
-- **FACTORY-FIRST POOL DISCOVERY**: When looking for LP pools, ALWAYS use `mantle-cli lp find-pools --json` which queries factory contracts on-chain. Do NOT rely on DexScreener, subgraphs, or hardcoded lists — they have incomplete coverage.
+- **FACTORY-FIRST POOL DISCOVERY**: When looking for LP pools for a specific token pair, use `mantle-cli lp find-pools --json` which queries factory contracts on-chain. When the user asks for the BEST pools or LP recommendations WITHOUT specifying tokens, use `mantle-cli lp top-pools --json` first to discover top opportunities by volume/APR/TVL across ALL DEXes (including meme tokens, xStocks, and newly launched pools).
 - **ANALYZE BEFORE LP**: Before adding liquidity, ALWAYS run `mantle-cli defi analyze-pool --json` to get fee APR, multi-range comparison, risk scoring, and investment projections. Do NOT add liquidity based on guesswork about which range or how much to invest.
 - **USD AMOUNT MODE**: When the user specifies an investment in USD (e.g. "invest $1000"), use `--amount-usd` instead of manually computing token amounts. The CLI reads pool state and computes the correct token ratio for the target tick range. Do NOT blindly split 50/50.
 - **PERCENTAGE REMOVAL**: When the user wants to remove a fraction of a V3 position (e.g. "remove half"), use `--percentage 50` instead of manually reading and computing liquidity amounts. The CLI reads the position on-chain and calculates the exact liquidity to remove.

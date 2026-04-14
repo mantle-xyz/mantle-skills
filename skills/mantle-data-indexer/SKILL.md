@@ -1,6 +1,6 @@
 ---
 name: mantle-data-indexer
-version: 0.1.9
+version: 0.1.10
 description: "Use when a Mantle task needs historical wallet activity, time-windowed metrics, event backfills, or protocol analytics that raw RPC cannot answer efficiently."
 ---
 

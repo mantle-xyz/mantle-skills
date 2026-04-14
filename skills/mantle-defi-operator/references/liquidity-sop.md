@@ -8,7 +8,8 @@ Use this flow for LP operations on Mantle (V3: Agni/Fluxion, LB: Merchant Moe).
 
 ```bash
 # Read operations (no signing needed)
-mantle-cli lp find-pools --token-a USDC --token-b USDe --json  # Discover ALL pools across ALL DEXes
+mantle-cli lp top-pools --sort-by volume --limit 20 --json  # Discover BEST pools across ALL DEXes (no token pair needed)
+mantle-cli lp find-pools --token-a USDC --token-b USDe --json  # Discover ALL pools for a specific token pair
 mantle-cli lp positions --owner 0x... --json          # List all V3 positions
 mantle-cli lp pool-state --token-a USDC --token-b WMNT --fee-tier 10000 --provider agni --json
 mantle-cli lp suggest-ticks --token-a USDC --token-b WMNT --fee-tier 10000 --provider agni --json
@@ -25,7 +26,17 @@ mantle-cli lp collect-fees --provider agni --token-id 12345 --recipient 0x... --
 
 ## Step 1: Pool Discovery — ALWAYS Start Here
 
-**Before any LP operation, use `find-pools` to discover ALL available pools across ALL DEXes.** This queries factory contracts on-chain — the authoritative source. Do NOT rely on DexScreener, subgraphs, or hardcoded pair lists.
+**When the user wants LP recommendations without specifying tokens**, use `top-pools` to discover the best opportunities across ALL DEXes:
+
+```bash
+mantle-cli lp top-pools --sort-by volume --json                     # Top pools by 24h volume
+mantle-cli lp top-pools --sort-by apr --min-tvl 10000 --json        # Highest APR with minimum TVL
+mantle-cli lp top-pools --provider fluxion --sort-by apr --json     # Best Fluxion pools
+```
+
+This queries DexScreener for ALL active pools on Mantle (including meme tokens, xStocks, and newly launched pairs), calculates fee APR, and returns a ranked list.
+
+**When the user specifies a token pair**, use `find-pools` to discover ALL available pools for that specific pair:
 
 ```bash
 mantle-cli lp find-pools --token-a USDC --token-b USDe --json

@@ -18,16 +18,36 @@ Apply these controls before any potential state-changing DeFi action.
 - This skill must stop at analysis + plan generation.
 - Never fabricate tx hashes, receipts, or settlement outcomes.
 
-## No manual value construction
+## ⛔ ABSOLUTE PROHIBITION — No manual transaction construction
 
-**CRITICAL**: NEVER manually compute wei values, hex-encode amounts, or use scripts/Python/JS to calculate `amount * 10**decimals` for any transaction field. This is the single most dangerous category of bugs — manual hex arithmetic silently produces wrong amounts (real-world incident: 15 MNT intended → 56.28 MNT sent due to incorrect hex encoding).
+**NEVER**, under any circumstances:
+- Compute calldata, function selectors, or ABI-encoded parameters (via Python `encode_abi`, JS `encodeFunctionData`, manual `0xa9059cbb` selectors, or ANY other method)
+- Manually hex-encode token amounts or wei values
+- Construct `unsigned_tx` JSON objects by hand
+- Use Python/JS scripts to build transaction data
+- Call `sign evm-transaction` or `eth_sendRawTransaction` with hand-crafted data
+- Reason that "the CLI doesn't support this" to justify manual construction — check the catalog first
 
-Always use the CLI's deterministic `parseUnits()` conversion:
-- **Native MNT transfers**: `mantle-cli transfer send-native --to <addr> --amount <n> --json`
-- **ERC-20 token transfers**: `mantle-cli transfer send-token --token <token> --to <addr> --amount <n> --json`
-- **All other DeFi operations**: Use the corresponding `mantle-cli` command (swap, aave, lp, etc.)
+**The CLI supports ALL common operations. Use these:**
+```bash
+mantle-cli transfer send-native --to <addr> --amount <n> --json        # Native MNT
+mantle-cli transfer send-token --token <sym> --to <addr> --amount <n> --json  # ANY ERC-20 (USDC, USDT, WMNT, etc.)
+mantle-cli swap build-swap ...                                         # DEX swap
+mantle-cli swap approve ...                                            # ERC-20 approve
+mantle-cli swap wrap-mnt / unwrap-mnt ...                              # Wrap/unwrap
+mantle-cli lp add / remove / collect-fees ...                          # LP
+mantle-cli aave supply / borrow / repay / withdraw / set-collateral ...  # Aave
+```
 
-If no CLI command exists for a particular operation, **do not construct the transaction manually**. Instead, flag it as `blocked` and request the CLI be extended.
+**Real incident**: Agent claimed `mantle-cli` only checks balances and doesn't support ERC-20 transfers. It then manually computed calldata with Python for a USDC transfer, bypassing all safety checks. This is FALSE — `mantle-cli transfer send-token --token USDC --to <addr> --amount <n>` handles ALL ERC-20 transfers with deterministic decimal conversion.
+
+If a truly unsupported operation is needed, use the safe encoding utilities instead of Python/JS:
+```bash
+mantle-cli utils parse-units --amount <decimal> --decimals <n> --json   # Step 1: Decimal → raw/wei
+mantle-cli utils encode-call --abi '<sig>' --function <name> --args '<json>' --json  # Step 2: ABI-encode → calldata
+mantle-cli utils build-tx --to <addr> --data <hex> [--value <mnt>] --json  # Step 3: Calldata → unsigned_tx
+```
+The `build-tx` output includes `⚠ UNVERIFIED MANUAL CONSTRUCTION` warning. Mark the resulting transaction as **UNVERIFIED** in the handoff.
 
 ## Coordination boundary
 
@@ -68,13 +88,40 @@ If no CLI command exists for a particular operation, **do not construct the tran
 - Record required call sequence and parameter values for the external executor.
 - Define post-execution reconciliation checks (balances/allowances/slippage) to run after user-confirmed execution.
 
+## Transaction deduplication (CRITICAL)
+
+Every build-tool response includes an `idempotency_key` — a deterministic keccak256 hash scoped to the signing wallet. The key includes `sender` (wallet address), `request_id` (caller-provided intent ID), and `unsigned_tx` fields (to, data, value, chainId).
+
+**Scoping rules:**
+- **Same wallet, same calldata** → same key → deduplicated ✓
+- **Different wallets, same calldata** → different keys → both can execute ✓
+- **Same wallet, same calldata, different request_id** → different keys → both can execute ✓
+
+**Rules for the agent:**
+1. Call each build tool EXACTLY ONCE per user intent. Do not "retry" or "verify" by calling again.
+2. ALWAYS pass `sender=<signing_wallet_address>` when calling build tools.
+3. If the same user explicitly requests two separate identical transfers, pass a distinct `request_id` for each.
+4. If you accidentally call a builder twice, compare `idempotency_key` values. If they match, discard the duplicate.
+
+**Rules for the external signer / executor:**
+1. Before signing, check if this `idempotency_key` was already signed within the last 5 minutes.
+2. If yes, REJECT the duplicate — return the original transaction hash instead.
+3. After broadcast, store `(idempotency_key → tx_hash)` for deduplication lookups.
+4. If `idempotency_scope.sender` is `"unscoped"`, inject the signing wallet address into the key before deduplication.
+
+**Rules for retry after timeout:**
+1. NEVER rebuild the transaction on timeout. The original may have already been mined.
+2. Instead: use `mantle-cli chain tx --hash <original_hash>` to check receipt.
+3. Only rebuild if the original hash is confirmed as dropped (not in any block and not in mempool).
+
 ## CLI coverage boundary
 
-The `mantle-cli` only covers a defined set of verified-safe operations (transfers, swaps on whitelisted DEXes, Aave V3, V3/LB LP). If the requested operation has no corresponding CLI command:
+The `mantle-cli` covers verified-safe operations (transfers, swaps on whitelisted DEXes, Aave V3, V3/LB LP) PLUS general-purpose encoding utilities. If the requested operation has no corresponding dedicated CLI command:
 
-1. **Do not silently construct the transaction manually.** Always inform the user first.
-2. **Explain the risk**: manual construction bypasses decimal conversion verification, address whitelisting, pool parameter resolution, and ABI encoding validation — any error can cause irreversible fund loss.
-3. **Suggest safer alternatives** within the CLI's coverage if possible.
-4. **Require explicit user confirmation** before proceeding with any manual construction.
-5. **Mark the plan as `unverified`** if the user confirms and you proceed manually.
-6. **When in doubt, mark the plan as `blocked`** rather than risk user funds.
+1. **Do NOT use Python/JS/manual hex.** Use the CLI utils pipeline instead:
+   - `mantle-cli utils parse-units` — convert decimal amounts to raw integers
+   - `mantle-cli utils encode-call` — ABI-encode the function call
+   - `mantle-cli utils build-tx` — wrap calldata into a validated unsigned_tx
+2. **Warn the user** that the resulting transaction is `UNVERIFIED` — it was not built by a dedicated, protocol-specific CLI command.
+3. **Require explicit user confirmation** before signing the `⚠ UNVERIFIED` unsigned_tx.
+4. **When in doubt, mark the plan as `blocked`** rather than risk user funds.

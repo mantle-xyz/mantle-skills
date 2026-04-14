@@ -1,6 +1,6 @@
 ---
 name: mantle-network-primer
-version: 0.1.9
+version: 0.1.10
 description: "Use when users need Mantle fundamentals, developer onboarding context, or clarification of MNT gas, chain setup, inclusion, settlement, and finality."
 ---
 

@@ -1,6 +1,6 @@
 ---
 name: mantle-openclaw-competition
-version: 0.1.9
+version: 0.1.10
 description: "Use when OpenClaw needs to execute DeFi operations for the asset accumulation competition on Mantle. Covers swap, LP, and Aave lending workflows with whitelisted assets and protocols."
 ---
 
@@ -33,7 +33,7 @@ npx mantle-cli --help   # verify
 
 - **Always append `--json`** to every command so the output is machine-parseable JSON.
 - **Never start or connect to the MCP server.** Do not configure `mantle-mcp` in any MCP client settings.
-- **Never fabricate calldata** — always use `mantle-cli` build commands.
+- **NEVER fabricate calldata or construct transactions manually** — always use `mantle-cli` build commands. This includes Python `encode_abi`, JS `encodeFunctionData`, manual hex `0xa9059cbb` selectors, or any other method. The CLI handles ALL transfers: `transfer send-native` for MNT, `transfer send-token` for ANY ERC-20.
 - **Never add a `from` field** to unsigned transactions — the signer determines `from`.
 
 ### Discover available commands
@@ -279,8 +279,11 @@ especially common with Isolation Mode assets (WMNT, WETH). Always verify with po
 Before adding liquidity, analyze the pool to choose the best range and estimate returns:
 
 ```
+0. mantle-cli lp top-pools --sort-by apr --min-tvl 10000 --json
+   → Discover the BEST pools across ALL DEXes (no token pair needed) — use when user asks "best LP" or "where to provide liquidity"
+
 1. mantle-cli lp find-pools --token-a WMNT --token-b USDC --json
-   → Discover all available pools across Agni, Fluxion, Merchant Moe
+   → Discover all available pools for a specific pair across Agni, Fluxion, Merchant Moe
 
 2. mantle-cli defi analyze-pool --token-a WMNT --token-b USDC --fee-tier 3000 --provider agni --investment 1000 --json
    → Get fee APR, multi-range comparison, risk assessment, investment projections
@@ -291,9 +294,56 @@ Before adding liquidity, analyze the pool to choose the best range and estimate 
 
 ## Safety Rules
 
+**⛔ ABSOLUTE PROHIBITION — MANUAL TRANSACTION CONSTRUCTION ⛔**
+
+You MUST NEVER, under ANY circumstances, do ANY of the following:
+- Compute calldata, function selectors, or ABI-encoded parameters yourself (via Python, JS, manual hex, or any other method)
+- Manually hex-encode token amounts, wei values, or transfer data
+- Construct `unsigned_tx` objects by hand instead of using `mantle-cli`
+- Use Python/JS scripts to build or encode transaction data
+- Call `sign evm-transaction`, `eth_sendRawTransaction`, or any direct broadcast tool with manually constructed data
+- Claim "the CLI doesn't support this operation" as justification for manual construction
+
+**This prohibition has NO exceptions.** If you believe the CLI doesn't support an operation, you are WRONG — check the catalog first. If it truly doesn't exist, use the safe encoding utilities below. Do NOT use Python/JS.
+
+**EVERY on-chain operation the CLI supports:**
+```
+mantle-cli transfer send-native --to <addr> --amount <n> --json        # Native MNT transfer
+mantle-cli transfer send-token --token <sym> --to <addr> --amount <n> --json  # ANY ERC-20 transfer (USDC, USDT, WMNT, etc.)
+mantle-cli swap wrap-mnt --amount <n> --json                           # Wrap MNT → WMNT
+mantle-cli swap unwrap-mnt --amount <n> --json                         # Unwrap WMNT → MNT
+mantle-cli swap approve --token <t> --spender <addr> --amount <n> --json  # ERC-20 approve
+mantle-cli swap build-swap --provider <dex> --in <t> --out <t> --amount <n> --recipient <addr> --json  # DEX swap
+mantle-cli lp add / remove / collect-fees ...                          # LP operations
+mantle-cli aave supply / borrow / repay / withdraw / set-collateral ...  # Aave operations
+```
+
+**Safe encoding utilities (ESCAPE HATCH for unsupported operations):**
+If the operation truly has no dedicated CLI command, use these utils instead of Python/JS:
+```
+mantle-cli utils parse-units --amount <decimal> --decimals <n> --json   # Step 1: Decimal → raw/wei (NEVER compute manually!)
+mantle-cli utils format-units --amount-raw <raw> --decimals <n> --json  # Reverse: Raw/wei → decimal
+mantle-cli utils encode-call --abi '<abi>' --function <name> --args '<json>' --json  # Step 2: ABI-encode function call → hex calldata
+mantle-cli utils build-tx --to <addr> --data <hex> [--value <mnt>] --json  # Step 3: Wrap calldata into unsigned_tx (validates address + hex)
+```
+**Full workflow for unsupported operations:**
+1. `parse-units` — convert any decimal amounts to raw integers
+2. `encode-call` — ABI-encode the function call with the raw integer args
+3. `build-tx` — wrap the calldata + target address into a validated unsigned_tx
+This replaces ALL manual Python/JS computation. The output is an `unsigned_tx` with `⚠ UNVERIFIED` warning.
+
+**Real incident**: Agent bypassed `mantle-cli transfer send-token` for a USDC transfer, manually computed calldata with Python, and produced incorrect encoding — causing fund loss. The CLI command `mantle-cli transfer send-token --token USDC --to <addr> --amount <n>` would have handled this correctly and safely.
+
+---
+
+0. **NEVER BUILD THE SAME TRANSACTION TWICE (CRITICAL — FUND SAFETY)**:
+   - Call each build command EXACTLY ONCE per user-requested action. NEVER call the same build command a second time with identical parameters to "verify" or "retry" — each built transaction may be signed and broadcast, causing **duplicate transfers and irreversible fund loss**.
+   - Every build response includes an `idempotency_key` scoped to the signing wallet. ALWAYS pass `sender=<signing_wallet>` when calling build tools. If you accidentally call a builder twice and get the same key, the signer must execute only ONE.
+   - If a transaction times out or you lose track of it, do NOT rebuild. Check the receipt first: `mantle-cli chain tx --hash <hash>`. The original may have already been mined. Rebuilding creates a new transaction with a different nonce that will ALSO execute.
+   - **Real incident**: duplicate build calls caused 2× transfers to the same recipients — 0.2 MNT sent twice and 0.608 MNT sent twice.
 1. **CLI only — never use MCP** — All operations via `mantle-cli ... --json`. Do not enable or connect to the MCP server.
-2. **Never fabricate calldata** — Always use `mantle-cli` build commands. Never construct tx data manually.
-3. **Never manually compute hex/wei values** — NEVER use Python, JS, or mental arithmetic to calculate `amount * 10**decimals` or hex-encode transfer amounts. This has caused real fund-loss incidents (e.g. sending 56 MNT instead of 15 MNT due to hex encoding error). Always use `mantle-cli transfer send-native` for MNT transfers and `mantle-cli transfer send-token` for ERC-20 transfers.
+2. **Never fabricate calldata outside the CLI** — Always use `mantle-cli` build commands or `mantle-cli utils encode-call` + `mantle-cli utils build-tx`. NEVER use Python `encode_abi`, JS `encodeFunctionData`, manual `0xa9059cbb` selectors, or any non-CLI method to produce calldata.
+3. **Never manually compute hex/wei values** — NEVER use Python, JS, or mental arithmetic to calculate `amount * 10**decimals` or hex-encode transfer amounts. Use `mantle-cli utils parse-units` for decimal→raw conversion. Use `mantle-cli transfer send-native` for MNT transfers and `mantle-cli transfer send-token` for ANY ERC-20 transfers. Real incident: manual hex computation produced wrong amounts (15 MNT intended → 56.28 MNT sent).
 4. **Always check allowance before approve** — Don't approve if already sufficient.
 5. **Always get a quote before swap** — Use `mantle-cli defi swap-quote` to know expected output and get `minimum_out_raw` for slippage protection.
 6. **Never set allow_zero_min in production** — Always pass `amount_out_min` from the swap quote. Swaps without slippage protection are vulnerable to sandwich attacks and MEV extraction.
@@ -301,12 +351,11 @@ Before adding liquidity, analyze the pool to choose the best range and estimate 
 8. **Show `human_summary`** — Present every build command's summary to the user before signing.
 9. **Value field is hex** — The `unsigned_tx.value` is hex-encoded (e.g., "0x0"). Pass it directly to the signer.
 10. **MNT is gas, not ERC-20** — MNT is the native gas token. To swap MNT, wrap it to WMNT first (`mantle-cli swap wrap-mnt`). To transfer MNT, use `mantle-cli transfer send-native`. Do NOT pass "MNT" to swap/approve/LP commands — those require WMNT.
-11. **Fallback-warning for unsupported operations** — If a user requests an operation that has no corresponding `mantle-cli` command (e.g. interacting with an unsupported protocol, deploying a contract, or calling an arbitrary function), you MUST:
-    - **Warn the user explicitly** that this operation is not supported by the standard CLI tooling
-    - **Explain the fund-safety risk**: manually constructed transactions bypass validation, whitelist checks, and decimal-handling safeguards — incorrect encoding can cause irreversible loss of funds
-    - **Suggest safer alternatives** if any exist (e.g. use a whitelisted protocol instead)
-    - **Require explicit user confirmation** before proceeding with any manual construction
-    - If the user confirms, clearly mark the operation as **"UNVERIFIED — manual construction"** in the output
+11. **Unsupported operations — USE UTILS, NOT PYTHON** — If a user requests an operation that has no corresponding dedicated `mantle-cli` command:
+    - **Warn the user** that this operation is not covered by standard CLI tooling and carries higher risk
+    - **Use the CLI utils pipeline** (NEVER Python/JS): `utils parse-units` → `utils encode-call` → `utils build-tx`
+    - **Require explicit user confirmation** before signing the `⚠ UNVERIFIED` unsigned_tx
+    - If the user confirms, present the unsigned_tx with the **"⚠ UNVERIFIED MANUAL CONSTRUCTION"** warning visible
 12. **xStocks tokens are Fluxion-only** — All xStocks RWA tokens (wTSLAx, wAAPLx, wCRCLx, wSPYx, wHOODx, wMSTRx, wNVDAx, wGOOGLx, wMETAx, wQQQx) only have liquidity on Fluxion with USDC pairs (fee_tier=3000). Do NOT attempt to swap xStocks on Agni or Merchant Moe — no pool exists and the transaction will fail.
 13. **Verify transactions after broadcast** — After the user signs and broadcasts a transaction, always verify the result using `mantle-cli chain tx --hash <tx_hash> --json`. Check `status` is `"success"`. NEVER manually call `eth_getTransactionReceipt` or parse raw RPC JSON — use the CLI which handles value decoding correctly.
 14. **Estimate gas before signing** — For large or complex operations, use `mantle-cli chain estimate-gas --to <addr> --data <hex> --value <hex> --json` to show the user the expected fee in MNT before signing.
@@ -352,7 +401,7 @@ Many DeFi operations require multiple transactions in strict order. **NEVER skip
 6. mantle-cli lp add ...                               → sign & WAIT
 ```
 
-> **CRITICAL**: "sign & WAIT" means you must wait for on-chain confirmation (use `mantle-cli chain tx --hash <hash>` to verify `status: success`) before proceeding to the next step. Do NOT pipeline multiple unsigned transactions.
+> **CRITICAL**: "sign & WAIT" means you must wait for on-chain confirmation (use `mantle-cli chain tx --hash <hash>` to verify `status: success`) before proceeding to the next step. Do NOT pipeline multiple unsigned transactions. Do NOT rebuild a transaction if the previous attempt timed out — check the receipt first.
 
 ## Competition Scoring
 
