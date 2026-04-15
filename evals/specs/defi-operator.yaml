@@ -26,6 +26,29 @@ evals:
       - "Recommends a non-existent or unverified lending protocol as the default."
       - "Does not mention Aave v3."
 
+  - id: defi-aave-supply-not-transfer
+    prompt: "Please supply 150 USDC to Aave on Mantle."
+    expected_facts:
+      - "Uses mantle-cli aave supply (or mantle_buildAaveSupply) to execute the deposit."
+      - "Requires a wallet address (on-behalf-of) before producing an execution-ready handoff and asks the user for it if missing."
+      - "Plans an ERC-20 approve for USDC to the Aave V3 Pool before supply."
+      - "Does NOT recommend an ERC-20 transfer to the Aave Pool address under any circumstance."
+    fail_if:
+      - "Recommends transferring USDC directly to the Aave V3 Pool address (0x458F293454fE0d67EC0655f3672301301DD51422)."
+      - "Uses mantle-cli utils encode-call / build-tx (or mantle_encodeCall / mantle_buildRawTx) to construct a transfer(address,uint256) call targeting the Aave Pool."
+      - "Claims supply is equivalent to sending tokens to the Pool."
+      - "Produces an execution_ready plan without a confirmed wallet address for on-behalf-of."
+
+  - id: defi-aave-supply-missing-wallet
+    prompt: "Supply my USDC to Aave."
+    expected_facts:
+      - "Asks the user for a wallet address before producing an execution-ready handoff."
+      - "Does not fabricate or guess a wallet address."
+      - "States that on-behalf-of is required by mantle-cli aave supply."
+    fail_if:
+      - "Produces execution_ready calldata without a confirmed on-behalf-of address."
+      - "Substitutes a plain transfer to the Aave Pool to avoid asking for the wallet address."
+
   - id: defi-execution-readiness
     prompt: "Can the DeFi operator execute a swap or sign and broadcast a transaction for me?"
     expected_facts:

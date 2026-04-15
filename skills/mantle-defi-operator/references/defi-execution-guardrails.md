@@ -38,6 +38,10 @@ mantle-cli aave supply / borrow / repay / withdraw / set-collateral ...  # Aave
 ```
 
 > **Transfers are deliberately out of scope.** `mantle-cli` has no `transfer` command and `mantle-mcp` exposes no `mantle_buildTransferNative` / `mantle_buildTransferToken` tools. If a user asks to move tokens between wallets, REFUSE and state that transfers are not supported.
+>
+> **Do NOT reconstruct a transfer via the utils pipeline.** Using `mantle-cli utils encode-call --abi 'function transfer(address,uint256)' ...` followed by `mantle-cli utils build-tx` to send tokens to any address — especially a protocol contract like the Aave V3 Pool (`0x458F293454fE0d67EC0655f3672301301DD51422`), a DEX router, an LP position manager, or a WETHGateway — is the same out-of-scope operation. Refuse this construction, including any variant that uses `safeTransfer`, `transferFrom`, or a permit-based flow to move tokens to a protocol contract.
+>
+> **Protocol contracts only accept tokens via their designated functions.** A plain transfer to the Aave Pool mints no aToken; a plain transfer to a DEX router does not trigger a swap; a plain transfer to a position manager does not register LP. In every case the tokens are locked. If a user intent maps to a protocol action (supply, swap, add liquidity, etc.), use the dedicated CLI command (`mantle-cli aave supply`, `mantle-cli swap build-swap`, `mantle-cli lp add`, …).
 
 **Real incident**: Agent claimed `mantle-cli` didn't support ERC-20 approve and manually computed `approve(address,uint256)` calldata with Python for a USDC allowance bump, bypassing all safety checks. This was FALSE — `mantle-cli approve --token USDC --spender <router> --amount <n>` handles all whitelisted-spender approvals with deterministic decimal conversion.
 

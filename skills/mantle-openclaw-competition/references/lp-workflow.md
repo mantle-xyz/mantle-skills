@@ -71,6 +71,7 @@ Use `mantle-cli lp remove` and `mantle-cli lp collect-fees` — see `mantle-cli 
 
 ## Critical rules
 
+- **LP operations are position-manager / router function calls, NOT token transfers.** Sending tokens directly to a PositionManager (Agni / Fluxion) or the LB Router (Merchant Moe) via ERC-20 `transfer()` does NOT create an LP position — the tokens are **permanently locked** in the contract with no recovery path. Always use `mantle-cli lp add` which constructs the correct `mint()` / `increaseLiquidity()` / `addLiquidity()` call. If a user says "send tokens to the position manager" or "deposit into the LP contract", refuse and use `lp add` instead. NEVER construct a transfer to a position manager or router via `utils encode-call` + `build-tx` or any other method.
 - **Always pass `--sender <wallet>`** to lp add/remove so the build response carries a scoped `idempotency_key`.
 - **NEVER rebuild after timeout** — check the receipt first; rebuilding produces a different nonce that will also execute.
 - "sign & WAIT" between every step. Do NOT pre-build multiple LP transactions.

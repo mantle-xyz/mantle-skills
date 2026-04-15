@@ -29,6 +29,17 @@ Fail if any mandatory field is missing.
 - Flag unknown, suspicious, or blacklisted addresses.
 - Fail on blacklisted/explicitly flagged addresses.
 
+## Operation-to-contract semantic check
+
+A legitimate address can still be misused. This check catches protocol-function calls modelled as plain ERC-20 transfers.
+
+- Inspect the `unsigned_tx` calldata:
+  - If the calldata selector is `0xa9059cbb` (ERC-20 `transfer(address,uint256)`) OR `0x23b872dd` (`transferFrom`), decode the recipient (first argument).
+  - If the recipient is a known protocol contract (Aave V3 Pool, DEX router, position manager, LP pool, WETHGateway, etc.), fail with verdict `block` and message:
+    > "Plain ERC-20 transfer targeting protocol contract `<label>` (`<address>`). Protocol contracts only recognise tokens received via their designated functions (for Aave: `Pool.supply()`; for swaps: the router's swap/exactInput entry). Direct transfers are not accounted for and will lock funds. Rebuild with the dedicated protocol tool (e.g. `mantle-cli aave supply`, `mantle-cli swap build-swap`)."
+- If the operation type claims to be `supply`/`borrow`/`repay`/`withdraw` but the calldata selector is `transfer`/`transferFrom` instead of the expected Aave function selectors (`supply=0x617ba037`, `withdraw=0x69328dec`, `borrow=0xa415bcad`, `repay=0x573ade81`), fail with verdict `block`.
+- If the target contract for an Aave intent is NOT the Aave V3 Pool (`0x458F293454fE0d67EC0655f3672301301DD51422` on Mantle mainnet), fail with verdict `block`.
+
 ## Allowance scope check
 
 - Detect approvals broader than required for intended amount.

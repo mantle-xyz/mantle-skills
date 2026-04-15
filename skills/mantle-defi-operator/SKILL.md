@@ -101,7 +101,8 @@ All `--json` outputs contain `unsigned_tx` with `to`, `data`, `value`, `chainId`
 ## Workflow
 
 1. Normalize intent:
-   - `swap`, `add_liquidity`, `remove_liquidity`, or compound flow
+   - `swap`, `add_liquidity`, `remove_liquidity`, `supply`, `borrow`, `repay`, `withdraw`, `set_collateral`, or compound flow
+   - For Aave lending intents (supply/borrow/repay/withdraw), NEVER rewrite the intent as "send tokens to the Aave Pool" — that is a different, unsafe operation. See `references/lending-sop.md` ("supply is NOT a token transfer").
    - token addresses, amounts, recipient, deadline, slippage
 2. Run prep checks from `references/defi-execution-guardrails.md`.
 3. Resolve candidate protocol contracts from `mantle-address-registry-navigator` using the required registry key or protocol role for the requested action.

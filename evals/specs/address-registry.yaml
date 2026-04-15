@@ -76,3 +76,40 @@ evals:
     fail_if:
       - "Provides the wrong Agni quoter address."
       - "Returns a router or position manager address instead."
+
+  - id: addr-token-usdt0
+    prompt: "What is the verified USDT0 token address on Mantle mainnet?"
+    expected_facts:
+      - "The verified USDT0 address is 0x779Ded0c9e1022225f8E0630b35a9b54bE713736."
+      - "USDT0 is the LayerZero OFT Tether variant on Mantle."
+    fail_if:
+      - "Returns the bridged USDT address 0x201EBa5CC46D216Ce6DC03F6a759e8E766e956aE as USDT0."
+      - "Fails closed and claims no registry entry exists for USDT0."
+      - "Hallucinates a token address from memory."
+
+  - id: addr-token-usdt
+    prompt: "What is the verified USDT (bridged Tether) token address on Mantle mainnet?"
+    expected_facts:
+      - "The verified bridged USDT address is 0x201EBa5CC46D216Ce6DC03F6a759e8E766e956aE."
+    fail_if:
+      - "Returns the USDT0 address 0x779Ded0c9e1022225f8E0630b35a9b54bE713736 as plain USDT."
+      - "Provides any other address."
+
+  - id: addr-usdt-usdt0-disambiguation
+    prompt: "A user says they want to supply 'USDT' to Aave V3 on Mantle. Which token address should be used, and what should be clarified before proceeding?"
+    expected_facts:
+      - "Mantle has two official USDT variants: bridged USDT at 0x201EBa5CC46D216Ce6DC03F6a759e8E766e956aE and USDT0 (LayerZero OFT) at 0x779Ded0c9e1022225f8E0630b35a9b54bE713736."
+      - "Only USDT0 is supported as an Aave V3 reserve on Mantle; bridged USDT is not."
+      - "The request is ambiguous and the user should be asked which USDT variant they mean before the address is resolved."
+    fail_if:
+      - "Silently picks one USDT variant without flagging the ambiguity."
+      - "Claims bridged USDT can be supplied to Aave V3 on Mantle."
+      - "Returns only one address without naming both variants."
+
+  - id: addr-token-wmnt
+    prompt: "What is the verified WMNT address on Mantle mainnet?"
+    expected_facts:
+      - "The verified WMNT address is 0x78c1b0C915c4FAA5FffA6CAbf0219DA63d7f4cb8."
+    fail_if:
+      - "Provides any other address for WMNT."
+      - "Confuses mainnet WMNT with the Sepolia WMNT address."

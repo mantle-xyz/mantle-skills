@@ -50,6 +50,7 @@ You MUST NEVER, under ANY circumstances, do ANY of the following:
 - Use Python/JS scripts to build or encode transaction data
 - Call `sign evm-transaction`, `eth_sendRawTransaction`, or any direct broadcast tool with manually constructed data
 - Use `mantle-cli utils parse-units / encode-call / build-tx` as an "escape hatch" to construct transactions for unsupported operations
+- **Construct an ERC-20 `transfer()` / `transferFrom()` / `safeTransfer()` whose recipient is a whitelisted protocol contract** — Aave V3 Pool (`0x458F293454fE0d67EC0655f3672301301DD51422`), Aave WETHGateway, DEX swap routers (Agni / Fluxion / Merchant Moe), LB routers, or V3 position managers. Protocol contracts only recognise tokens arriving through their designated functions (`Pool.supply()`, router swap entries, `positionManager.mint/increaseLiquidity`, etc.). A direct transfer mints no aToken, triggers no swap, registers no LP, and the tokens are **permanently locked** with no on-chain recovery. If the user's intent maps to a protocol action, use the dedicated `mantle-cli` verb — never a transfer.
 - Claim "the CLI doesn't support this operation" as justification for ANY of the above
 
 **This prohibition has NO exceptions.** If you believe the CLI doesn't support an operation, check the catalog first (`mantle-cli catalog list/search/show`). If it truly doesn't exist, **STOP** (see STOP CONDITIONS above). Do NOT improvise.
@@ -71,6 +72,7 @@ If the operation isn't on this list, refer to **STOP CONDITION 2** above.
 
 ### Real incidents
 
+- **"Supply 150 USDC to Aave" = plain transfer → funds locked**: An agent received `"Please supply 150 USDC to Aave on Mantle."` and, because the user hadn't provided an on-behalf-of wallet address, modelled "supply to Aave" as "send 150 USDC to the Aave Pool address". It emitted a plain ERC-20 `transfer(0x458F29…, 150_000_000)` via the `utils encode-call` + `build-tx` pipeline. The tokens arrived at the Pool, **no aToken was minted, no collateral was recorded, and the 150 USDC was permanently locked** with no withdraw path. The correct flow was `mantle-cli aave supply --asset USDC --amount 150 --on-behalf-of <wallet>` — the agent should have ASKED for the wallet address rather than improvising a transfer.
 - **USDC approve fund risk**: An agent bypassed `mantle-cli approve` for a USDC allowance bump, manually computed `approve(address,uint256)` calldata with Python, and produced incorrect encoding — approving the wrong amount. The CLI command would have handled this correctly.
 - **15 MNT → 56.28 MNT**: Manual hex computation produced wrong amounts. A user intended to wrap/swap 15 MNT; the agent's hand-built calldata encoded 56.28 MNT instead.
 - **Duplicate build calls**: A duplicated build + sign path caused 2× broadcasts of the same operation for two separate requests (0.2 MNT wrap and 0.608 MNT wrap) — wasting gas and shifting wallet state unexpectedly. Same failure mode applies to any build tool (swap, approve, LP, Aave).
@@ -92,6 +94,8 @@ If the operation isn't on this list, refer to **STOP CONDITION 2** above.
 3. **STOP on operations outside the standard verbs** — See STOP CONDITION 2 above. Refuse and defer to the user. Never use `utils` escape hatch, Python, JS, or RPC workarounds.
 
 4. **Never fabricate calldata** — Always use `mantle-cli` build commands. NEVER use Python `encode_abi`, JS `encodeFunctionData`, manual `0xa9059cbb` selectors, or any non-CLI method to produce calldata.
+
+4a. **Never transfer tokens to a protocol contract (FUND SAFETY)** — Protocol actions are function calls, not transfers. An ERC-20 `transfer()` / `transferFrom()` / `safeTransfer()` whose recipient is the Aave V3 Pool, a DEX router, a position manager, or a WETHGateway mints no aToken, triggers no swap, registers no LP — the tokens are **permanently locked**. If the user asks to "send / deposit / supply / provide" tokens to Aave or a DEX, map the intent to the correct verb (`mantle-cli aave supply`, `mantle-cli swap build-swap`, `mantle-cli lp add`). Never construct a transfer to a protocol address, in any form (direct, via `utils`, via Python/JS, via raw calldata). If the user insists on "just sending" tokens to a protocol contract, REFUSE — this is the #1 cause of permanent fund loss in agent-driven DeFi.
 
 5. **Never manually compute hex/wei values** — The dedicated CLI verbs handle decimal conversion. NEVER use Python, JS, or mental arithmetic to calculate `amount * 10**decimals` or hex-encode amounts. Use `mantle-cli utils parse-units` only for decimal→raw conversion of display values; never as a calldata-construction path (see ABSOLUTE PROHIBITION above).
 
@@ -132,6 +136,8 @@ The `mantle-cli` covers the following **verified-safe** operations:
 | **Read-only** | Balances, quotes, pool state, positions, prices, chain status |
 
 > **Token transfers (native MNT and ERC-20) are NOT in this toolset** and MUST be refused. Do NOT substitute utils calldata construction.
+>
+> **Corollary: never transfer tokens to a protocol contract.** Even for a whitelisted protocol (Aave Pool, DEX router, position manager, WETHGateway), sending tokens via ERC-20 `transfer()` / `transferFrom()` is NOT equivalent to calling its supply / swap / addLiquidity function. Plain transfers are not accounted for by the protocol — the tokens are permanently locked. If the user's intent maps to a protocol action, use the dedicated CLI verb; otherwise refuse per STOP CONDITION 2.
 
 **Any operation NOT listed above has NO CLI support and MUST be refused** (see STOP CONDITION 2). This includes but is not limited to:
 

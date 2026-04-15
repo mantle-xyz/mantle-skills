@@ -1,8 +1,8 @@
 {
   "schema_version": "1.1.0",
   "network": "mantle",
-  "updated_at": "2026-03-08T04:00:14Z",
-  "notes": "Seeded from official Merchant Moe docs, the official AGNI app mainnet config bundle, and the Aave Mantle address book. Do not insert guessed addresses or placeholder values.",
+  "updated_at": "2026-04-15T00:00:00Z",
+  "notes": "Seeded from official Merchant Moe docs, the official AGNI app mainnet config bundle, the Aave Mantle address book, and the Mantle token-list source-of-truth (https://token-list.mantle.xyz). Do not insert guessed addresses or placeholder values.",
   "chain_ids": {
     "mainnet": 5000,
     "testnet": 5003
@@ -175,11 +175,19 @@
         "borrow",
         "repay"
       ],
+      "interaction_method": "function_call_only",
+      "reject_plain_transfers": true,
+      "correct_tools": {
+        "supply": "mantle-cli aave supply",
+        "withdraw": "mantle-cli aave withdraw",
+        "borrow": "mantle-cli aave borrow",
+        "repay": "mantle-cli aave repay"
+      },
       "source": {
         "url": "https://github.com/bgd-labs/aave-address-book/blob/main/src/AaveV3Mantle.sol",
         "retrieved_at": "2026-03-08T04:00:14Z"
       },
-      "notes": "Curated Tier 1 lending default on Mantle."
+      "notes": "Curated Tier 1 lending default on Mantle. INTERACT VIA Pool.supply/withdraw/borrow/repay ONLY. Sending a plain ERC-20 transfer() to this address mints NO aToken and permanently locks funds — never route supply/withdraw/borrow/repay through mantle-cli utils encode-call + build-tx; always use the dedicated mantle-cli aave commands."
     },
     {
       "key": "AAVE_V3_POOL_ADDRESSES_PROVIDER",
@@ -203,6 +211,150 @@
         "retrieved_at": "2026-03-08T04:00:14Z"
       },
       "notes": "Official Aave v3 Mantle pool registry entry."
+    },
+    {
+      "key": "WMNT",
+      "label": "Wrapped MNT",
+      "environment": "mainnet",
+      "category": "token",
+      "address": "0x78c1b0C915c4FAA5FffA6CAbf0219DA63d7f4cb8",
+      "status": "active",
+      "is_official": true,
+      "aliases": [
+        "wmnt",
+        "Wrapped Mantle"
+      ],
+      "source": {
+        "url": "https://docs.mantle.xyz/network/for-developers/quick-access",
+        "retrieved_at": "2026-03-08T04:00:14Z"
+      },
+      "notes": "ERC-20 wrapper for native MNT; listed in the official Mantle Quick Access onboarding docs."
+    },
+    {
+      "key": "WETH",
+      "label": "Wrapped Ether (bridged)",
+      "environment": "mainnet",
+      "category": "token",
+      "address": "0xdEAddEaDdeadDEadDEADDEAddEADDEAddead1111",
+      "status": "active",
+      "is_official": true,
+      "aliases": [
+        "weth",
+        "ETH"
+      ],
+      "source": {
+        "url": "https://token-list.mantle.xyz",
+        "retrieved_at": "2026-03-08T04:00:14Z"
+      },
+      "notes": "Bridged ETH on Mantle; canonical vanity address distinct from native MNT. Deep liquidity on Agni, Fluxion, and Merchant Moe."
+    },
+    {
+      "key": "METH",
+      "label": "Mantle Staked ETH",
+      "environment": "mainnet",
+      "category": "token",
+      "address": "0xcDA86A272531e8640cD7F1a92c01839911B90bb0",
+      "status": "active",
+      "is_official": true,
+      "aliases": [
+        "mETH",
+        "meth"
+      ],
+      "source": {
+        "url": "https://token-list.mantle.xyz",
+        "retrieved_at": "2026-03-08T04:00:14Z"
+      },
+      "notes": "Mantle liquid-staked ETH derivative."
+    },
+    {
+      "key": "CMETH",
+      "label": "Restaked mETH",
+      "environment": "mainnet",
+      "category": "token",
+      "address": "0xE6829d9a7eE3040e1276Fa75293Bde931859e8fA",
+      "status": "active",
+      "is_official": true,
+      "aliases": [
+        "cmETH",
+        "cmeth"
+      ],
+      "source": {
+        "url": "https://token-list.mantle.xyz",
+        "retrieved_at": "2026-03-08T04:00:14Z"
+      },
+      "notes": "Restaked Mantle mETH."
+    },
+    {
+      "key": "USDC",
+      "label": "USD Coin (bridged)",
+      "environment": "mainnet",
+      "category": "token",
+      "address": "0x09Bc4E0D864854c6aFB6eB9A9cdF58aC190D0dF9",
+      "status": "active",
+      "is_official": true,
+      "aliases": [
+        "usdc"
+      ],
+      "source": {
+        "url": "https://token-list.mantle.xyz",
+        "retrieved_at": "2026-03-08T04:00:14Z"
+      },
+      "notes": "Bridged USDC on Mantle."
+    },
+    {
+      "key": "USDT",
+      "label": "Tether USD (bridged)",
+      "environment": "mainnet",
+      "category": "token",
+      "address": "0x201EBa5CC46D216Ce6DC03F6a759e8E766e956aE",
+      "status": "active",
+      "is_official": true,
+      "aliases": [
+        "usdt",
+        "USDT_BRIDGED"
+      ],
+      "source": {
+        "url": "https://token-list.mantle.xyz",
+        "retrieved_at": "2026-03-08T04:00:14Z"
+      },
+      "notes": "Bridged Tether on Mantle. Has deep DEX liquidity but is NOT supported as an Aave V3 reserve — use USDT0 for Aave. Distinct from USDT0 (0x779Ded...)."
+    },
+    {
+      "key": "USDT0",
+      "label": "Tether USD (LayerZero OFT)",
+      "environment": "mainnet",
+      "category": "token",
+      "address": "0x779Ded0c9e1022225f8E0630b35a9b54bE713736",
+      "status": "active",
+      "is_official": true,
+      "aliases": [
+        "usdt0",
+        "USDT_OFT",
+        "USDT_LAYERZERO"
+      ],
+      "source": {
+        "url": "https://token-list.mantle.xyz",
+        "retrieved_at": "2026-03-08T04:00:14Z"
+      },
+      "notes": "LayerZero OFT version of Tether on Mantle. This is the USDT variant supported as an Aave V3 reserve. Distinct from bridged USDT (0x201EBa...). A USDT/USDT0 pool (bin_step=1) on Merchant Moe enables direct conversion."
+    },
+    {
+      "key": "USDE",
+      "label": "Ethena USDe",
+      "environment": "mainnet",
+      "category": "token",
+      "address": "0x5d3a1Ff2b6BAb83b63cd9AD0787074081a52ef34",
+      "status": "active",
+      "is_official": true,
+      "aliases": [
+        "USDe",
+        "usde"
+      ],
+      "source": {
+        "url": "https://token-list.mantle.xyz",
+        "retrieved_at": "2026-03-08T04:00:14Z"
+      },
+      "notes": "Ethena USDe stablecoin on Mantle."
     }
   ]
 }

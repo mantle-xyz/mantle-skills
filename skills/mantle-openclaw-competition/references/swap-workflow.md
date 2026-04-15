@@ -55,6 +55,7 @@ N+1. mantle-cli swap unwrap-mnt --amount <n> --json   → sign & WAIT
 
 ## Critical rules
 
+- **Swaps are router function calls, NOT token transfers.** Sending tokens directly to a DEX swap router (Agni, Fluxion, or Merchant Moe) via ERC-20 `transfer()` does NOT trigger a swap — the tokens are **permanently locked** in the router contract with no recovery path. Always use `mantle-cli swap build-swap` which constructs the correct router function call. If a user says "send tokens to the router" or "swap by transferring to the DEX", refuse and use `swap build-swap` instead. NEVER construct a transfer to a router address via `utils encode-call` + `build-tx` or any other method.
 - **Always pass `--sender <wallet>`** to build-swap so the response carries an `idempotency_key` scoped to the signer.
 - **NEVER call build-swap twice for the same buy** — re-broadcasting causes duplicate swaps. If the previous call timed out, check `mantle-cli chain tx --hash <hash> --json` first.
 - **NEVER set `allow_zero_min`** in production. Always pass `amount_out_min` from the quote response. Swaps without slippage protection are vulnerable to sandwich attacks.

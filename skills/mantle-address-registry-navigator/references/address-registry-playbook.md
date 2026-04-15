@@ -29,6 +29,9 @@ Each `contracts[]` entry should include:
 - `protocol_id`: optional normalized protocol slug for DeFi entries
 - `contract_role`: optional normalized role such as `router`, `quoter`, `position_manager`, `pool`, or `pool_addresses_provider`
 - `supports`: optional list of supported operations such as `swap`, `add_liquidity`, `remove_liquidity`, `supply`, or `withdraw`
+- `interaction_method`: optional — `function_call_only` if the contract only accepts state changes via named function calls (e.g. Aave Pool). Plain ERC-20 transfers to such a contract must be refused.
+- `reject_plain_transfers`: optional boolean — when `true`, an agent MUST NOT construct an ERC-20 `transfer()` / `transferFrom()` whose recipient is this contract, and MUST NOT build one via `mantle-cli utils encode-call` + `build-tx`.
+- `correct_tools`: optional map from operation name to the dedicated CLI command / tool that should be used. Use these instead of any generic transfer/raw construction path.
 
 ## Lookup Strategy
 

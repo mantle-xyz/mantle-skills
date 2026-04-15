@@ -6,6 +6,26 @@ Pool address: `0x458F293454fE0d67EC0655f3672301301DD51422` (verify with `mantle-
 
 > Reserve assets are gated by Aave — discover the live list via `mantle-cli catalog show aave-supply --json` or the Aave V3 Mantle dashboard. Note: only **USDT0** is supported — NOT USDT. Convert USDT → USDT0 on Merchant Moe (bin_step=1) before supplying.
 
+## ⚠ CRITICAL: `supply` is a function call, NOT a token transfer
+
+`mantle-cli aave supply` invokes `Pool.supply(asset, amount, on_behalf_of, referral)`. The Pool then pulls tokens from the wallet via `transferFrom` AND mints aTokens that represent the deposit. **The aToken balance is the only on-chain record that can be redeemed via `withdraw`.**
+
+**Sending tokens directly to the Pool address is NOT a supply.** An ERC-20 `transfer()` / `transferFrom()` / `safeTransfer()` to `0x458F293454fE0d67EC0655f3672301301DD51422` bypasses the Pool's accounting entirely — no aToken is minted, no collateral is recorded, and the tokens are **permanently locked** in the Pool contract with no on-chain path to recover them.
+
+| Operation | Correct command | Result |
+|-----------|-----------------|--------|
+| Deposit USDC | `mantle-cli aave supply --asset USDC --amount 150 --on-behalf-of <wallet> --sender <wallet> --json` | aUSDC minted, redeemable via `aave withdraw` |
+| Anti-pattern (REFUSE) | ERC-20 `transfer()` to `0x458F293454fE0d67EC0655f3672301301DD51422` | Tokens locked forever — no recovery |
+
+The same principle applies to `borrow` / `repay` / `withdraw` and to the other whitelisted protocols (DEX routers, position managers, WETHGateway): **always use the dedicated CLI verb, never construct a plain transfer to a protocol contract.**
+
+### Red flags — refuse and STOP if you see any of these
+
+- A plan that includes `transfer(address,uint256)` calldata whose first argument is the Aave Pool address, a DEX router, a position manager, or a WETHGateway.
+- A plan that routes `supply` / `borrow` / `repay` / `withdraw` through `mantle-cli utils encode-call` + `mantle-cli utils build-tx` instead of `mantle-cli aave …`. This is an `utils` escape-hatch attempt and is prohibited (see `safety-prohibitions.md`).
+- A user request phrased as "send N tokens to Aave" treated as an ERC-20 transfer instead of `aave supply`. Clarify intent and use `aave supply`.
+- A plan that proceeds without a confirmed `--on-behalf-of` wallet address and substitutes a plain transfer to avoid asking the user. ALWAYS ask for the wallet address when missing; never degrade to a transfer.
+
 ## Supply (earn interest)
 
 ```
@@ -57,6 +77,7 @@ Pool address: `0x458F293454fE0d67EC0655f3672301301DD51422` (verify with `mantle-
 
 ## Critical rules
 
+- **`supply` / `borrow` / `repay` / `withdraw` are FUNCTION CALLS on the Pool** — never construct them as ERC-20 transfers to the Pool address. Plain transfers mint no aToken and lock funds permanently. Use the dedicated `mantle-cli aave …` verbs only; never the `utils` escape hatch.
 - **`aave set-collateral` operates on `msg.sender`** — the wallet that signs MUST be the wallet you want to enable collateral for. Do NOT delegate.
 - **Isolation Mode quirks**: WMNT and WETH often need an explicit `set-collateral` after supply.
 - **Only USDT0 is on Aave** — NOT USDT. Convert USDT → USDT0 on Merchant Moe (bin_step=1) before supplying.

@@ -2,6 +2,26 @@
 
 Use this standard flow for Aave V3 lending operations (supply, borrow, repay, withdraw) on Mantle.
 
+## ⚠ CRITICAL: supply is NOT a token transfer
+
+`mantle-cli aave supply` calls the Aave `Pool.supply()` function. Internally the Pool pulls tokens from the user via `transferFrom` AND mints aTokens that represent the deposit. An aToken balance is the only on-chain record that can be redeemed via `withdraw`.
+
+**Never "simulate" a supply by sending tokens to the Pool address.** A plain ERC-20 `transfer()` to `0x458F293454fE0d67EC0655f3672301301DD51422` (Aave V3 Pool) does NOT trigger Pool accounting — no aToken is minted, no collateral is recorded, and the tokens are **permanently locked** in the Pool contract with no on-chain path to recover them.
+
+| Operation | Correct command | Result |
+|-----------|-----------------|--------|
+| Supply (deposit) | `mantle-cli aave supply --asset USDC --amount 150 --on-behalf-of <wallet>` | aUSDC minted, redeemable via `withdraw` |
+| Anti-pattern (DO NOT USE) | `mantle-cli utils encode-call --abi 'function transfer(address,uint256)' ...` targeting the Pool | Tokens locked forever — no recovery |
+
+Red-flag patterns that indicate an incorrect supply plan:
+
+- The plan includes a `transfer(address,uint256)` calldata whose first argument is the Aave Pool address.
+- The plan routes `supply` through `mantle-cli utils encode-call` / `mantle-cli utils build-tx` rather than `mantle-cli aave supply`.
+- The plan presents "send USDC to Aave Pool" as equivalent to "supply USDC to Aave". These are different operations with different end states.
+- The plan omits `--on-behalf-of` and tries to avoid asking the user for their wallet address by substituting a plain transfer. **ALWAYS ask for the wallet address when it is missing** — never degrade to a plain transfer to avoid an extra round-trip.
+
+If a user request maps to supply / borrow / repay / withdraw, use the dedicated `mantle-cli aave …` command. If a user asks to "transfer tokens to Aave" in natural language, clarify with them that this means `supply`, and use the correct command. Token transfers between wallets are out of scope for this skill (see SKILL.md guardrails).
+
 ## CRITICAL: Use CLI for Transaction Building
 
 **ALWAYS use `mantle-cli` to build unsigned transactions.** Do NOT manually construct calldata, extract addresses from text, or build approve calls yourself. The CLI handles address resolution, ABI encoding, and whitelist validation correctly.
@@ -173,6 +193,7 @@ If diagnostics show collateral is NOT enabled and LTV > 0:
 
 ## Common pitfalls
 
+- **Modelling supply as a plain transfer**: The #1 cause of permanent fund loss. ERC-20 `transfer()` to the Aave Pool address mints NO aToken — the tokens are locked forever. Always use `mantle-cli aave supply`. Never route Aave supply through `mantle-cli utils encode-call` / `mantle-cli utils build-tx`.
 - **Missing approve**: supply and repay require prior ERC-20 approval for the Aave Pool.
 - **Missing collateral enablement**: after supply, always verify `collateral_enabled=YES` before borrowing. If it's NO, use `set-collateral` to enable. If `set-collateral` throws `LTV_IS_ZERO`, the asset cannot be used as collateral by governance design.
 - **`from` field in unsigned_tx**: NEVER add `from` — this breaks Privy and some signers.
