@@ -12,7 +12,7 @@ mantle-cli swap build-swap --provider fluxion --in WMNT --out BSB \
   --amount 0.5 --recipient 0x... --json
 
 # If approval is needed
-mantle-cli swap approve --token WMNT --spender <router_address> \
+mantle-cli approve --token WMNT --spender <router_address> \
   --amount <exact_or_max> --owner <wallet> --json
 
 # Check available pairs and pool parameters
@@ -127,7 +127,7 @@ mantle-cli swap build-swap --provider <provider_from_quote> \
 - Check if the input token is approved for that router.
 - If insufficient:
   ```bash
-  mantle-cli swap approve --token <token> --spender <router_from_tx_to> --amount <exact_or_max> --owner <wallet> --json
+  mantle-cli approve --token <token> --spender <router_from_tx_to> --amount <exact_or_max> --owner <wallet> --json
   ```
 
 ## Step 7: Sign and broadcast

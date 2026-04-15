@@ -38,13 +38,9 @@ Each entry includes:
 ### Available CLI commands for DeFi operations:
 
 ```bash
-# Token transfers
-mantle-cli transfer send-native --to <addr> --amount <n> --json
-mantle-cli transfer send-token --token <token> --to <addr> --amount <n> --json
-
 # Swap operations
 mantle-cli swap build-swap --provider <dex> --in <token> --out <token> --amount <n> --recipient <addr> --json
-mantle-cli swap approve --token <token> --spender <router> --amount <n> --json
+mantle-cli approve --token <token> --spender <router> --amount <n> --json
 mantle-cli swap wrap-mnt --amount <n> --json
 mantle-cli swap unwrap-mnt --amount <n> --json
 mantle-cli swap pairs --json
@@ -145,7 +141,7 @@ All `--json` outputs contain `unsigned_tx` with `to`, `data`, `value`, `chainId`
 
 You MUST NEVER, under ANY circumstances, do ANY of the following:
 - Compute calldata, function selectors, or ABI-encoded parameters yourself (via Python, JS, manual hex, or any other method)
-- Manually hex-encode token amounts, wei values, or transfer data
+- Manually hex-encode token amounts or wei values
 - Construct `unsigned_tx` objects by hand instead of using `mantle-cli`
 - Use Python/JS scripts to build or encode transaction data
 - Call `sign evm-transaction`, `eth_sendRawTransaction`, or any direct broadcast tool with manually constructed data
@@ -153,11 +149,7 @@ You MUST NEVER, under ANY circumstances, do ANY of the following:
 
 **This prohibition has NO exceptions.** If you believe the CLI doesn't support an operation, you are WRONG — check the catalog first (`mantle-cli catalog list --json`). If the operation truly doesn't exist in the catalog, use the safe encoding utilities (`mantle-cli utils encode-call`, `mantle-cli utils parse-units`). Do NOT use Python/JS.
 
-**Available CLI commands for ALL transfers:**
-```
-mantle-cli transfer send-native --to <addr> --amount <n> --json        # Native MNT transfer
-mantle-cli transfer send-token --token <sym> --to <addr> --amount <n> --json  # ANY ERC-20 transfer (USDC, USDT, WMNT, BSB, ELSA, etc.)
-```
+**Token transfers are NOT supported by this skill.** `mantle-cli` and `mantle-mcp` have NO transfer commands — `transfer send-native` / `transfer send-token` / `mantle_buildTransferNative` / `mantle_buildTransferToken` have been deliberately removed. If a user asks to move tokens between wallets, REFUSE and tell them transfers are out of scope for this skill.
 
 **Safe encoding utilities (ESCAPE HATCH for truly unsupported operations):**
 ```
@@ -166,18 +158,18 @@ mantle-cli utils encode-call --abi '<sig>' --function <name> --args '<json>' --j
 mantle-cli utils build-tx --to <addr> --data <hex> [--value <mnt>] --json  # Step 3: Calldata → unsigned_tx
 ```
 
-**Real incident**: Agent bypassed `mantle-cli transfer send-token` for a USDC transfer, manually computed calldata with Python, and produced incorrect encoding. The CLI command would have handled this correctly and safely.
+**Real incident**: Agent bypassed `mantle-cli approve` for a USDC allowance, manually computed `approve(address,uint256)` calldata with Python, and produced incorrect encoding. The CLI command would have handled this correctly and safely.
 
 ---
 
 - **DUPLICATE TRANSACTION PREVENTION (CRITICAL)**:
-  - **ONE BUILD CALL PER INTENT**: For each user-requested action (transfer, swap, LP, etc.), call the corresponding build tool EXACTLY ONCE. NEVER call the same build tool a second time with the same or similar parameters for the same user request. If you already obtained an `unsigned_tx`, use that result — do not "verify" or "retry" by calling the builder again.
+  - **ONE BUILD CALL PER INTENT**: For each user-requested action (swap, LP, approve, etc.), call the corresponding build tool EXACTLY ONCE. NEVER call the same build tool a second time with the same or similar parameters for the same user request. If you already obtained an `unsigned_tx`, use that result — do not "verify" or "retry" by calling the builder again.
   - **IDEMPOTENCY KEY**: Every build-tool response includes an `idempotency_key` (deterministic hash scoped to the signing wallet). ALWAYS pass `sender=<signing_wallet_address>` when calling build tools — this ensures different wallets can independently execute identical payloads without false deduplication. If you accidentally call a builder twice from the same wallet and get the same `idempotency_key`, the external signer MUST execute only ONE of them.
   - **NO SPECULATIVE BUILDS**: Do NOT build transactions "to see what they look like" and then build them again for real. Each build call may result in execution.
   - **WAIT BEFORE NEXT STEP**: After a transaction is signed and broadcast, ALWAYS verify its receipt (`mantle-cli chain tx --hash <hash>`) before proceeding to the next step. NEVER submit the next transaction until the previous one is confirmed on-chain.
-  - **TIMEOUT ≠ FAILURE**: If a transaction submission times out or you lose track of it, do NOT rebuild and resubmit. Instead, check the wallet's recent transactions or use the transaction hash to verify status. Rebuilding creates a NEW transaction with a different nonce that will ALSO execute, causing duplicate transfers.
-- **CLI-FIRST RULE**: ALWAYS use `mantle-cli` commands with `--json` to build unsigned transactions. For standard operations (transfer, swap, LP, Aave), use the dedicated commands. For unsupported operations, use the utils pipeline: `utils parse-units` → `utils encode-call` → `utils build-tx`. NEVER use Python/JS/manual hex to construct calldata.
-- **NO MANUAL HEX/WEI CONSTRUCTION**: NEVER manually compute wei values, hex-encode transfer amounts, or use Python/JS to calculate `amount * 10**decimals`. Use `mantle-cli utils parse-units` for decimal→raw conversion. Use `mantle-cli transfer send-native` for MNT and `mantle-cli transfer send-token` for any ERC-20. The CLI uses `parseUnits()` for deterministic decimal-to-wei conversion.
+  - **TIMEOUT ≠ FAILURE**: If a transaction submission times out or you lose track of it, do NOT rebuild and resubmit. Instead, check the wallet's recent transactions or use the transaction hash to verify status. Rebuilding creates a NEW transaction with a different nonce that will ALSO execute, causing duplicate submissions.
+- **CLI-FIRST RULE**: ALWAYS use `mantle-cli` commands with `--json` to build unsigned transactions. For standard operations (swap, LP, Aave, approve), use the dedicated commands. For unsupported operations, use the utils pipeline: `utils parse-units` → `utils encode-call` → `utils build-tx`. NEVER use Python/JS/manual hex to construct calldata.
+- **NO MANUAL HEX/WEI CONSTRUCTION**: NEVER manually compute wei values, hex-encode amounts, or use Python/JS to calculate `amount * 10**decimals`. Use `mantle-cli utils parse-units` for decimal→raw conversion. The CLI uses `parseUnits()` for deterministic decimal-to-wei conversion.
 - **NO `from` FIELD**: NEVER add a `from` field to `unsigned_tx` objects. The signer determines `from` from the signing key. Adding `from` breaks Privy and other embedded wallet signers.
 - **NO MANUAL ROUTING**: NEVER manually discover intermediate pools, split multi-hop swaps into separate transactions, or use external aggregators/routing services. The CLI auto-discovers 2-hop routes via bridge tokens (WMNT, USDC, USDT0, USDT, USDe, WETH) when no direct pair exists. Just pass `--in` and `--out` — the CLI handles the routing.
 - **USDT vs USDT0**: Mantle has two official USDT variants — USDT (bridged Tether, `0x201E...`) and USDT0 (LayerZero OFT, `0x779D...`). Both have deep DEX liquidity. **Only USDT0 works on Aave V3.** If a user holds USDT and wants to use Aave, guide them to swap USDT → USDT0 first via Merchant Moe (USDT/USDT0 pool, bin_step=1).

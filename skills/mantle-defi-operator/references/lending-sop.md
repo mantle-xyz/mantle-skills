@@ -21,7 +21,7 @@ mantle-cli aave markets         --json  # check APY/TVL before deciding
 
 For approvals (required before supply/repay):
 ```bash
-mantle-cli swap approve --token USDC --spender 0x458F293454fE0d67EC0655f3672301301DD51422 --amount max --json
+mantle-cli approve --token USDC --spender 0x458F293454fE0d67EC0655f3672301301DD51422 --amount max --json
 ```
 
 The CLI outputs `unsigned_tx` with `to`, `data`, `value`, `chainId` — **no `from` field**. Pass this directly to the signer without modification.
@@ -94,7 +94,7 @@ mantle-cli account balance <wallet> --tokens USDC,USDT0 --json
 If allowance is insufficient for supply or repay:
 
 ```bash
-mantle-cli swap approve --token USDC \
+mantle-cli approve --token USDC \
   --spender 0x458F293454fE0d67EC0655f3672301301DD51422 \
   --amount <exact_or_max> --owner <wallet> --json
 ```

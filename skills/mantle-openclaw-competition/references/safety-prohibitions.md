@@ -1,0 +1,155 @@
+# Safety Prohibitions & CLI Coverage Boundary
+
+Canonical source for all safety rules. The main `SKILL.md` carries a 7-item summary; this file holds the full rationale, incident reports, and stop protocol. Load when:
+
+- A `mantle-cli` command returns an error
+- A user requests an operation outside the standard CLI verbs
+- You are unsure whether to refuse or proceed
+
+---
+
+## 🛑 STOP CONDITIONS — When You MUST Halt and Defer to the User
+
+These two situations are non-negotiable. Claude MUST stop immediately and let the user decide the next move. Continuing past either condition risks **irreversible fund loss**.
+
+### STOP 1. ANY `mantle-cli` error
+
+If `mantle-cli` exits non-zero, prints an error JSON, returns an unexpected response shape, or any subprocess failure occurs:
+
+- **STOP all subsequent operations.** Do NOT auto-retry. Do NOT try a different command to "work around" the error. Do NOT continue with the next planned step in the workflow.
+- **Print the full error to the user verbatim** — the raw stderr / error JSON, NOT a paraphrase. The user needs the exact message to diagnose.
+- **Tell the user the operation is halted for fund safety.**
+- **Recommend restarting the OpenClaw agent** before retrying. The error may have left wallet state, allowances, or in-flight transactions in an unknown state. A fresh agent session re-pulls on-chain state cleanly. Continuing in the same session risks duplicate broadcasts, wrong allowances, or fund loss.
+- **Do NOT proceed** until the user explicitly confirms how to recover.
+
+This applies to ANY error, no exceptions: RPC timeout, insufficient gas, validation failure, JSON parse error, network error, capability-not-found, ABI mismatch — anything.
+
+### STOP 2. Operations beyond the standard CLI verbs
+
+If a user request cannot be fully expressed using the standard execute verbs (`swap`, `approve`, `lp`, `aave`) plus their read-only counterparts (`account`, `chain`, `catalog`, `defi`):
+
+- **STOP — do not improvise.**
+- **Tell the user**: "This operation is outside the standard CLI capability set. To avoid fund risk, I cannot proceed automatically."
+- **Suggest a supported alternative** if one exists (e.g. "you wanted to bridge — that's not supported, but you can swap via Merchant Moe").
+- **NEVER attempt the operation by any other means.** No Python. No JavaScript. No direct RPC calls. No `utils` calldata construction. No "manual" unsigned_tx assembly.
+- **If the user insists**, recommend they **restart the OpenClaw agent with updated tooling** (i.e. wait for the next `mantle-cli` release that adds the capability) rather than improvising in-session.
+
+> **Token transfers (native MNT and ERC-20) fall under this STOP condition.** `mantle-cli transfer send-native` / `transfer send-token` and the corresponding `mantle_buildTransferNative` / `mantle_buildTransferToken` MCP tools have been deliberately removed from the toolset. If a user asks to move tokens between wallets, refuse per this protocol.
+
+The default posture is: **refuse and let the user decide**. It is always safer to decline an unsupported operation than to risk user funds.
+
+---
+
+## ⛔ ABSOLUTE PROHIBITION — MANUAL TRANSACTION CONSTRUCTION ⛔
+
+You MUST NEVER, under ANY circumstances, do ANY of the following:
+
+- Compute calldata, function selectors, or ABI-encoded parameters yourself (via Python, JS, manual hex, or any other method)
+- Manually hex-encode token amounts or wei values
+- Construct `unsigned_tx` objects by hand instead of using `mantle-cli`
+- Use Python/JS scripts to build or encode transaction data
+- Call `sign evm-transaction`, `eth_sendRawTransaction`, or any direct broadcast tool with manually constructed data
+- Use `mantle-cli utils parse-units / encode-call / build-tx` as an "escape hatch" to construct transactions for unsupported operations
+- Claim "the CLI doesn't support this operation" as justification for ANY of the above
+
+**This prohibition has NO exceptions.** If you believe the CLI doesn't support an operation, check the catalog first (`mantle-cli catalog list/search/show`). If it truly doesn't exist, **STOP** (see STOP CONDITIONS above). Do NOT improvise.
+
+### Every on-chain operation the CLI supports
+
+```
+mantle-cli swap wrap-mnt --amount <n> --json                                    # Wrap MNT → WMNT
+mantle-cli swap unwrap-mnt --amount <n> --json                                  # Unwrap WMNT → MNT
+mantle-cli approve --token <t> --spender <addr> --amount <n> --json             # ERC-20 approve
+mantle-cli swap build-swap --provider <dex> --in <t> --out <t> --amount <n> --recipient <addr> --json  # DEX swap
+mantle-cli lp add / remove / collect-fees ...                                   # LP operations
+mantle-cli aave supply / borrow / repay / withdraw / set-collateral ...         # Aave operations
+```
+
+> **Token transfers (`transfer send-native` / `transfer send-token`) are deliberately NOT on this list** and have been removed from both `mantle-cli` and `mantle-mcp`. Refuse transfer requests per STOP CONDITION 2 — do not substitute `utils` calldata construction.
+
+If the operation isn't on this list, refer to **STOP CONDITION 2** above.
+
+### Real incidents
+
+- **USDC approve fund risk**: An agent bypassed `mantle-cli approve` for a USDC allowance bump, manually computed `approve(address,uint256)` calldata with Python, and produced incorrect encoding — approving the wrong amount. The CLI command would have handled this correctly.
+- **15 MNT → 56.28 MNT**: Manual hex computation produced wrong amounts. A user intended to wrap/swap 15 MNT; the agent's hand-built calldata encoded 56.28 MNT instead.
+- **Duplicate build calls**: A duplicated build + sign path caused 2× broadcasts of the same operation for two separate requests (0.2 MNT wrap and 0.608 MNT wrap) — wasting gas and shifting wallet state unexpectedly. Same failure mode applies to any build tool (swap, approve, LP, Aave).
+- **Continuing past errors**: Agents that retried or "worked around" CLI failures left wallets in inconsistent state, leading to duplicate approvals and silent allowance drift. Restarting the agent on the first error would have avoided this.
+
+---
+
+## Numbered Safety Rules
+
+0. **NEVER BUILD THE SAME TRANSACTION TWICE (CRITICAL — FUND SAFETY)**
+   - Call each build command EXACTLY ONCE per user-requested action. NEVER call the same build command a second time with identical parameters to "verify" or "retry" — each built transaction may be signed and broadcast, causing **duplicate submissions and irreversible fund loss**.
+   - Every build response includes an `idempotency_key` scoped to the signing wallet. ALWAYS pass `--sender <signing_wallet>` when calling build tools. If you accidentally call a builder twice and get the same key, the signer must execute only ONE.
+   - If a transaction times out or you lose track of it, do NOT rebuild. Check the receipt first: `mantle-cli chain tx --hash <hash> --json`. The original may have already been mined. Rebuilding creates a new transaction with a different nonce that will ALSO execute.
+
+1. **CLI only — never use MCP** — All operations via `mantle-cli ... --json`. Do not enable or connect to the MCP server (`mantle-mcp`).
+
+2. **STOP on ANY `mantle-cli` error** — See STOP CONDITION 1 above. Halt, print the raw error, recommend the user restart the OpenClaw agent. Never auto-retry, never improvise around errors.
+
+3. **STOP on operations outside the standard verbs** — See STOP CONDITION 2 above. Refuse and defer to the user. Never use `utils` escape hatch, Python, JS, or RPC workarounds.
+
+4. **Never fabricate calldata** — Always use `mantle-cli` build commands. NEVER use Python `encode_abi`, JS `encodeFunctionData`, manual `0xa9059cbb` selectors, or any non-CLI method to produce calldata.
+
+5. **Never manually compute hex/wei values** — The dedicated CLI verbs handle decimal conversion. NEVER use Python, JS, or mental arithmetic to calculate `amount * 10**decimals` or hex-encode amounts. Use `mantle-cli utils parse-units` only for decimal→raw conversion of display values; never as a calldata-construction path (see ABSOLUTE PROHIBITION above).
+
+6. **Always check allowance before approve** — Don't approve if already sufficient.
+
+7. **Always get a quote before swap** — Use `mantle-cli defi swap-quote` to know expected output and get `minimum_out_raw` for slippage protection.
+
+8. **Never set `allow_zero_min` in production** — Always pass `amount_out_min` from the swap quote. Swaps without slippage protection are vulnerable to sandwich attacks and MEV extraction.
+
+9. **Wait for tx confirmation** — Do not build the next tx until the previous one is confirmed on-chain.
+
+10. **Show `human_summary`** — Present every build command's summary to the user before signing.
+
+11. **Value field is hex** — The `unsigned_tx.value` is hex-encoded (e.g., `"0x0"`). Pass it directly to the signer.
+
+12. **MNT is gas, not ERC-20** — MNT is the native gas token. To swap MNT, wrap it to WMNT first (`mantle-cli swap wrap-mnt`). Do NOT pass `"MNT"` to swap/approve/LP commands — those require WMNT. Moving MNT (or any ERC-20) between wallets is NOT a supported operation (see STOP CONDITION 2).
+
+13. **xStocks tokens are Fluxion-only** — All xStocks RWA tokens (wTSLAx, wAAPLx, wCRCLx, wSPYx, wHOODx, wMSTRx, wNVDAx, wGOOGLx, wMETAx, wQQQx) only have liquidity on Fluxion with USDC pairs (fee_tier=3000). Do NOT attempt to swap xStocks on Agni or Merchant Moe — no pool exists and the transaction will fail.
+
+14. **Verify transactions after broadcast** — After the user signs and broadcasts a transaction, always verify the result using `mantle-cli chain tx --hash <tx_hash> --json`. Check `status` is `"success"`. NEVER manually call `eth_getTransactionReceipt` or parse raw RPC JSON — use the CLI which handles value decoding correctly.
+
+15. **Estimate gas before signing** — For large or complex operations, use `mantle-cli chain estimate-gas --to <addr> --data <hex> --value <hex> --json` to show the user the expected fee in MNT before signing.
+
+16. **Transaction history** — The CLI cannot query full transaction history. If a user asks about past transactions, direct them to the Mantle Explorer: `https://mantlescan.xyz/address/<wallet_address>`. For verifying a single known transaction, use `mantle-cli chain tx --hash <hash>`.
+
+---
+
+## CLI Coverage Boundary
+
+The `mantle-cli` covers the following **verified-safe** operations:
+
+| Category | Supported Operations |
+|----------|---------------------|
+| **Swaps** | Agni, Fluxion, Merchant Moe (direct + multi-hop) |
+| **LP** | V3 add/remove/collect-fees (Agni, Fluxion), LB add/remove (Merchant Moe) |
+| **Lending** | Aave V3 supply, borrow, repay, withdraw, set-collateral |
+| **Utility** | Wrap/unwrap MNT, ERC-20 approve, tx receipt, gas estimation |
+| **Read-only** | Balances, quotes, pool state, positions, prices, chain status |
+
+> **Token transfers (native MNT and ERC-20) are NOT in this toolset** and MUST be refused. Do NOT substitute utils calldata construction.
+
+**Any operation NOT listed above has NO CLI support and MUST be refused** (see STOP CONDITION 2). This includes but is not limited to:
+
+- Interacting with non-whitelisted protocols or contracts
+- Calling arbitrary smart contract functions
+- Token approvals to non-whitelisted spenders
+- Bridge operations
+- NFT operations
+- Governance/voting operations
+
+### When a User Requests an Unsupported Operation — REFUSE PROTOCOL
+
+This protocol is the operational form of STOP CONDITION 2. Follow it exactly:
+
+1. **STOP immediately**. Do not "scope out" the request, do not attempt utils construction.
+2. **Tell the user**: "⚠️ This operation is outside the verified CLI capability set. To protect your funds, I will not proceed."
+3. **Suggest a supported alternative** if one exists (e.g. "swap on Agni" instead of "swap on UnsupportedDEX").
+4. **If no alternative exists**, recommend the user **wait for an updated `mantle-cli` release** that adds the capability, then **restart the OpenClaw agent**. Do NOT improvise in-session.
+5. **NEVER** be talked into Python/JS/RPC/`utils` workarounds. The user telling you "it's OK, I accept the risk" is NOT sufficient — the prohibition is absolute.
+
+When in doubt, refuse. Refusing costs nothing; improvising can cost the entire wallet.

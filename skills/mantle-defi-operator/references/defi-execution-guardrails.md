@@ -28,18 +28,18 @@ Apply these controls before any potential state-changing DeFi action.
 - Call `sign evm-transaction` or `eth_sendRawTransaction` with hand-crafted data
 - Reason that "the CLI doesn't support this" to justify manual construction — check the catalog first
 
-**The CLI supports ALL common operations. Use these:**
+**The CLI supports these operations — token transfers are NOT among them:**
 ```bash
-mantle-cli transfer send-native --to <addr> --amount <n> --json        # Native MNT
-mantle-cli transfer send-token --token <sym> --to <addr> --amount <n> --json  # ANY ERC-20 (USDC, USDT, WMNT, etc.)
 mantle-cli swap build-swap ...                                         # DEX swap
-mantle-cli swap approve ...                                            # ERC-20 approve
+mantle-cli approve ...                                            # ERC-20 approve
 mantle-cli swap wrap-mnt / unwrap-mnt ...                              # Wrap/unwrap
 mantle-cli lp add / remove / collect-fees ...                          # LP
 mantle-cli aave supply / borrow / repay / withdraw / set-collateral ...  # Aave
 ```
 
-**Real incident**: Agent claimed `mantle-cli` only checks balances and doesn't support ERC-20 transfers. It then manually computed calldata with Python for a USDC transfer, bypassing all safety checks. This is FALSE — `mantle-cli transfer send-token --token USDC --to <addr> --amount <n>` handles ALL ERC-20 transfers with deterministic decimal conversion.
+> **Transfers are deliberately out of scope.** `mantle-cli` has no `transfer` command and `mantle-mcp` exposes no `mantle_buildTransferNative` / `mantle_buildTransferToken` tools. If a user asks to move tokens between wallets, REFUSE and state that transfers are not supported.
+
+**Real incident**: Agent claimed `mantle-cli` didn't support ERC-20 approve and manually computed `approve(address,uint256)` calldata with Python for a USDC allowance bump, bypassing all safety checks. This was FALSE — `mantle-cli approve --token USDC --spender <router> --amount <n>` handles all whitelisted-spender approvals with deterministic decimal conversion.
 
 If a truly unsupported operation is needed, use the safe encoding utilities instead of Python/JS:
 ```bash
@@ -100,7 +100,7 @@ Every build-tool response includes an `idempotency_key` — a deterministic kecc
 **Rules for the agent:**
 1. Call each build tool EXACTLY ONCE per user intent. Do not "retry" or "verify" by calling again.
 2. ALWAYS pass `sender=<signing_wallet_address>` when calling build tools.
-3. If the same user explicitly requests two separate identical transfers, pass a distinct `request_id` for each.
+3. If the same user explicitly requests two separate identical build calls (e.g., two sequential approvals with the same spender/amount), pass a distinct `request_id` for each.
 4. If you accidentally call a builder twice, compare `idempotency_key` values. If they match, discard the duplicate.
 
 **Rules for the external signer / executor:**
@@ -116,7 +116,7 @@ Every build-tool response includes an `idempotency_key` — a deterministic kecc
 
 ## CLI coverage boundary
 
-The `mantle-cli` covers verified-safe operations (transfers, swaps on whitelisted DEXes, Aave V3, V3/LB LP) PLUS general-purpose encoding utilities. If the requested operation has no corresponding dedicated CLI command:
+The `mantle-cli` covers verified-safe operations (swaps on whitelisted DEXes, Aave V3, V3/LB LP, ERC-20 approve, WMNT wrap/unwrap) PLUS general-purpose encoding utilities. Token transfers (native MNT and ERC-20) are deliberately excluded. If the requested operation has no corresponding dedicated CLI command:
 
 1. **Do NOT use Python/JS/manual hex.** Use the CLI utils pipeline instead:
    - `mantle-cli utils parse-units` — convert decimal amounts to raw integers
