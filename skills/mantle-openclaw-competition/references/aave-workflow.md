@@ -28,33 +28,67 @@ The same principle applies to `borrow` / `repay` / `withdraw` and to the other w
 
 ## Supply (earn interest)
 
+> **⚠ Steps MUST be executed in strict sequential order (Rule W-1). NEVER skip a step. Each transaction requires user confirmation (Rule W-2).**
+
 ```
-1. mantle-cli approve --token USDC --spender 0x458F293454fE0d67EC0655f3672301301DD51422 --amount 100 --json
+1. ⚠️ USER CONFIRMATION — present Supply Confirmation Summary:
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   Intent:    <user's original request>
+   Operation: Aave Supply
+   Asset:     <amount> <token> (≈ $<usd>)
+   Receives:  a<token> (interest-bearing receipt)
+   On behalf: <wallet>
+   Spender:   0x458F293454fE0d67EC0655f3672301301DD51422
+   Warnings:  <Isolation Mode caveats, if applicable>
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   → User must explicitly approve before proceeding. If "no" → STOP.
+
+   mantle-cli approve --token USDC --spender 0x458F293454fE0d67EC0655f3672301301DD51422 --amount 100 --json
    → Sign and broadcast → WAIT
+   ↓ MUST confirm tx success before Step 2
 
 2. mantle-cli aave supply --asset USDC --amount 100 --on-behalf-of <wallet> --sender <wallet> --json
-   → Sign and broadcast → WAIT → Receive aUSDC (grows with interest)
+   → ⚠️ USER CONFIRMATION (if not already covered in Step 1's summary) → Sign and broadcast → WAIT → Receive aUSDC (grows with interest)
 ```
 
 ## Borrow (leverage)
 
+> **⚠ Steps MUST be executed in strict sequential order (Rule W-1). NEVER skip a step. Each transaction requires user confirmation (Rule W-2).**
+
 ```
-1. Supply collateral first (see above)
+1. Supply collateral first (see above — all supply steps must complete)
+   ↓ MUST confirm supply tx success before Step 2
 
 2. mantle-cli aave positions --user <wallet> --json
    → Verify collateral_enabled=YES for the supplied asset
    → If collateral_enabled=NO or total_collateral_usd=0 → continue to step 3
    → Otherwise skip to step 4
+   ↓ MUST complete before Step 3
 
-3. mantle-cli aave set-collateral --asset <supplied_asset> --user <wallet> --sender <wallet> --json
+3. ⚠️ USER CONFIRMATION — present set-collateral details (asset, wallet)
+   mantle-cli aave set-collateral --asset <supplied_asset> --user <wallet> --sender <wallet> --json
    → Use the ACTUAL asset you supplied (e.g. WMNT, WETH, USDC) — NOT always WMNT
    → Runs preflight diagnostics (checks aToken balance, LTV, reserve status)
    → If LTV_IS_ZERO: this asset CANNOT be collateral by design — do NOT proceed
    → Sign and broadcast → WAIT → Enables the supplied asset as collateral
    → IMPORTANT: the signing wallet MUST be <wallet> itself
      (set-collateral operates on msg.sender)
+   ↓ MUST confirm tx success before Step 4
 
-4. mantle-cli aave borrow --asset USDC --amount 50 --on-behalf-of <wallet> --sender <wallet> --json
+4. ⚠️ USER CONFIRMATION — present Borrow Confirmation Summary:
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   Intent:         <user's original request>
+   Operation:      Aave Borrow
+   Borrow asset:   <amount> <token> (≈ $<usd>)
+   Health factor:  <current_health_factor>
+   Projected HF:   <after_borrow_health_factor>
+   Liquidation:    <warning if HF < 1.5>
+   On behalf:      <wallet>
+   Warnings:       <Isolation Mode, high utilization, etc.>
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   → User must explicitly approve before proceeding. If "no" → STOP.
+
+   mantle-cli aave borrow --asset USDC --amount 50 --on-behalf-of <wallet> --sender <wallet> --json
    → Sign and broadcast → WAIT → Receive USDC, incur variableDebtUSDC
 ```
 
@@ -62,17 +96,33 @@ The same principle applies to `borrow` / `repay` / `withdraw` and to the other w
 
 ## Repay
 
+> **⚠ Steps MUST be executed in strict sequential order (Rule W-1). Each transaction requires user confirmation (Rule W-2).**
+
 ```
-1. mantle-cli approve --token USDC --spender 0x458F293454fE0d67EC0655f3672301301DD51422 --amount 50 --json   → sign & WAIT
+1. ⚠️ USER CONFIRMATION — present Repay Confirmation Summary:
+   - Intent, repay asset, amount (or "max"), current debt balance, wallet address
+   → User must explicitly approve before proceeding. If "no" → STOP.
+
+   mantle-cli approve --token USDC --spender 0x458F293454fE0d67EC0655f3672301301DD51422 --amount 50 --json   → sign & WAIT
+   ↓ MUST confirm tx success before Step 2
+
 2. mantle-cli aave repay --asset USDC --amount 50 --on-behalf-of <wallet> --sender <wallet> --json
    OR --amount max to repay full debt
+   → sign & WAIT
 ```
 
 ## Withdraw
 
+> **⚠ Steps MUST be executed in strict sequential order (Rule W-1). Each transaction requires user confirmation (Rule W-2).**
+
 ```
-1. mantle-cli aave withdraw --asset USDC --amount 50 --to <wallet> --sender <wallet> --json
+1. ⚠️ USER CONFIRMATION — present Withdraw Confirmation Summary:
+   - Intent, withdraw asset, amount (or "max"), current aToken balance, impact on health factor (if borrowing), wallet address
+   → User must explicitly approve before proceeding. If "no" → STOP.
+
+   mantle-cli aave withdraw --asset USDC --amount 50 --to <wallet> --sender <wallet> --json
    OR --amount max for full balance
+   → sign & WAIT
 ```
 
 ## Critical rules
@@ -83,3 +133,61 @@ The same principle applies to `borrow` / `repay` / `withdraw` and to the other w
 - **Only USDT0 is on Aave** — NOT USDT. Convert USDT → USDT0 on Merchant Moe (bin_step=1) before supplying.
 - "sign & WAIT" between every step. Verify each tx with `mantle-cli chain tx --hash <hash> --json` before continuing.
 - Always pass `--sender <wallet>` so the build response carries a scoped `idempotency_key`. Never call the same build command twice.
+
+## Parameter Reference
+
+### `aave supply`
+
+| Param | Required | Description |
+|-------|----------|-------------|
+| `--asset` | ✅ | Token symbol to supply (e.g. `USDC`, `USDT0`, `WMNT`) — NOT `USDT` |
+| `--amount` | ✅ | Amount to supply (human-readable) |
+| `--on-behalf-of` | ✅ | Wallet address that receives aTokens — NEVER omit |
+| `--sender` | ✅ | Signing wallet — required for `idempotency_key` |
+| `--json` | ✅ | Machine-parseable output |
+
+### `aave borrow`
+
+| Param | Required | Description |
+|-------|----------|-------------|
+| `--asset` | ✅ | Token symbol to borrow |
+| `--amount` | ✅ | Amount to borrow (human-readable) |
+| `--on-behalf-of` | ✅ | Wallet address that incurs the debt |
+| `--sender` | ✅ | Signing wallet |
+| `--json` | ✅ | Machine-parseable output |
+
+### `aave repay`
+
+| Param | Required | Description |
+|-------|----------|-------------|
+| `--asset` | ✅ | Token symbol to repay |
+| `--amount` | ✅ | Amount to repay, or `max` for full debt |
+| `--on-behalf-of` | ✅ | Wallet address whose debt to repay |
+| `--sender` | ✅ | Signing wallet |
+| `--json` | ✅ | Machine-parseable output |
+
+### `aave withdraw`
+
+| Param | Required | Description |
+|-------|----------|-------------|
+| `--asset` | ✅ | Token symbol to withdraw |
+| `--amount` | ✅ | Amount to withdraw, or `max` for full balance |
+| `--to` | ✅ | Destination wallet address |
+| `--sender` | ✅ | Signing wallet |
+| `--json` | ✅ | Machine-parseable output |
+
+### `aave set-collateral`
+
+| Param | Required | Description |
+|-------|----------|-------------|
+| `--asset` | ✅ | The supplied asset to enable/disable as collateral |
+| `--user` | ✅ | Wallet address (must match `--sender` — operates on `msg.sender`) |
+| `--sender` | ✅ | Signing wallet — MUST be `--user` itself |
+| `--json` | ✅ | Machine-parseable output |
+
+### `aave positions`
+
+| Param | Required | Description |
+|-------|----------|-------------|
+| `--user` | ✅ | Wallet address to query |
+| `--json` | ✅ | Machine-parseable output |

@@ -121,6 +121,8 @@ If the operation isn't on this list, refer to **STOP CONDITION 2** above.
 
 16. **Transaction history** — The CLI cannot query full transaction history. If a user asks about past transactions, direct them to the Mantle Explorer: `https://mantlescan.xyz/address/<wallet_address>`. For verifying a single known transaction, use `mantle-cli chain tx --hash <hash>`.
 
+17. **USDT ≠ USDT0 (FUND SAFETY)** — Two different ERC-20 tokens on Mantle. Aave V3 only accepts USDT0. CLI params `USDT` and `USDT0` point to different contracts — never interchange. When the user says "USDT", clarify which one. To convert: swap USDT → USDT0 on Merchant Moe (bin_step=1).
+
 ---
 
 ## CLI Coverage Boundary

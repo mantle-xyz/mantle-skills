@@ -54,6 +54,67 @@ Full rationale, incident reports, and the numbered detail list live in `referenc
 6. **Always quote before swap** — pass `amount_out_min` from the quote; never set `allow_zero_min`.
 7. **"sign & WAIT"** — verify each tx (`status: success`) before building the next. Do NOT pipeline unsigned transactions.
 
+## ⚠ USDT ≠ USDT0
+
+USDT and USDT0 are **two different ERC-20 tokens** on Mantle (different contract addresses, different protocol support, different liquidity pools). Never confuse them.
+
+- **Aave V3 only accepts USDT0** — NOT USDT. If the user only holds USDT, swap to USDT0 on Merchant Moe (bin_step=1) first.
+- **When the user says "USDT", always clarify** — ask whether they mean USDT or USDT0 before executing any operation. Do not assume.
+- **CLI params must be exact** — `--in USDT` and `--in USDT0` point to different contracts. Using the wrong symbol causes failed txs, wrong pools, or fund loss.
+- **Always display both balances** when the user asks about USDT holdings or portfolio.
+
+## Workflow Execution Rules (mandatory)
+
+These rules apply to **every** workflow (Swap, LP, Aave) and **every** reference file. Violations may cause irreversible fund loss.
+
+### Rule W-1: Strict Sequential Step Enforcement
+
+Each workflow defines a numbered step sequence. You MUST execute steps **in exact order** — skipping, reordering, or parallelising steps is **prohibited**.
+
+- **NEVER skip an intermediate step** to jump to a later one. For example, you MUST NOT call `swap build-swap` (Step 5) without first completing the quote (Step 2) and allowance check (Step 3).
+- **NEVER execute a step before its predecessor has completed successfully** (on-chain `status: success` for write operations, valid JSON response for read operations).
+- **If a step fails**, follow STOP CONDITION 1 (`references/safety-prohibitions.md`). Do NOT skip the failed step and continue with later steps.
+- **If a step's precondition is not met** (e.g. allowance already sufficient at Step 3), the step may be **explicitly marked as skipped with reason** in the output to the user, but execution must still proceed to the **next sequential step** — never jump ahead by more than one step.
+
+### Rule W-2: User Confirmation Gate Before Transaction Execution
+
+For **any** on-chain transaction (approve, swap, LP add/remove, Aave supply/borrow/repay/withdraw/set-collateral, wrap/unwrap), you MUST present a **Transaction Confirmation Summary** and receive **explicit user approval** before signing.
+
+The summary MUST include:
+
+1. **Intent** — One-sentence description of what the user asked for.
+2. **Transaction details** — Operation type, input/output tokens & amounts (with USD estimate), recipient address, slippage protection, price impact, gas estimate.
+3. **Risk warnings** — Price impact > 0.2%, large approvals, Isolation Mode caveats, etc.
+
+**Format:**
+
+```
+⚠️ Transaction Confirmation
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Intent:     <what the user asked for>
+Operation:  <Swap / Approve / Supply / ...>
+Input:      <amount> <token> (≈ $<usd>)
+Output:     <expected_amount> <token> (≈ $<usd>)
+Min output: <amount_out_min> <token>
+Impact:     <price_impact>%
+Recipient:  <address>
+Est. gas:   <gas> MNT
+Warnings:   <any risks>
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Proceed? (yes/no)
+```
+
+- **NEVER broadcast without user confirmation.** "no" or no response → STOP.
+- **Each transaction needs its own confirmation** — do NOT batch (e.g. approve and swap are confirmed separately).
+- This applies **even in auto-mode** — every fund-moving tx requires explicit human approval.
+
+### Rule W-3: Rate Limiting
+
+- **Minimum 2-second gap** between consecutive `mantle-cli` calls. Never fire CLI commands in rapid succession.
+- **No parallel CLI calls** — wait for the previous command's response before issuing the next.
+- **After any write tx is confirmed**, wait at least **5 seconds** before the next write command to allow on-chain state (balances, allowances, positions) to settle.
+- **If an RPC timeout or rate-limit error occurs**, wait **30 seconds**, then retry **once**. If it fails again, follow STOP CONDITION 1.
+
 ## Available Tools
 
 | Tool | Purpose | Command |
@@ -78,13 +139,23 @@ Full rationale, incident reports, and the numbered detail list live in `referenc
 
 ## Workflow: Swap (skeleton)
 
+> **⚠ Steps MUST be executed in strict order (Rule W-1). Each transaction requires user confirmation (Rule W-2).**
+
 ```
 1. mantle-cli swap pairs --json                                      → find bin_step / fee_tier
+   ↓ MUST complete before Step 2
 2. mantle-cli defi swap-quote --in X --out Y --amount N --provider best --json   → minimum_out_raw
+   ↓ MUST complete before Step 3
 3. mantle-cli account allowances <wallet> --pairs X:<router> --json  → allowance check
-4. IF insufficient: mantle-cli approve ...                           → sign & WAIT
-5. mantle-cli swap build-swap --provider <dex> --in X --out Y ... --amount-out-min <quote> --sender <wallet> --json
+   ↓ MUST complete before Step 4
+4. IF insufficient: mantle-cli approve ...                           → ⚠️ USER CONFIRMATION → sign & WAIT
+   ↓ MUST confirm tx success before Step 5
+5. ⚠️ USER CONFIRMATION — present Transaction Confirmation Summary:
+   - Intent, input/output tokens & amounts, amount_out_min, price impact, gas estimate
+   → User must explicitly approve before proceeding
+   mantle-cli swap build-swap --provider <dex> --in X --out Y ... --amount-out-min <quote> --sender <wallet> --json
                                                                      → sign & WAIT
+   ↓ MUST confirm tx success before Step 6
 6. mantle-cli chain tx --hash <hash> --json                          → verify status: success
 ```
 
@@ -92,29 +163,51 @@ For MNT input: `swap wrap-mnt` first, then swap WMNT. For MNT output: swap to WM
 
 ## Workflow: Add Liquidity (skeleton)
 
+> **⚠ Steps MUST be executed in strict order (Rule W-1). Each transaction requires user confirmation (Rule W-2).**
+
 ```
 1. mantle-cli lp top-pools --sort-by apr --min-tvl 10000 --json   (OR: lp find-pools for a specific pair)
+   ↓ MUST complete before Step 2
 2. mantle-cli defi analyze-pool ... --investment N --json         → APR, risk, projections
+   ↓ MUST complete before Step 3
 3. mantle-cli lp suggest-ticks ... --json                         → wide / moderate / tight
-4. mantle-cli approve --token A --spender <position_manager>      → sign & WAIT
-5. mantle-cli approve --token B --spender <position_manager>      → sign & WAIT
-6. mantle-cli lp add ... --sender <wallet> --json                 → sign & WAIT
+   ↓ MUST complete before Step 4
+4. ⚠️ USER CONFIRMATION — present LP Confirmation Summary:
+   - Intent, pool, token amounts, tick/bin range, strategy, estimated APR, risk warnings
+   → User must explicitly approve before proceeding to approvals
+   mantle-cli approve --token A --spender <position_manager>      → sign & WAIT
+   ↓ MUST confirm tx success
+5. mantle-cli approve --token B --spender <position_manager>      → ⚠️ USER CONFIRMATION → sign & WAIT
+   ↓ MUST confirm tx success before Step 6
+6. mantle-cli lp add ... --sender <wallet> --json                 → ⚠️ USER CONFIRMATION → sign & WAIT
 ```
 
 V3 (Agni / Fluxion) takes `--fee-tier`, `--tick-lower`, `--tick-upper`. LB (Merchant Moe) takes `--bin-step`, `--active-id`, `--delta-ids`, `--distribution-x/y`. xStocks LP only on Fluxion (USDC pairs, fee_tier=3000). Full args → **`references/lp-workflow.md`**.
 
 ## Workflow: Aave Supply → Borrow (skeleton)
 
+> **⚠ Steps MUST be executed in strict order (Rule W-1). Each transaction requires user confirmation (Rule W-2).**
+
 > **`aave supply` is a function call, NOT a transfer.** The CLI invokes `Pool.supply()` which pulls tokens via `transferFrom` AND mints aTokens. Never "simulate" a supply by constructing an ERC-20 `transfer()` to the Pool address (`0x458F293454fE0d67EC0655f3672301301DD51422`) — no aToken is minted, no collateral is recorded, the tokens are locked forever. Same principle for `borrow` / `repay` / `withdraw`: always use the dedicated `mantle-cli aave` verb.
 
 ```
-1. mantle-cli approve --token X --spender <aave-pool>   → sign & WAIT
+1. ⚠️ USER CONFIRMATION — present Supply Confirmation Summary:
+   - Intent, asset, amount, on-behalf-of address, expected aToken receipt
+   → User must explicitly approve before proceeding
+   mantle-cli approve --token X --spender <aave-pool>   → sign & WAIT
+   ↓ MUST confirm tx success before Step 2
 2. mantle-cli aave supply --asset X --amount N --on-behalf-of <wallet> --sender <wallet> --json
-                                                                                       → sign & WAIT
+                                                                                       → ⚠️ USER CONFIRMATION → sign & WAIT
+   ↓ MUST confirm tx success before Step 3
 3. mantle-cli aave positions --user <wallet> --json   → verify collateral_enabled
+   ↓ MUST complete before Step 4
 4. IF collateral_enabled=NO: mantle-cli aave set-collateral --asset X --user <wallet> --sender <wallet>
-                                                                                       → sign & WAIT
-5. mantle-cli aave borrow --asset Y --amount N --on-behalf-of <wallet> --sender <wallet> --json
+                                                                                       → ⚠️ USER CONFIRMATION → sign & WAIT
+   ↓ MUST confirm tx success before Step 5
+5. ⚠️ USER CONFIRMATION — present Borrow Confirmation Summary:
+   - Intent, borrow asset, amount, current health factor, projected health factor, liquidation risk
+   → User must explicitly approve before proceeding
+   mantle-cli aave borrow --asset Y --amount N --on-behalf-of <wallet> --sender <wallet> --json
                                                                                        → sign & WAIT
 ```
 
@@ -130,3 +223,24 @@ V3 (Agni / Fluxion) takes `--fee-tier`, `--tick-lower`, `--tick-upper`. LB (Merc
 | `references/safety-prohibitions.md` | A `mantle-cli` error occurred, the user requested something outside standard verbs, or you need the full STOP protocol + numbered rule list + incident reports |
 
 For full CLI documentation and the live whitelisted asset/protocol list: `mantle-cli catalog list --json` and `mantle-cli catalog show <tool-id> --json`.
+
+## Integrity Verification
+
+Each release includes `integrity.json` mapping version → SHA-256 hashes for every file. Verify after download:
+
+```bash
+python3 -c "
+import hashlib, json, os, sys
+manifest = json.load(open('integrity.json'))
+ok = True
+for f, expected in manifest['files'].items():
+    actual = hashlib.sha256(open(f,'rb').read()).hexdigest()
+    if actual != expected:
+        print(f'MISMATCH {f}: expected {expected[:16]}… got {actual[:16]}…')
+        ok = False
+if ok: print(f'All files verified for v{manifest[\"version\"]}')
+else: sys.exit(1)
+"
+```
+
+**On publish/update:** regenerate `integrity.json` with new hashes and bump `version`.

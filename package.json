@@ -9,7 +9,7 @@
     "LICENSE"
   ],
   "dependencies": {
-    "@mantleio/mantle-cli": "^0.1.10"
+    "@mantleio/mantle-cli": "0.1.10"
   },
   "scripts": {
     "postinstall": "mantle-cli --help > /dev/null 2>&1 && echo 'mantle-cli ready' || echo 'mantle-cli not found — run: npm install'"

@@ -1,0 +1,12 @@
+{
+  "version": "0.1.12",
+  "algorithm": "sha256",
+  "files": {
+    "SKILL.md": "dcc26d103dc136d5b19139c9eac8db2f45500070d7fe2c1d4652a429c6b9b96c",
+    "agents/openai.yaml": "9a6517b7d8a99745eb361c08732a6c2922d1003b3bcc3752f242b27a0ae67746",
+    "references/aave-workflow.md": "f646fd1e5e9436ca97900183719ee4c5dca0b14541d98ceacab54c1f943ee6fb",
+    "references/lp-workflow.md": "69ad2ab76103f90c4b71ececbeea1abe91e0deb927dff40012b7deca1fa7c1fb",
+    "references/swap-workflow.md": "1de530ab9ea6bd0949fdb5389b578bb02f73eff1b0274c90eea4901589179dac",
+    "references/safety-prohibitions.md": "1dffa6011311ef5c1fca4ce8b5df920afd8d65d2e7e801575fb971e16a9f49c3"
+  }
+}
