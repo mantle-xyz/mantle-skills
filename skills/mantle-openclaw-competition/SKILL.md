@@ -29,7 +29,7 @@ npx mantle-cli --help
 
 ### Discover available commands & whitelisted assets/protocols
 
-The `mantle-cli` catalog is the **single source of truth** for capabilities, supported tokens, pools, routers, and pool params. Do NOT rely on hard-coded lists, prior knowledge, or cached assumptions.
+The `mantle-cli` catalog is the authoritative source for capabilities, supported tokens, pools, routers, and pool params. Do NOT rely on hard-coded lists.
 
 ```bash
 mantle-cli catalog list --json           # list all capabilities
@@ -41,25 +41,9 @@ mantle-cli lp find-pools --token-a A --token-b B --json   # discover pools for a
 
 Each catalog entry includes `category` (`query` / `analyze` / `execute`), `auth` (`none` / `optional` / `required`), `cli_command` template, and `workflow_before` (which tools to call first).
 
-### Catalog-first constraint (MANDATORY — Hard Constraint #8)
+## Hard Constraints (7 critical rules)
 
-**Before executing ANY operation, you MUST consult the catalog to verify the operation exists and retrieve its exact CLI command template.** This is a non-negotiable hard constraint at the same level as constraints 1–7.
-
-**⛔ ABSOLUTE RULE: No catalog lookup → No execution. No exceptions.**
-
-1. **Every session MUST start with a catalog load.** Run `mantle-cli catalog list --json` at the beginning of the session to load the full capability list. Do NOT proceed with any operation until the catalog response is received and parsed.
-2. **Every operation MUST be verified against the catalog before execution.** Before running any `swap / lp / aave / approve` command:
-   - Run `mantle-cli catalog show <tool-id> --json` to retrieve the exact command template, required parameters, and `workflow_before` dependencies.
-   - If the operation is not in the catalog → **STOP and refuse**. The operation does not exist.
-3. **Unknown token, pool, or pair?** Verify via `mantle-cli swap pairs --json` or `mantle-cli lp find-pools --json`. If not in the response → **STOP and refuse**. It is not whitelisted.
-4. **Never invent CLI subcommands or flags.** If `catalog list` does not show a capability for the user's request, that capability does not exist. Do NOT guess command names, flags, or parameter formats. Do NOT extrapolate from other commands.
-5. **Catalog data expires at session boundary.** Do NOT carry over catalog results from a previous session — always re-fetch.
-
-**Incident reference:** Agent skipped catalog lookup, assumed `mantle-cli transfer send-token` existed, and attempted to construct a transfer command that does not exist in the CLI. Had the agent consulted `catalog list` first, it would have found zero matches and refused.
-
-## Hard Constraints (8 critical rules)
-
-Full rationale, incident reports, and the numbered detail list live in `references/safety-prohibitions.md`. The eight non-negotiables:
+Full rationale, incident reports, and the numbered detail list live in `references/safety-prohibitions.md`. The seven non-negotiables:
 
 1. **CLI only** — never enable `mantle-mcp`; every command ends in `--json`.
 2. **🛑 STOP on ANY `mantle-cli` error** — never auto-retry, never improvise. Print the raw error to the user verbatim, halt the workflow, and **recommend the user restart the OpenClaw agent** before continuing. Continuing past an unhandled error risks duplicate broadcasts, stale allowances, and fund loss.
@@ -69,7 +53,6 @@ Full rationale, incident reports, and the numbered detail list live in `referenc
 5. **Never build the same tx twice** — always pass `--sender <wallet>` so the response carries an `idempotency_key`. If a build times out, check `mantle-cli chain tx --hash <hash> --json` BEFORE rebuilding.
 6. **Always quote before swap** — pass `amount_out_min` from the quote; never set `allow_zero_min`.
 7. **"sign & WAIT"** — verify each tx (`status: success`) before building the next. Do NOT pipeline unsigned transactions.
-8. **🔍 Catalog-first — ALWAYS consult the catalog before ANY operation** — run `mantle-cli catalog list --json` at session start and `mantle-cli catalog show <tool-id> --json` before each operation. No catalog lookup → no execution. See "Catalog-first constraint" section above for full rules.
 
 ## ⚠ USDT ≠ USDT0
 
@@ -153,28 +136,12 @@ Proceed? (yes/no)
 - Supply / borrow on Aave V3
 - Discover available assets, pools, or trading pairs (via `catalog` / `swap pairs` / `lp find-pools`)
 - Optimize portfolio value (yield, leverage, exit timing)
-- **Any DeFi operation that is part of the Mantle asset accumulation competition (OpenClaw / 龙虾活动)**
-
-## Routing Priority (MANDATORY)
-
-**This skill is the SOLE entry point for all Mantle asset accumulation competition operations.** Any request that matches the conditions below MUST be handled by this skill — do NOT delegate to `$mantle-defi-operator` or any other skill:
-
-- The user mentions OpenClaw, 龙虾, asset accumulation competition, or the competition wallet
-- The user requests swap / LP / Aave / approve / wrap / unwrap on Mantle with a competition context
-- The user asks to check balances, positions, or portfolio value in a competition context
-- The user asks to optimize portfolio value, yield strategy, leverage, or exit timing for the competition
-
-**Why?** `$mantle-defi-operator` produces execution-ready *plans* but does NOT enforce the safety constraints (STOP-on-error, sign-and-WAIT, user confirmation gates, CLI-only, no fabricated calldata) that are critical for real fund operations in the competition. Routing competition operations to `$mantle-defi-operator` bypasses these guardrails and risks duplicate broadcasts, stale allowances, and fund loss.
-
-If a non-competition Mantle DeFi request arrives (e.g. general protocol comparison, venue discovery without execution intent), delegate to `$mantle-defi-operator`.
 
 ## Workflow: Swap (skeleton)
 
 > **⚠ Steps MUST be executed in strict order (Rule W-1). Each transaction requires user confirmation (Rule W-2).**
 
 ```
-0. mantle-cli catalog show mantle_buildSwap --json                     → verify command exists, get template & workflow_before
-   ↓ MUST complete before Step 1 (Hard Constraint #8)
 1. mantle-cli swap pairs --json                                      → find bin_step / fee_tier
    ↓ MUST complete before Step 2
 2. mantle-cli defi swap-quote --in X --out Y --amount N --provider best --json   → minimum_out_raw
@@ -199,8 +166,6 @@ For MNT input: `swap wrap-mnt` first, then swap WMNT. For MNT output: swap to WM
 > **⚠ Steps MUST be executed in strict order (Rule W-1). Each transaction requires user confirmation (Rule W-2).**
 
 ```
-0. mantle-cli catalog show mantle_addLiquidity --json                → verify command exists, get template & workflow_before
-   ↓ MUST complete before Step 1 (Hard Constraint #8)
 1. mantle-cli lp top-pools --sort-by apr --min-tvl 10000 --json   (OR: lp find-pools for a specific pair)
    ↓ MUST complete before Step 2
 2. mantle-cli defi analyze-pool ... --investment N --json         → APR, risk, projections
@@ -226,8 +191,6 @@ V3 (Agni / Fluxion) takes `--fee-tier`, `--tick-lower`, `--tick-upper`. LB (Merc
 > **`aave supply` is a function call, NOT a transfer.** The CLI invokes `Pool.supply()` which pulls tokens via `transferFrom` AND mints aTokens. Never "simulate" a supply by constructing an ERC-20 `transfer()` to the Pool address (`0x458F293454fE0d67EC0655f3672301301DD51422`) — no aToken is minted, no collateral is recorded, the tokens are locked forever. Same principle for `borrow` / `repay` / `withdraw`: always use the dedicated `mantle-cli aave` verb.
 
 ```
-0. mantle-cli catalog show mantle_aaveSupply --json                  → verify command exists, get template & workflow_before
-   ↓ MUST complete before Step 1 (Hard Constraint #8)
 1. ⚠️ USER CONFIRMATION — present Supply Confirmation Summary:
    - Intent, asset, amount, on-behalf-of address, expected aToken receipt
    → User must explicitly approve before proceeding
