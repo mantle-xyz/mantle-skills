@@ -103,7 +103,7 @@ If the operation isn't on this list, refer to **STOP CONDITION 2** above.
 
 7. **Always get a quote before swap** — Use `mantle-cli defi swap-quote` to know expected output and get `minimum_out_raw` for slippage protection.
 
-8. **Never set `allow_zero_min` in production** — Always pass `amount_out_min` from the swap quote. Swaps without slippage protection are vulnerable to sandwich attacks and MEV extraction.
+8. **`--amount-out-min` MUST equal `minimum_out_raw` from the quote, VERBATIM** — `minimum_out_raw` is already a raw integer in the output token's smallest unit (e.g. USDC 6 decimals: `9934699` = ~9.93 USDC). Do NOT multiply, divide, re-encode, or recalculate it. Do NOT set `--amount-out-min` to `0`, `1`, or any value below `minimum_out_raw`. If `build-swap` reverts, re-quote and use the new `minimum_out_raw` — NEVER lower the minimum to "make it work." A reverted swap with proper slippage protection is safe; a successful swap with `amount-out-min: 1` is exposed to sandwich attacks.
 
 9. **Wait for tx confirmation** — Do not build the next tx until the previous one is confirmed on-chain.
 

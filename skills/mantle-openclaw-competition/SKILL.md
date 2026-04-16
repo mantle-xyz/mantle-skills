@@ -67,7 +67,7 @@ Full rationale, incident reports, and the numbered detail list live in `referenc
    - **Protocol actions are function calls, NOT transfers.** `aave supply / borrow / repay / withdraw`, `swap build-swap`, and `lp add / remove` invoke specific functions on the target contract that mint aTokens, route the trade, or register liquidity. Sending tokens directly to the Aave V3 Pool (`0x458F293454fE0d67EC0655f3672301301DD51422`), a DEX router, a position manager, or a WETHGateway via ERC-20 `transfer()` / `transferFrom()` does NOT trigger those functions — the tokens are **permanently locked** with no on-chain path to recover. If a user says "supply / deposit / lend X to Aave" or "send X to Aave", use `mantle-cli aave supply` — never model it as an ERC-20 transfer to the Pool address.
 4. **Never fabricate calldata or compute wei** — the dedicated CLI verbs handle decimal conversion deterministically. NEVER use Python/JS for any encoding.
 5. **Never build the same tx twice** — always pass `--sender <wallet>` so the response carries an `idempotency_key`. If a build times out, check `mantle-cli chain tx --hash <hash> --json` BEFORE rebuilding.
-6. **Always quote before swap** — pass `amount_out_min` from the quote; never set `allow_zero_min`.
+6. **🛡️ Always quote before swap — `amount-out-min` MUST come from the quote's `minimum_out_raw`, VERBATIM** — see "Slippage Protection Rules" section below for full details. Setting `--amount-out-min` to `0`, `1`, or any value less than `minimum_out_raw` is **absolutely prohibited** — it removes slippage protection and exposes the user to sandwich attacks and fund loss.
 7. **"sign & WAIT"** — verify each tx (`status: success`) before building the next. Do NOT pipeline unsigned transactions.
 8. **🔍 Catalog-first — ALWAYS consult the catalog before ANY operation** — run `mantle-cli catalog list --json` at session start and `mantle-cli catalog show <tool-id> --json` before each operation. No catalog lookup → no execution. See "Catalog-first constraint" section above for full rules.
 
@@ -79,6 +79,42 @@ USDT and USDT0 are **two different ERC-20 tokens** on Mantle (different contract
 - **When the user says "USDT", always clarify** — ask whether they mean USDT or USDT0 before executing any operation. Do not assume.
 - **CLI params must be exact** — `--in USDT` and `--in USDT0` point to different contracts. Using the wrong symbol causes failed txs, wrong pools, or fund loss.
 - **Always display both balances** when the user asks about USDT holdings or portfolio.
+
+## 🛡️ Slippage Protection Rules (Hard Constraint #6 — detailed)
+
+**⛔ ABSOLUTE RULE: `--amount-out-min` MUST equal the quote's `minimum_out_raw` value, passed VERBATIM. No exceptions.**
+
+### Unit rules — DO NOT convert or recalculate
+
+The `--amount-out-min` flag takes a **raw integer in the token's smallest unit** (wei-equivalent). The quote response already provides this as `minimum_out_raw`.
+
+| Token | Decimals | Quote `minimum_out_raw` | Correct `--amount-out-min` | ❌ WRONG |
+|-------|----------|------------------------|---------------------------|----------|
+| USDC  | 6        | `9934699`              | `9934699`                 | `9934699000000` (re-multiplied) |
+| USDT0 | 6        | `4500000`              | `4500000`                 | `4500000000000000000` (×10^18) |
+| WMNT  | 18       | `15000000000000000000` | `15000000000000000000`    | `15` (used decimal form) |
+
+**Rules:**
+1. **Copy `minimum_out_raw` verbatim** from the quote response into `--amount-out-min`. Do NOT multiply, divide, or re-encode it. The CLI already computed the correct raw value with the correct token decimals.
+2. **Never manually compute raw amounts.** Do NOT use Python/JS to calculate `decimal_amount × 10^decimals`. The quote's `minimum_out_raw` is the authoritative value.
+3. **Never round, truncate, or "adjust" the value.** Pass the exact string from the quote.
+
+### Floor rules — NEVER lower the minimum
+
+4. **`--amount-out-min` MUST be ≥ `minimum_out_raw` from the quote.** Setting it to ANY value less than `minimum_out_raw` is prohibited. This includes:
+   - `0` — prohibited (zero protection)
+   - `1` — prohibited (effectively zero protection)
+   - Any value below `minimum_out_raw` — prohibited
+5. **If `build-swap` reverts with the quote's `minimum_out_raw`, the correct action is STOP — not lowering `amount-out-min`.** The revert means the pool price has moved beyond acceptable slippage since the quote was taken. The correct recovery is:
+   - Wait 30 seconds for pool conditions to stabilize
+   - Re-run the quote (`mantle-cli defi swap-quote ...`) to get fresh `minimum_out_raw`
+   - Retry with the NEW quote's `minimum_out_raw`
+   - If it reverts again after 2 retries, **STOP and inform the user** that market conditions are unfavorable
+6. **Never bypass slippage protection "to make it work."** A reverted swap with proper slippage protection is SAFE (no funds lost). A successful swap with `amount-out-min: 1` is DANGEROUS (sandwich attack can steal nearly all output tokens).
+
+### Incident reference
+
+> **Real incident (this agent):** Quote returned `minimum_out_raw: 9934699` (USDC, 6 decimals = ~9.93 USDC). Agent passed `--amount-out-min 9934700000` (incorrectly re-multiplied by 10^3 → demanded 9934.7 USDC minimum). Transaction reverted because the pool cannot produce 9934 USDC from 15 WMNT. Agent then "fixed" by setting `--amount-out-min 1`, removing ALL slippage protection. The swap went through but was fully exposed to sandwich attacks. **Correct fix:** pass `9934699` verbatim from the quote.
 
 ## Workflow Execution Rules (mandatory)
 
@@ -178,6 +214,8 @@ If a non-competition Mantle DeFi request arrives (e.g. general protocol comparis
 1. mantle-cli swap pairs --json                                      → find bin_step / fee_tier
    ↓ MUST complete before Step 2
 2. mantle-cli defi swap-quote --in X --out Y --amount N --provider best --json   → minimum_out_raw
+   ⚠️ SAVE the `minimum_out_raw` value from the response — pass it VERBATIM to --amount-out-min in Step 5.
+      DO NOT convert, multiply, or recalculate. See "Slippage Protection Rules" (Hard Constraint #6).
    ↓ MUST complete before Step 3
 3. mantle-cli account allowances <wallet> --pairs X:<router> --json  → allowance check
    ↓ MUST complete before Step 4
@@ -186,7 +224,9 @@ If a non-competition Mantle DeFi request arrives (e.g. general protocol comparis
 5. ⚠️ USER CONFIRMATION — present Transaction Confirmation Summary:
    - Intent, input/output tokens & amounts, amount_out_min, price impact, gas estimate
    → User must explicitly approve before proceeding
-   mantle-cli swap build-swap --provider <dex> --in X --out Y ... --amount-out-min <quote> --sender <wallet> --json
+   mantle-cli swap build-swap --provider <dex> --in X --out Y ... --amount-out-min <minimum_out_raw from Step 2, VERBATIM> --sender <wallet> --json
+   ⚠️ --amount-out-min MUST be the EXACT `minimum_out_raw` from Step 2. NEVER set to 0, 1, or any lower value.
+      If this reverts → re-quote (Step 2), do NOT lower amount-out-min. See "Slippage Protection Rules".
                                                                      → sign & WAIT
    ↓ MUST confirm tx success before Step 6
 6. mantle-cli chain tx --hash <hash> --json                          → verify status: success

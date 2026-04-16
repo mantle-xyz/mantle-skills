@@ -17,6 +17,9 @@ You have the input token in your wallet. For MNT, wrap to WMNT first (see below)
 
 2. mantle-cli defi swap-quote --in X --out Y --amount 10 --provider best --json
    → Get the expected output and minimum_out_raw
+   ⚠️ SAVE `minimum_out_raw` from this response. This is a RAW INTEGER in the token's smallest unit
+      (e.g. USDC has 6 decimals: `9934699` means ~9.93 USDC). Pass it VERBATIM to --amount-out-min.
+      DO NOT multiply, divide, or re-encode it. DO NOT use Python/JS to recalculate.
    ↓ MUST complete before Step 3
 
 3. mantle-cli account allowances <wallet> --pairs X:<router> --json
@@ -49,7 +52,7 @@ You have the input token in your wallet. For MNT, wrap to WMNT first (see below)
      --provider <dex> \
      --in X --out Y --amount 10 \
      --recipient <wallet> \
-     --amount-out-min <from_quote> \
+     --amount-out-min <minimum_out_raw from Step 2, VERBATIM — do NOT convert or lower> \
      --sender <wallet> \
      --json
    → Sign and broadcast → WAIT for confirmation
@@ -93,6 +96,7 @@ Swap to WMNT, then unwrap:
 - **Always pass `--sender <wallet>`** to build-swap so the response carries an `idempotency_key` scoped to the signer.
 - **NEVER call build-swap twice for the same buy** — re-broadcasting causes duplicate swaps. If the previous call timed out, check `mantle-cli chain tx --hash <hash> --json` first.
 - **NEVER set `allow_zero_min`** in production. Always pass `amount_out_min` from the quote response. Swaps without slippage protection are vulnerable to sandwich attacks.
+- **`--amount-out-min` MUST equal `minimum_out_raw` from the quote, VERBATIM.** This value is a raw integer in the output token's smallest unit — do NOT multiply, divide, re-encode, or "adjust" it. Do NOT set it to `0`, `1`, or any value below `minimum_out_raw`. If `build-swap` reverts, re-quote instead of lowering the minimum. See SKILL.md "Slippage Protection Rules" for the full incident report and recovery procedure.
 - **"sign & WAIT"** means wait for `status: success` from `mantle-cli chain tx --hash <hash> --json` before building the next tx. Do NOT pipeline unsigned transactions.
 - **Show `human_summary`** from every build response to the user before they sign.
 - **Quote impact check** — abort if `priceImpactPct > 1%`, warn if > 0.2%.
@@ -123,7 +127,7 @@ Do NOT pass `MNT` to `swap`/`approve`/`lp` commands — those expect WMNT (the E
 | `--out` | ✅ | Output token symbol |
 | `--amount` | ✅ | Input amount (human-readable) |
 | `--recipient` | ✅ | Address to receive output tokens |
-| `--amount-out-min` | ✅ | Minimum output from quote — NEVER omit or set to 0 |
+| `--amount-out-min` | ✅ | Raw integer from quote's `minimum_out_raw` — pass VERBATIM, NEVER set to 0 or 1 |
 | `--sender` | ✅ | Signing wallet — required for `idempotency_key` |
 | `--json` | ✅ | Machine-parseable output |
 
