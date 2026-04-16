@@ -8,3 +8,7 @@ metadata:
     - competition
     - defi
     - openclaw
+interface:
+  display_name: "Mantle OpenClaw DeFi Operations"
+  short_description: "Execute swap, LP, and Aave operations on Mantle via mantle-cli for the OpenClaw asset accumulation competition"
+  default_prompt: "Use $mantle-openclaw-competition for any DeFi operation on Mantle: swap tokens, add/remove liquidity, supply/borrow on Aave V3, approve ERC-20 spenders, wrap/unwrap MNT, query balances/positions, or optimize portfolio value. Covers all whitelisted Mantle protocols (Agni, Fluxion, Merchant Moe, Aave V3) via mantle-cli. This is the ONLY skill for the Mantle asset accumulation competition (OpenClaw / 龙虾活动)."
