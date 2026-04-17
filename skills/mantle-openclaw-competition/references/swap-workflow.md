@@ -30,6 +30,15 @@ Load this file the first time you execute a swap in a session, or when handling 
 2. If `--exact-out` is not supported, **STOP and ask the user for the input amount.** Do NOT silently convert the output quantity into an input quantity. Do NOT guess.
 3. Never start `wrap-mnt`, `approve`, or `build-swap` until the direction is resolved and the user has confirmed the input amount (via Rule W-2).
 
+## 🛑 STEP 0.5 — Pre-Execution Readiness Check (Rule W-9)
+
+**Before ANY write op, verify the user's intent is feasible. Two queries, in this order:**
+
+1. **Balance** — `mantle-cli account token-balances <wallet> --json`. Verify `balance(input_token) ≥ planned input`. Insufficient → **STOP**, tell the user the actual balance, do NOT proceed.
+2. **Allowance** — `mantle-cli account allowances <wallet> --pairs <input_token>:<router> --json`. Verify `allowance ≥ planned input`. Insufficient → route to the approve flow (Step 4 / Rule W-6).
+
+Run BOTH checks before presenting the Transaction Confirmation Summary so the summary reflects real on-chain state. Skipping either is a hard error.
+
 ## Pre-condition
 
 You have the input token in your wallet. For MNT, wrap to WMNT first (see below).
