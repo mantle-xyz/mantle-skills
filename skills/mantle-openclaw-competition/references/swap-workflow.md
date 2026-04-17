@@ -4,6 +4,32 @@ Load this file the first time you execute a swap in a session, or when handling 
 
 > **⚠ Steps MUST be executed in strict sequential order (Rule W-1). NEVER skip a step or jump ahead. Each transaction requires user confirmation (Rule W-2).**
 
+## 🛑 STEP 0 — Parse the user's intent FIRST (Rule W-5)
+
+**Before touching any CLI command, determine whether the number attaches to the INPUT or the OUTPUT side.** Getting this wrong silently swaps who pays what — an unrecoverable misroute of funds.
+
+| User phrasing | Input | Output | Mode |
+|---|---|---|---|
+| "swap **10 MNT** for USDC" / "用 **10 MNT** 换 USDC" | **10 MNT (fixed)** | variable USDC | fixed-input |
+| "swap MNT for **10 USDC**" / "用 MNT 换 **10 USDC**" / "把 MNT 给我换 **10 USDC**" | variable MNT | **10 USDC (fixed)** | fixed-output |
+| "buy **10 USDC** with MNT" / "给我 **10 USDC**, 用 MNT 付" | variable MNT | **10 USDC (fixed)** | fixed-output |
+
+**Rule:** the numeric quantity attaches to whichever token it is **directly adjacent to** in the sentence — never flip it.
+
+### Incident (2026-04): agent misread "请你把 MNT 给我换 0.5 USDC"
+
+- User intent: **output = 0.5 USDC** (fixed-output, variable MNT input)
+- Agent action: `mantle-cli swap wrap-mnt --amount 0.5` (treated 0.5 as MNT input) ❌
+- Correct action: reverse-quote to find MNT needed for 0.5 USDC output, or ask the user for the MNT input amount. Do NOT wrap 0.5 MNT.
+
+### Handling fixed-output requests
+
+`mantle-cli swap build-swap` is **fixed-input** (`--amount` is the input amount; `--amount-out-min` is a slippage floor, not a target). For fixed-output requests:
+
+1. **Reverse-quote** with `mantle-cli defi swap-quote --in X --out Y --exact-out <N> --json` IF the CLI supports `--exact-out`. Verify via `mantle-cli catalog show mantle_swapQuote --json` before using.
+2. If `--exact-out` is not supported, **STOP and ask the user for the input amount.** Do NOT silently convert the output quantity into an input quantity. Do NOT guess.
+3. Never start `wrap-mnt`, `approve`, or `build-swap` until the direction is resolved and the user has confirmed the input amount (via Rule W-2).
+
 ## Pre-condition
 
 You have the input token in your wallet. For MNT, wrap to WMNT first (see below).
@@ -66,8 +92,10 @@ You have the input token in your wallet. For MNT, wrap to WMNT first (see below)
 
 MNT is the native gas token. Wrap first, then swap WMNT.
 
+> **⛔ Before Step 1, verify Step 0 (direction parsing) is resolved.** If the user's request is fixed-output (e.g. "swap MNT for 0.5 USDC"), you do NOT yet know how much MNT to wrap — reverse-quote or ask the user for the input first. Wrapping a guessed amount is an unrecoverable error.
+
 ```
-1. ⚠️ USER CONFIRMATION — present wrap details (amount of MNT to wrap)
+1. ⚠️ USER CONFIRMATION — present wrap details (amount of MNT to wrap — this is the INPUT amount, resolved in Step 0)
    mantle-cli swap wrap-mnt --amount <n> --json   → sign & WAIT
    ↓ MUST confirm tx success before Step 2
 2. mantle-cli defi swap-quote --in WMNT --out X --amount <n> --json
