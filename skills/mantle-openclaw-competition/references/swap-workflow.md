@@ -10,13 +10,13 @@ Load this file the first time you execute a swap in a session, or when handling 
 
 | User phrasing | Input | Output | Mode |
 |---|---|---|---|
-| "swap **10 MNT** for USDC" / "用 **10 MNT** 换 USDC" | **10 MNT (fixed)** | variable USDC | fixed-input |
-| "swap MNT for **10 USDC**" / "用 MNT 换 **10 USDC**" / "把 MNT 给我换 **10 USDC**" | variable MNT | **10 USDC (fixed)** | fixed-output |
-| "buy **10 USDC** with MNT" / "给我 **10 USDC**, 用 MNT 付" | variable MNT | **10 USDC (fixed)** | fixed-output |
+| "swap **10 MNT** for USDC" | **10 MNT (fixed)** | variable USDC | fixed-input |
+| "swap MNT for **10 USDC**" / "swap me **10 USDC** using MNT" | variable MNT | **10 USDC (fixed)** | fixed-output |
+| "buy **10 USDC** with MNT" / "pay with MNT, give me **10 USDC**" | variable MNT | **10 USDC (fixed)** | fixed-output |
 
-**Rule:** the numeric quantity attaches to whichever token it is **directly adjacent to** in the sentence — never flip it.
+**Rule:** the numeric quantity attaches to whichever token it is **directly adjacent to** in the sentence — never flip it. The rule is language-agnostic: the same logic applies to English, Chinese, or any other phrasing. Translate the user's request into the canonical form `swap <input_token> for <output_token>` with the number on the side where the user placed it.
 
-### Incident (2026-04): agent misread "请你把 MNT 给我换 0.5 USDC"
+### Incident (2026-04): agent misread "swap MNT for 0.5 USDC"
 
 - User intent: **output = 0.5 USDC** (fixed-output, variable MNT input)
 - Agent action: `mantle-cli swap wrap-mnt --amount 0.5` (treated 0.5 as MNT input) ❌
