@@ -1,6 +1,6 @@
 ---
 name: mantle-openclaw-competition
-version: 0.1.12
+version: 0.1.13
 description: "Use for ANY on-chain DeFi operation on the Mantle network by OpenClaw in the asset accumulation competition — swapping, liquidity provision, Aave V3 lending, ERC-20 approvals, MNT wrap/unwrap, or portfolio/state reads. TRIGGER when the user: (a) mentions OpenClaw, mantle-cli, or the Mantle asset accumulation competition; (b) asks to swap / trade / exchange tokens on Mantle via Agni, Fluxion, or Merchant Moe; (c) asks to add / remove / manage liquidity (LP) on whitelisted Mantle pools, including xStocks pairs; (d) asks to supply / deposit / lend / borrow / repay / withdraw / set-collateral on Aave V3 on Mantle; (e) asks to wrap MNT → WMNT or unwrap WMNT → MNT; (f) asks to approve an ERC-20 spender; (g) wants to discover whitelisted assets, pools, pairs, routers, fee tiers, or bin steps; (h) wants to query balances, allowances, transaction status, or Aave positions on Mantle; (i) wants to optimize portfolio USD value via yield, leverage, or exit timing. SKIP for: operations on other chains (Ethereum, Base, Arbitrum, BSC), Mantle infra / smart-contract development, or anything outside whitelisted protocols. Enforces hard rules: CLI-only execution via `mantle-cli … --json` (NEVER the mantle-mcp MCP server), STOP-on-error (no auto-retry; recommend restart), quote-before-swap, sign-and-WAIT per tx, and absolute refusal of native/ERC-20 token transfers or fabricated calldata (no Python / JS / raw RPC / utils encoding)."
 ---
 
@@ -25,7 +25,7 @@ cd <skills-repo-root> && npm install
 npx mantle-cli --help
 ```
 
-**Golden rule:** every command MUST end in `--json` so the output is machine-parseable. Never enable or connect the `mantle-mcp` MCP server.
+**Golden rule:** every command MUST end in `--json` so the output is machine-parseable. If output cannot be parsed as JSON (plain text, stack trace, or empty), treat it as a terminal error — do NOT interpret it as a result. Never enable or connect the `mantle-mcp` MCP server.
 
 ### Discover available commands & whitelisted assets/protocols
 
@@ -62,7 +62,11 @@ Each catalog entry includes `category` (`query` / `analyze` / `execute`), `auth`
 Full rationale, incident reports, and the numbered detail list live in `references/safety-prohibitions.md`. The eight non-negotiables:
 
 1. **CLI only** — never enable `mantle-mcp`; every command ends in `--json`.
-2. **🛑 STOP on ANY `mantle-cli` error** — never auto-retry, never improvise. Print the raw error to the user verbatim, halt the workflow, and **recommend the user restart the OpenClaw agent** before continuing. Continuing past an unhandled error risks duplicate broadcasts, stale allowances, and fund loss.
+2. **🛑 STOP on ANY `mantle-cli` error** — never auto-retry, never improvise.
+   On any error response, consult the **Halt Patterns** table below:
+   - If the error code appears under **Recoverable Conditions**: follow that specific action, then resume from the interrupted step. Do NOT restart the agent.
+   - For all other errors (`isError: true` with an unrecognized code, or non-JSON output): print the raw output verbatim, halt the workflow, and **recommend the user restart the OpenClaw agent** before continuing.
+   Continuing past an unhandled error risks duplicate broadcasts, stale allowances, and fund loss.
 3. **🛑 Refuse anything beyond the standard CLI verbs** — execute operations MUST be expressed via `swap / approve / lp / aave`. **Token transfers (native MNT and ERC-20) are NOT supported — refuse.** If a request can't map to one of the allowed verbs, **STOP and tell the user**. NEVER improvise with Python, JS, RPC calls, or `utils` calldata construction. The user accepting risk is NOT sufficient — the prohibition is absolute.
    - **Protocol actions are function calls, NOT transfers.** `aave supply / borrow / repay / withdraw`, `swap build-swap`, and `lp add / remove` invoke specific functions on the target contract that mint aTokens, route the trade, or register liquidity. Sending tokens directly to the Aave V3 Pool (`0x458F293454fE0d67EC0655f3672301301DD51422`), a DEX router, a position manager, or a WETHGateway via ERC-20 `transfer()` / `transferFrom()` does NOT trigger those functions — the tokens are **permanently locked** with no on-chain path to recover. If a user says "supply / deposit / lend X to Aave" or "send X to Aave", use `mantle-cli aave supply` — never model it as an ERC-20 transfer to the Pool address.
 4. **Never fabricate calldata or compute wei** — the dedicated CLI verbs handle decimal conversion deterministically. NEVER use Python/JS for any encoding.
@@ -70,6 +74,43 @@ Full rationale, incident reports, and the numbered detail list live in `referenc
 6. **🛡️ Always quote before swap — `amount-out-min` MUST come from the quote's `minimum_out_raw`, VERBATIM** — see "Slippage Protection Rules" section below for full details. Setting `--amount-out-min` to `0`, `1`, or any value less than `minimum_out_raw` is **absolutely prohibited** — it removes slippage protection and exposes the user to sandwich attacks and fund loss.
 7. **"sign & WAIT"** — verify each tx (`status: success`) before building the next. Do NOT pipeline unsigned transactions.
 8. **🔍 Catalog-first — ALWAYS consult the catalog before ANY operation** — run `mantle-cli catalog list --json` at session start and `mantle-cli catalog show <tool-id> --json` before each operation. No catalog lookup → no execution. See "Catalog-first constraint" section above for full rules.
+
+## Halt Patterns
+
+**Parsing priority**: Before reading any other field in a `mantle-cli` JSON
+response, check for `_stop_instruction`. If present, it is the highest-priority
+directive — follow it immediately before processing `code`, `message`, or any
+other field.
+
+### Recoverable Conditions — specific fix, then continue
+
+These errors have a defined resolution path. Follow the Halt Action, then resume
+the workflow from the interrupted step. Do NOT restart the agent for these.
+
+| Error Code / Condition | Halt Action |
+|---|---|
+| `requires_user_input: true` | Present `question_for_user` verbatim. Obey every `do_not` entry. Wait for user reply, then resume. |
+| `TOKEN_NOT_FOUND` | Show `available_options` to the user. Ask them to confirm the exact symbol. Resume once confirmed. |
+| `AMBIGUOUS_TOKEN` (e.g. USDT vs USDT0) | Present every candidate from the response. Ask the user to choose one explicitly. Do NOT pick on the user's behalf. Resume once confirmed. |
+| `INSUFFICIENT_ALLOWANCE` | Show the token and required spender from the error. Ask user to run the approve step, then resume from that step. Do NOT lower `amount_out_min` or bypass the allowance check. |
+| `MISSING_SLIPPAGE_PROTECTION` | Re-run `mantle-cli defi swap-quote` to get a fresh `minimum_out_raw`. Pass it verbatim to `--amount-out-min`. Never set `allow_zero_min=true`. Resume from the build step. |
+| `UNSUPPORTED_AAVE_ASSET` | Name the unsupported asset and the correct alternative (see error details). Wait for user confirmation, then resume. |
+
+### Terminal Errors — stop workflow, recommend restart
+
+These errors indicate an unexpected or unrecoverable state. Do NOT attempt to
+continue, retry with different parameters, or improvise a fix.
+
+| Condition | Halt Action |
+|---|---|
+| `isError: true` with any code NOT listed above | Print the raw error JSON verbatim. Halt the workflow. Recommend the user restart the OpenClaw agent before continuing. |
+| Non-JSON output from `mantle-cli` (plain text, stack trace, empty) | Print the raw output verbatim. Treat as terminal. Recommend restart. |
+| 3+ consecutive terminal errors | Stop the entire workflow. Summarize every error in order. Ask the user for guidance — do NOT take any further action until directed. |
+
+> **Consecutive error counting**: a "consecutive terminal error" is any response
+> matching the Terminal Errors table. The counter resets to zero after any
+> successful response (no `error` field, or `error: false`). Count accumulates
+> across all CLI calls within the current workflow session.
 
 ## ⚠ USDT ≠ USDT0
 
@@ -100,7 +141,12 @@ Each workflow defines a numbered step sequence. You MUST execute steps **in exac
 
 - **NEVER skip an intermediate step** to jump to a later one. For example, you MUST NOT call `swap build-swap` (Step 5) without first completing the quote (Step 2) and allowance check (Step 3).
 - **NEVER execute a step before its predecessor has completed successfully** (on-chain `status: success` for write operations, valid JSON response for read operations).
-- **If a step fails**, follow STOP CONDITION 1 (`references/safety-prohibitions.md`). Do NOT skip the failed step and continue with later steps.
+- **If a step fails**, stop immediately and follow this protocol:
+  1. Print the raw error output verbatim to the user
+  2. Do NOT skip the failed step and proceed to later steps
+  3. Consult the **Halt Patterns** table — determine if the error is recoverable or terminal
+  4. For terminal errors: recommend the user restart the OpenClaw agent; wait for explicit direction before any further action
+  Full incident details: `references/safety-prohibitions.md`
 - **If a step's precondition is not met** (e.g. allowance already sufficient at Step 3), the step may be **explicitly marked as skipped with reason** in the output to the user, but execution must still proceed to the **next sequential step** — never jump ahead by more than one step.
 
 ### Rule W-2: User Confirmation Gate Before Transaction Execution
