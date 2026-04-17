@@ -1,6 +1,6 @@
 ---
 name: mantle-openclaw-competition
-version: 0.1.12
+version: 0.1.13
 description: "Use for ANY on-chain DeFi operation on the Mantle network by OpenClaw in the asset accumulation competition — swapping, liquidity provision, Aave V3 lending, ERC-20 approvals, MNT wrap/unwrap, or portfolio/state reads. TRIGGER when the user: (a) mentions OpenClaw, mantle-cli, or the Mantle asset accumulation competition; (b) asks to swap / trade / exchange tokens on Mantle via Agni, Fluxion, or Merchant Moe; (c) asks to add / remove / manage liquidity (LP) on whitelisted Mantle pools, including xStocks pairs; (d) asks to supply / deposit / lend / borrow / repay / withdraw / set-collateral on Aave V3 on Mantle; (e) asks to wrap MNT → WMNT or unwrap WMNT → MNT; (f) asks to approve an ERC-20 spender; (g) wants to discover whitelisted assets, pools, pairs, routers, fee tiers, or bin steps; (h) wants to query balances, allowances, transaction status, or Aave positions on Mantle; (i) wants to optimize portfolio USD value via yield, leverage, or exit timing. SKIP for: operations on other chains (Ethereum, Base, Arbitrum, BSC), Mantle infra / smart-contract development, or anything outside whitelisted protocols. Enforces hard rules: CLI-only execution via `mantle-cli … --json` (NEVER the mantle-mcp MCP server), STOP-on-error (no auto-retry; recommend restart), quote-before-swap, sign-and-WAIT per tx, and absolute refusal of native/ERC-20 token transfers or fabricated calldata (no Python / JS / raw RPC / utils encoding)."
 ---
 
@@ -140,7 +140,8 @@ Proceed? (yes/no)
 - **Minimum 2-second gap** between consecutive `mantle-cli` calls. Never fire CLI commands in rapid succession.
 - **No parallel CLI calls** — wait for the previous command's response before issuing the next.
 - **After any write tx is confirmed**, wait at least **5 seconds** before the next write command to allow on-chain state (balances, allowances, positions) to settle.
-- **If an RPC timeout or rate-limit error occurs**, wait **30 seconds**, then retry **once**. If it fails again, follow STOP CONDITION 1.
+- **On ANY `mantle-cli` non-zero exit (including RPC timeout / rate-limit)**: STOP immediately per STOP CONDITION 1. Do NOT auto-retry write commands (`approve`, `swap build-swap`, `wrap-mnt`, `unwrap-mnt`, `lp add/remove/collect-fees`, `aave supply/borrow/repay/withdraw/set-collateral`) — re-running a build or sign step after a timeout risks a duplicate broadcast with stale state.
+- **Post-sign receipt polling is the ONLY permitted retry path** — if the tx was already signed and broadcast (you have a hash), you MAY retry `mantle-cli chain tx --hash <hash> --json` until you get a deterministic `status: success | reverted`. Rebuilding / re-signing is governed by Rule W-8 only.
 
 ### Rule W-4: Post-Operation Balance Verification (MANDATORY)
 

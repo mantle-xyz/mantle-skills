@@ -112,6 +112,7 @@ LB Router V2.2 address: `0x013e138EF6008ae5FDFDE29700e3f2Bc61d21E3a`
      --delta-ids '[-5,-4,-3,-2,-1,0,1,2,3,4,5]' \
      --distribution-x '[0,0,0,0,0,0,1e17,1e17,2e17,2e17,3e17]' \
      --distribution-y '[3e17,2e17,2e17,1e17,1e17,0,0,0,0,0,0]' \
+     --sender <wallet> \
      --json
    ↓ MUST confirm tx success
 
