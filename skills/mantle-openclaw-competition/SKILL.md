@@ -1,6 +1,6 @@
 ---
 name: mantle-openclaw-competition
-version: 0.1.13
+version: 0.1.14
 description: "Use for ANY on-chain DeFi operation on the Mantle network by OpenClaw in the asset accumulation competition — swapping, liquidity provision, Aave V3 lending, ERC-20 approvals, MNT wrap/unwrap, or portfolio/state reads. TRIGGER when the user: (a) mentions OpenClaw, mantle-cli, or the Mantle asset accumulation competition; (b) asks to swap / trade / exchange tokens on Mantle via Agni, Fluxion, or Merchant Moe; (c) asks to add / remove / manage liquidity (LP) on whitelisted Mantle pools, including xStocks pairs; (d) asks to supply / deposit / lend / borrow / repay / withdraw / set-collateral on Aave V3 on Mantle; (e) asks to wrap MNT → WMNT or unwrap WMNT → MNT; (f) asks to approve an ERC-20 spender; (g) wants to discover whitelisted assets, pools, pairs, routers, fee tiers, or bin steps; (h) wants to query balances, allowances, transaction status, or Aave positions on Mantle; (i) wants to optimize portfolio USD value via yield, leverage, or exit timing. SKIP for: operations on other chains (Ethereum, Base, Arbitrum, BSC), Mantle infra / smart-contract development, or anything outside whitelisted protocols. Enforces hard rules: CLI-only execution via `mantle-cli … --json` (NEVER the mantle-mcp MCP server), STOP-on-error (no auto-retry; recommend restart), quote-before-swap, sign-and-WAIT per tx, and absolute refusal of native/ERC-20 token transfers or fabricated calldata (no Python / JS / raw RPC / utils encoding)."
 ---
 
@@ -78,9 +78,17 @@ Full rationale, incident reports, and the numbered detail list live in `referenc
 ## Halt Patterns
 
 **Parsing priority**: Before reading any other field in a `mantle-cli` JSON
-response, check for `_stop_instruction`. If present, it is the highest-priority
-directive — follow it immediately before processing `code`, `message`, or any
-other field.
+response, check for `_stop_instruction`. If present, route as follows before
+processing `code`, `message`, or any other field:
+
+- **`🛑 STOP` prefix** (`"🛑 STOP — This error requires user input…"`) —
+  present `question_for_user` verbatim; obey every `do_not` entry; wait for the
+  user's reply. This prefix always maps to the Recoverable path.
+- **`⚠️ ERROR` prefix** (`"⚠️ ERROR — This operation failed and cannot be
+  retried with the same parameters…"`) — check the error `code` against the
+  **Recoverable Conditions** table first. If the code appears there, follow that
+  Recoverable path (the fix supplies different parameters, not the same ones
+  again). If the code is NOT in the Recoverable table, treat as Terminal.
 
 ### Recoverable Conditions — specific fix, then continue
 
@@ -92,9 +100,12 @@ the workflow from the interrupted step. Do NOT restart the agent for these.
 | `requires_user_input: true` | Present `question_for_user` verbatim. Obey every `do_not` entry. Wait for user reply, then resume. |
 | `TOKEN_NOT_FOUND` | Show `available_options` to the user. Ask them to confirm the exact symbol. Resume once confirmed. |
 | `AMBIGUOUS_TOKEN` (e.g. USDT vs USDT0) | Present every candidate from the response. Ask the user to choose one explicitly. Do NOT pick on the user's behalf. Resume once confirmed. |
-| `INSUFFICIENT_ALLOWANCE` | Show the token and required spender from the error. Ask user to run the approve step, then resume from that step. Do NOT lower `amount_out_min` or bypass the allowance check. |
+| `INSUFFICIENT_ALLOWANCE` | Show the token and required spender from the error. Proceed to the approve step (`mantle-cli approve`) following Rule W-2 confirmation gate, then resume the workflow from the interrupted step. Do NOT bypass the allowance check. |
 | `MISSING_SLIPPAGE_PROTECTION` | Re-run `mantle-cli defi swap-quote` to get a fresh `minimum_out_raw`. Pass it verbatim to `--amount-out-min`. Never set `allow_zero_min=true`. Resume from the build step. |
-| `UNSUPPORTED_AAVE_ASSET` | Name the unsupported asset and the correct alternative (see error details). Wait for user confirmation, then resume. |
+| `UNSUPPORTED_AAVE_ASSET` | Name the unsupported asset. Check `details.suggested_asset` or the `suggestion` field for the correct alternative. Present it to the user and wait for confirmation, then resume. |
+| `POOL_NOT_FOUND` | Show the token pair from the error. Run `mantle-cli lp find-pools --token-a A --token-b B --json` to discover available pools and their fee tiers / bin steps. Ask the user to confirm which pool to use. Resume from that step. Do NOT restart. |
+| `LTV_IS_ZERO` | The asset cannot be used as collateral on Aave V3 (LTV=0 by Aave governance). Explain this to the user and ask them to choose a different collateral asset. Do NOT restart — restarting will not change the on-chain governance config. |
+| `RPC_ERROR` or `INDEXER_TIMEOUT` | Wait 30 seconds, then retry the same command once (per Rule W-3). If it fails again, treat as Terminal: print the raw error verbatim, halt the workflow, and recommend the user restart the OpenClaw agent. |
 
 ### Terminal Errors — stop workflow, recommend restart
 
@@ -109,8 +120,9 @@ continue, retry with different parameters, or improvise a fix.
 
 > **Consecutive error counting**: a "consecutive terminal error" is any response
 > matching the Terminal Errors table. The counter resets to zero after any
-> successful response (no `error` field, or `error: false`). Count accumulates
-> across all CLI calls within the current workflow session.
+> successful response (one where `error` is absent — the scaffold never emits
+> `error: false`). Count accumulates across all CLI calls within the current
+> workflow session.
 
 ## ⚠ USDT ≠ USDT0
 
