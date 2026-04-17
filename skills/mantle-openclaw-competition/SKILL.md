@@ -142,6 +142,62 @@ Proceed? (yes/no)
 - **After any write tx is confirmed**, wait at least **5 seconds** before the next write command to allow on-chain state (balances, allowances, positions) to settle.
 - **If an RPC timeout or rate-limit error occurs**, wait **30 seconds**, then retry **once**. If it fails again, follow STOP CONDITION 1.
 
+### Rule W-4: Post-Operation Balance Verification (MANDATORY)
+
+After **any** write tx confirms (`status: success`), ALWAYS run `mantle-cli account balances <wallet> --json` to fetch actual on-chain balances (full-whitelist coverage per Rule W-7). **NEVER report, display, or infer balance changes from your own calculation** — only show what the CLI returns. Fabricated or estimated balances are prohibited.
+
+### Rule W-5: Swap Direction Disambiguation ⚠️
+
+When the user says "use **X** to get **N Y**", "swap **X** for **N Y**", or "buy **N Y** with **X**":
+- **N** is the **output** quantity (Y tokens to receive) — NOT the input amount.
+- **❌ Wrong:** "use MNT to get 10 USDC" → interpreted as "swap 10 MNT → USDC"
+- **✅ Correct:** "use MNT to get 10 USDC" → "swap MNT → 10 USDC (output fixed at 10)"
+- **✅ Converse:** "swap 10 MNT for USDC" → input = 10 MNT (output variable). The number attaches to the side it's adjacent to — never flip it.
+
+If the CLI does not support fixed-output swaps, **inform the user and ask for the input amount instead**. Never silently swap the roles of input and output.
+
+### Rule W-6: Allowance Disclosure & Approve Confirmation
+
+After every `allowances` check, display the **current allowance (raw + human-readable), spender address, and the required amount** for the planned operation to the user BEFORE deciding to approve or skip. If `approve` is required, present the exact spender address and approval amount in the Transaction Confirmation Summary (Rule W-2) for explicit user approval. Do NOT silently approve (max or otherwise), and do NOT silently skip approve based on your own reading of the allowance.
+
+### Rule W-7: Full-Whitelist Balance Query
+
+When querying balances **without a specific asset filter**, you MUST return **all whitelisted assets** — never omit any. Procedure:
+
+1. Run `mantle-cli account balances <wallet> --json` without token filters.
+2. Cross-check the response against the whitelisted token list from `mantle-cli catalog list --json` (or `mantle-cli swap pairs --json`).
+3. For any whitelisted asset missing from step 1's output, query it explicitly and merge the result.
+
+Silently omitting any whitelisted asset (e.g., MOE) from a balance report is a hard error — never present an incomplete portfolio.
+
+### Rule W-8: Signing Flow Integrity 🔐
+
+**Canonical path:** `mantle-cli` build → complete `unsigned_tx` → Privy API sign → wait for on-chain receipt. No shortcuts, no alternatives.
+
+**`unsigned_tx` MUST carry the full parameter set returned by `mantle-cli`:**
+
+```ts
+unsigned_tx: {
+  to: string;                     // required
+  data: string;                   // required
+  value: string;                  // required
+  chainId: number;                // required
+  gas?: string;                   // suggested gas limit
+  maxFeePerGas?: string;          // EIP-1559: baseFee × 2 + tip, hex wei
+  maxPriorityFeePerGas?: string;  // EIP-1559 tip, hex wei
+  nonce?: number;                 // only when explicitly overridden (e.g. after mantle_getNonce)
+};
+```
+
+- **Never mutate, strip, or re-encode** any field returned by `mantle-cli`. Pass `unsigned_tx` to Privy **verbatim**.
+- **Never hand-assemble `unsigned_tx`** from your own values — the CLI is the sole producer. Fabricating `to` / `data` / `value` / gas params is the same violation as Hard Constraint #4 (no fabricated calldata).
+
+**One unsigned_tx = one signature. No exceptions.**
+
+- After signing, WAIT for the receipt (`mantle-cli chain tx --hash <hash> --json`) before any further action.
+- **On 504 / timeout / network error:** do NOT re-sign. First query the chain for the receipt — if the tx is already mined (any status), resume from there; only if it is truly absent from the chain may you rebuild via `mantle-cli` (new `idempotency_key`) and sign the **new** `unsigned_tx`. Re-signing the old `unsigned_tx` risks duplicate broadcast and nonce collision.
+- **If Privy timed out before returning a tx hash** (signing-stage failure, no broadcast): there is nothing to query on-chain. Rebuild via `mantle-cli` with a new `idempotency_key` and sign the fresh `unsigned_tx`. Discard the old one.
+
 ## Available Tools
 
 | Tool | Purpose | Command |
