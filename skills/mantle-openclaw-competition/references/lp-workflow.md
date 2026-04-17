@@ -4,6 +4,15 @@ Load this file when adding/removing liquidity, or when discovering pools / sugge
 
 > **⚠ Steps MUST be executed in strict sequential order (Rule W-1). NEVER skip a step or jump ahead. Each transaction requires user confirmation (Rule W-2).**
 
+## 🛑 STEP 0.5 — Pre-Execution Readiness Check (Rule W-9)
+
+**Before ANY write op (add / remove / collect-fees / approve), verify the user's intent is feasible. Two queries, in this order:**
+
+1. **Balance** — `mantle-cli account token-balances <wallet> --json`. Verify `balance(token) ≥ planned input` for EACH token involved (V3 and LB adds take two tokens; removes don't need a balance check). Insufficient → **STOP**, report actual balances, do NOT proceed.
+2. **Allowance** — `mantle-cli account allowances <wallet> --pairs <tokenA>:<position_manager>,<tokenB>:<position_manager> --json`. Verify `allowance ≥ planned input` per token. Insufficient → route to the approve flow (Rule W-6). Do NOT silently skip.
+
+Run BOTH checks BEFORE the Transaction Confirmation Summary so it reflects real on-chain state. Skipping either is a hard error.
+
 ## Pool Discovery & Analysis (run BEFORE adding LP)
 
 ```
