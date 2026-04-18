@@ -1,6 +1,6 @@
 ---
 name: mantle-openclaw-competition
-version: 0.1.15
+version: 0.1.16
 description: "Use for ANY on-chain DeFi operation on the Mantle network by OpenClaw in the asset accumulation competition — swapping, liquidity provision, Aave V3 lending, ERC-20 approvals, MNT wrap/unwrap, or portfolio/state reads. TRIGGER when the user: (a) mentions OpenClaw, mantle-cli, or the Mantle asset accumulation competition; (b) asks to swap / trade / exchange tokens on Mantle via Agni, Fluxion, or Merchant Moe; (c) asks to add / remove / manage liquidity (LP) on whitelisted Mantle pools, including xStocks pairs; (d) asks to supply / deposit / lend / borrow / repay / withdraw / set-collateral on Aave V3 on Mantle; (e) asks to wrap MNT → WMNT or unwrap WMNT → MNT; (f) asks to approve an ERC-20 spender; (g) wants to discover whitelisted assets, pools, pairs, routers, fee tiers, or bin steps; (h) wants to query balances, allowances, transaction status, or Aave positions on Mantle; (i) wants to optimize portfolio USD value via yield, leverage, or exit timing. SKIP for: operations on other chains (Ethereum, Base, Arbitrum, BSC), Mantle infra / smart-contract development, or anything outside whitelisted protocols. Enforces hard rules: CLI-only execution via `mantle-cli … --json` (NEVER the mantle-mcp MCP server), STOP-on-error (no auto-retry; recommend restart), quote-before-swap, sign-and-WAIT per tx, and absolute refusal of native/ERC-20 token transfers or fabricated calldata (no Python / JS / raw RPC / utils encoding)."
 ---
 
@@ -162,10 +162,15 @@ After **any** write tx confirms (`status: success`), ALWAYS run `mantle-cli acco
 When the user says "use **X** to get **N Y**", "swap **X** for **N Y**", or "buy **N Y** with **X**":
 - **N** is the **output** quantity (Y tokens to receive) — NOT the input amount.
 - **❌ Wrong:** "use MNT to get 10 USDC" → interpreted as "swap 10 MNT → USDC"
-- **✅ Correct:** "use MNT to get 10 USDC" → "swap MNT → 10 USDC (output fixed at 10)"
+- **✅ Correct:** "use MNT to get 10 USDC" → target output ≈ 10 USDC
 - **✅ Converse:** "swap 10 MNT for USDC" → input = 10 MNT (output variable). The number attaches to the side it's adjacent to — never flip it.
 
-If the CLI does not support fixed-output swaps, **inform the user and ask for the input amount instead**. Never silently swap the roles of input and output.
+**Estimating the input amount (the CLI only supports fixed-input swaps).** Do NOT guess how much X is needed to receive N Y. Instead, use a reverse `swap-quote` to derive the estimate from live on-chain liquidity:
+
+1. Call `mantle-cli defi swap-quote --in Y --out X --amount N --provider best --json` — this asks "if I swapped N Y back to X right now, how much X would I get?", which is a good proxy for the X needed to buy N Y.
+2. Take the quoted X amount and add a small buffer (suggest +0.5%–1%) to cover slippage, fees, and price impact asymmetry between the two directions. This buffered X is the input for the real forward swap.
+3. In the Transaction Confirmation Summary (Rule W-2), clearly state: input = `<buffered X>`, expected output ≈ `N Y` (may be slightly higher or lower), and the buffer %. Let the user approve or adjust the buffer before you broadcast.
+4. If the user insists on receiving **exactly** N Y (not ≈ N Y), inform them the CLI has no fixed-output swap and the reverse-quote method is the closest feasible approach — never silently claim exact output, and never flip input/output to fake a fixed-output swap.
 
 ### Rule W-6: Allowance Disclosure & Approve Confirmation
 
@@ -210,6 +215,8 @@ unsigned_tx: {
 - **If Privy timed out before returning a tx hash** (signing-stage failure, no broadcast): there is nothing to query on-chain. Rebuild via `mantle-cli` with a new `idempotency_key` and sign the fresh `unsigned_tx`. Discard the old one.
 
 ### Rule W-9: Pre-Execution Readiness Check (MANDATORY)
+
+**⛔ BOTH checks below are mandatory — balance AND allowance. Completing only the balance check and proceeding is a hard error. Do NOT stop halfway.**
 
 Before executing **ANY** write operation (swap, approve, lp add/remove, aave supply/borrow/repay/withdraw/set-collateral, wrap/unwrap), confirm the user's intent is feasible against actual on-chain state. Two queries, in this order:
 
