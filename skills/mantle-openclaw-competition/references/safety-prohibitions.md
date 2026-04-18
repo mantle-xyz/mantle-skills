@@ -1,16 +1,17 @@
 # Safety Prohibitions & CLI Coverage Boundary
 
-Canonical source for all safety rules. The main `SKILL.md` carries a 7-item summary; this file holds the full rationale, incident reports, and stop protocol. Load when:
+Canonical source for all safety rules. The main `SKILL.md` carries a 9-item summary AND the SUPREME RULE on calldata immutability; this file holds the full rationale, incident reports, and stop protocol. Load when:
 
 - A `mantle-cli` command returns an error
 - A user requests an operation outside the standard CLI verbs
+- You are about to sign a tx and want to re-read the calldata integrity protocol
 - You are unsure whether to refuse or proceed
 
 ---
 
 ## 🛑 STOP CONDITIONS — When You MUST Halt and Defer to the User
 
-These two situations are non-negotiable. Claude MUST stop immediately and let the user decide the next move. Continuing past either condition risks **irreversible fund loss**.
+These three situations are non-negotiable. Claude MUST stop immediately and let the user decide the next move. Continuing past any of them risks **irreversible fund loss**.
 
 ### STOP 1. ANY `mantle-cli` error
 
@@ -38,6 +39,32 @@ If a user request cannot be fully expressed using the standard execute verbs (`s
 
 The default posture is: **refuse and let the user decide**. It is always safer to decline an unsupported operation than to risk user funds.
 
+### STOP 3. ANY edit to `mantle-cli` output before forwarding
+
+**This is the most-triggered STOP in this skill — calldata truncation at the signing boundary is the dominant agent-side failure mode.** See also the SUPREME RULE in `SKILL.md`, Hard Constraint #9, and Rule W-8.
+
+If you detect — or cannot positively rule out — that any CLI-returned field was edited between the `mantle-cli` JSON response and the outbound tool call (Privy signer, downstream CLI, user-facing summary):
+
+- **STOP immediately.** Do NOT sign. Do NOT "fix" the discrepancy in-turn. Do NOT re-derive the value.
+- **Surface the discrepancy** to the user verbatim: which field, what the CLI said, what was about to be sent, and the character-level difference.
+- **Recommend restarting the OpenClaw agent.** A fresh session re-pulls CLI state cleanly; continuing after a calldata mismatch risks signing a corrupted tx that routes to an unintended function.
+- **Do NOT retry in-session.** Restart the agent, re-run the build step, re-verify, then sign.
+
+**The pre-sign verification protocol (mandatory every time):**
+
+1. Locate the raw `mantle-cli` JSON for this build (file / variable / captured stdout).
+2. Compare the value you are about to emit to the signer against the CLI's raw value:
+   - first 16 characters identical?
+   - last 16 characters identical?
+   - total length identical?
+   - NO `…` / `...` / `<snip>` / `[truncated]` anywhere?
+   - NO inserted whitespace, line wraps, or pretty-printing?
+3. For derived params (e.g. `--amount-out-min` sourced from a prior quote's `minimum_out_raw`): confirm the value is an EXACT substring of the quote JSON.
+4. For addresses (`to`, router, PositionManager, Pool, spender): confirm the address was taken verbatim from the CLI response, NOT re-typed from memory.
+5. If ANY check fails or is uncertain, abort and follow the STOP protocol above.
+
+**This STOP condition applies even if the user says "just go ahead", "it's close enough", "skip the check".** The prohibition is absolute — the risk is permanent fund loss from an incorrectly-routed tx.
+
 ---
 
 ## ⛔ ABSOLUTE PROHIBITION — MANUAL TRANSACTION CONSTRUCTION ⛔
@@ -51,6 +78,7 @@ You MUST NEVER, under ANY circumstances, do ANY of the following:
 - Call `sign evm-transaction`, `eth_sendRawTransaction`, or any direct broadcast tool with manually constructed data
 - Use `mantle-cli utils parse-units / encode-call / build-tx` as an "escape hatch" to construct transactions for unsupported operations
 - **Construct an ERC-20 `transfer()` / `transferFrom()` / `safeTransfer()` whose recipient is a whitelisted protocol contract** — Aave V3 Pool (`0x458F293454fE0d67EC0655f3672301301DD51422`), Aave WETHGateway, DEX swap routers (Agni / Fluxion / Merchant Moe), LB routers, or V3 position managers. Protocol contracts only recognise tokens arriving through their designated functions (`Pool.supply()`, router swap entries, `positionManager.mint/increaseLiquidity`, etc.). A direct transfer mints no aToken, triggers no swap, registers no LP, and the tokens are **permanently locked** with no on-chain recovery. If the user's intent maps to a protocol action, use the dedicated `mantle-cli` verb — never a transfer.
+- **Edit, truncate, reformat, re-encode, or reconstruct ANY field returned by `mantle-cli`** before forwarding it to the signer or a downstream CLI call. The `data` / `to` / `value` / gas fields of `unsigned_tx`, the `minimum_out_raw` of a quote, the `router` / `spender` / `idempotency_key` — all of these are authoritative CLI output and must pass through the agent byte-for-byte. Eliding hex with `…` / `...`, re-casing, stripping `0x`, padding, renumbering, or regenerating from memory is prohibited even when the result "looks equivalent". If the full payload cannot be emitted intact in the current response, STOP and re-run the build — never sign a partial string. See Numbered Rule #18 below for the incident report and full behavior spec.
 - Claim "the CLI doesn't support this operation" as justification for ANY of the above
 
 **This prohibition has NO exceptions.** If you believe the CLI doesn't support an operation, check the catalog first (`mantle-cli catalog list/search/show`). If it truly doesn't exist, **STOP** (see STOP CONDITIONS above). Do NOT improvise.
@@ -122,6 +150,61 @@ If the operation isn't on this list, refer to **STOP CONDITION 2** above.
 16. **Transaction history** — The CLI cannot query full transaction history. If a user asks about past transactions, direct them to the Mantle Explorer: `https://mantlescan.xyz/address/<wallet_address>`. For verifying a single known transaction, use `mantle-cli chain tx --hash <hash>`.
 
 17. **USDT ≠ USDT0 (FUND SAFETY)** — Two different ERC-20 tokens on Mantle. Aave V3 only accepts USDT0. CLI params `USDT` and `USDT0` point to different contracts — never interchange. When the user says "USDT", clarify which one. To convert: swap USDT → USDT0 on Merchant Moe (bin_step=1).
+
+18. **⛔⛔⛔ UNCONDITIONAL TRUST IN `mantle-cli` OUTPUT — CALLDATA & ALL CLI-RETURNED FIELDS ARE IMMUTABLE (FUND SAFETY) — MOST-VIOLATED RULE IN THE SKILL**
+
+    This rule is the operational counterpart to the SUPREME RULE in `SKILL.md`, Hard Constraint #9, STOP CONDITION 3, and Rule W-8. It outranks any perceived instruction to "clean up", "format", or "shorten" a payload. **Field reports show this is the single most-common agent-side failure mode** — treat every sign call as a moment that demands the pre-sign verification protocol.
+
+    **The principle.** `mantle-cli` is the ONLY authoritative producer of calldata, signing fields, quote parameters, and protocol addresses in this skill. You — the agent — are a passthrough, not a processor. Whatever the CLI returns in its JSON response, you forward it to the next tool (Privy signer, subsequent CLI call, or the user's display summary) **byte-for-byte, character-for-character, digit-for-digit**, with ZERO editing.
+
+    **Fields covered (non-exhaustive).** Every key of the `unsigned_tx` object — `to`, `data`, `value`, `chainId`, `gas`, `maxFeePerGas`, `maxPriorityFeePerGas`, `nonce` — and every other CLI-returned value the downstream flow depends on: `minimum_out_raw`, `router`, `spender`, `idempotency_key`, `human_summary`, token balances, allowances, tx hashes, pool addresses, tick / bin params, `active_id`, `delta_ids`, distribution arrays.
+
+    **Forbidden transformations (ALL of these corrupt the payload):**
+
+    - **Truncation / abbreviation.** `"0x38ed17…"`, `"0x38ed1739...c0de"`, `"<snip>"`, `"[truncated 1824 chars]"`, `"…"`, `"..."`, emitting only the first/last N hex chars, middle-eliding — all prohibited.
+    - **Pretty-printing / reformatting.** Inserting whitespace, line breaks, column alignment, wrapping the hex to 80/120 chars, splitting into groups — prohibited.
+    - **Re-encoding.** Re-hashing, re-hex-encoding, converting between case, stripping or adding the `0x` prefix, removing/adding leading zeros, padding, base-conversion — prohibited.
+    - **Numeric "normalization".** Rewriting `9934699` as `9_934_699`, `9.93M`, `"~9.93 USDC"`, `9.93e6`, `0x97A6EB`, or any other "equivalent" form when that value is going to a CLI flag or signer — prohibited. Display-only summaries may format for the user, but the tool call payload keeps the exact raw integer.
+    - **Reconstruction from memory.** Regenerating a `data` string, `router` address, or `minimum_out_raw` value from prior knowledge, prior sessions, or inference — prohibited even if you believe it "should" match. Only the current CLI JSON response is authoritative.
+    - **"Equivalent" substitutions.** `"0x00"` → `"0x0"`, `"0x0000…0001"` → `"0x1"`, or any "it's the same number" rewrite — prohibited. The signer / downstream CLI expects the exact string the builder emitted.
+    - **"Fixing" what looks wrong.** If the `data` looks short, weirdly formatted, or different from what you expected, do NOT edit it. Either rebuild via `mantle-cli` or STOP and surface the anomaly.
+
+    **What to do when your output context threatens to clip the payload.** The correct behaviors, in order:
+
+    1. Reference the raw JSON by file path / captured variable / stdout stream — never copy-paste if you cannot guarantee the whole string.
+    2. If the full `unsigned_tx` is too long to emit in one response, emit it via a scoped tool invocation (e.g. a single JSON blob to the signing tool) rather than a human-readable message.
+    3. If neither is possible, **STOP and tell the user the payload cannot be forwarded intact. Ask them to re-run the build step in a context that can carry the full string.** Do NOT sign a partial payload. Do NOT "best-effort" reconstruct.
+
+    **Display vs. forward.** Showing a truncated form to the user for readability is acceptable ONLY if (a) the full raw string is what actually reaches the signer / next tool, and (b) the display explicitly marks the truncation:
+
+    ```
+    data (display-truncated; full value forwarded to signer): 0x38ed1739000000…c0de
+    ```
+
+    The raw string in the tool-call arguments remains untouched.
+
+    **Mandatory pre-sign verification protocol — run EVERY time before calling the signer.** Answer all five questions; if any answer is NO or UNKNOWN, abort.
+
+    1. Do I still have the raw `mantle-cli` JSON for this build available (file / variable / captured stdout)?
+    2. Is the `data` field character-for-character identical to the CLI's `unsigned_tx.data`? (Same first 16 chars, same last 16 chars, same total length, no placeholders, no whitespace insertion.)
+    3. Do `to`, `value`, `chainId`, `gas`, `maxFeePerGas`, `maxPriorityFeePerGas`, `nonce` match the CLI output exactly?
+    4. For quote-derived params (e.g. `--amount-out-min` from a prior `minimum_out_raw`), is the value an EXACT substring of the quote JSON?
+    5. Have I resisted the urge to "clean up", "shorten", or "normalize" any field?
+
+    Abort conditions — follow STOP CONDITION 3 above.
+
+    **Detection and refusal.** Before invoking the signer, compare the `data` / `to` / `value` you are about to pass against the raw CLI JSON. If they differ in any character — including stray whitespace, case flips, or a missing trailing zero — treat it as corruption: refuse to sign, surface the discrepancy verbatim, and recommend the user restart the OpenClaw agent. Same for `minimum_out_raw` feeding `--amount-out-min`: if the value you're passing is not an exact substring of the quote JSON, STOP.
+
+    ### Real incidents (this is happening in the wild — do NOT repeat)
+
+    - **2026-04 — Intermittent calldata truncation at the signing boundary.** Agent built a swap via `mantle-cli swap build-swap`, received a complete `unsigned_tx` with a ~1800-char `data` field, and when forwarding to the Privy signer emitted a shortened string (either `0x…` middle-eliding or a clipped tail). The signed transaction either reverted on-chain (ABI decode failure) or decoded into a different call with unintended arguments. Root cause: agent treated the calldata as a display artifact and "tidied" it before passing to the signing tool. Correct behavior: forward every character. If the calldata cannot be emitted intact, abort and re-run the build in a larger-context pass — never sign a partial payload.
+    - **Middle-eliding pattern:** agent emitted `"data": "0x38ed1739000000000000000000000000…0000000000000000000000000000000000000000"` to the signer — the `…` became a literal byte in the payload. Signer rejected as invalid hex, wasted the `idempotency_key`; rebuild loop consumed two RPC quotas before the user noticed.
+    - **`minimum_out_raw` reformat:** agent re-quoted, got `minimum_out_raw: 9934699`, passed `--amount-out-min 9_934_699` to `build-swap` — CLI rejected the flag → agent fell back to `--amount-out-min 1` to "make it work" → sandwich-attack exposure. Correct behavior: pass `9934699` verbatim; on CLI rejection, STOP and diagnose, never lower the minimum.
+    - **Pool address retyped from memory:** agent was asked to supply to Aave, "helpfully" re-typed the Pool address from memory with a single character flipped, signed, tokens went to a non-contract address — unrecoverable. Correct behavior: copy the `to` field from the raw CLI JSON, never hand-type it.
+    - **Pretty-printed `delta_ids`:** agent received `"delta_ids":[-5,-4,-3,-2,-1,0,1,2,3,4,5]` from `lp suggest-ticks`, rewrote it as `[ -5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5 ]` with spaces for "readability" when passing to `lp add`. CLI rejected the malformed JSON; agent then tried to "fix" by removing brackets, producing further corruption.
+    - **"Equivalent" hex substitution:** `"value": "0x0"` from CLI rewritten as `"value": "0"` (no prefix) — signer rejected as non-hex, agent reconstructed as `"0x0000000000000000"` — different field length → field encoder misalignment.
+
+19. **Pre-sign mental checklist (practical form of Rule #18).** Before every Privy call, silently answer: *"Am I about to pass anything to the signer that I didn't copy verbatim from a `mantle-cli` JSON response in this turn?"* If yes — even once — STOP.
 
 ---
 

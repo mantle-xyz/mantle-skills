@@ -8,6 +8,25 @@ Pool address: `0x458F293454fE0d67EC0655f3672301301DD51422` (verify with `mantle-
 
 > **⚠ Steps MUST be executed in strict sequential order (Rule W-1). NEVER skip a step or jump ahead. Each transaction requires user confirmation (Rule W-2).**
 
+## ⛔⛔⛔ CALLDATA INTEGRITY — READ BEFORE EVERY `aave supply` / `borrow` / `repay` / `withdraw` / `set-collateral` / `approve` SIGN CALL
+
+**See SUPREME RULE in `SKILL.md`.** Aave V3 Pool function calls are function-selector + packed struct arguments — typically shorter than swap/LP calldata, but STILL must pass byte-for-byte. A single dropped byte changes the function selector, the asset address, the amount, or `referralCode` — any of which can route the call to a different function (`supply` → `borrow`, or worse, a proxy-admin call).
+
+Before calling the signer on any Aave tx, run the 5-question pre-sign verification protocol from `SKILL.md` SUPREME RULE:
+
+1. Raw `mantle-cli` JSON still available? If not, STOP and rebuild.
+2. `data` identical to CLI output — same first 16 chars (function selector + start of first arg), same last 16 chars, same total length, NO `…` / `...` / `<snip>` / `[truncated]`?
+3. `to` (Aave V3 Pool `0x458F293454fE0d67EC0655f3672301301DD51422` or WETHGateway per CLI response) identical to CLI output? NEVER rewrite the Pool address from memory — type it from the CLI JSON.
+4. `value` (hex wei) identical to CLI output?
+5. `--on-behalf-of` argument you passed is the EXACT wallet address from the user — no checksum re-casing, no truncation?
+
+If any answer is NO or UNKNOWN, abort. A corrupted Aave sign call can supply to the wrong asset reserve (tokens locked), borrow the wrong asset, or — in the classic incident — end up as a bare `transfer()` to the Pool address that mints NO aToken and locks the funds permanently.
+
+**Most common truncation points in Aave flows:**
+- Pool address re-typed from memory with a checksum typo → tx routes to no contract / to a different address.
+- `amount` argument reformatted from raw integer → silent wrong supply amount.
+- `interestRateMode` / `referralCode` trailing bytes dropped → selector decodes to a different function.
+
 ## 🛑 STEP 0.5 — Pre-Execution Readiness Check (Rule W-9)
 
 **Before ANY write op (supply / borrow / repay / withdraw / set-collateral / approve), verify the user's intent is feasible against actual on-chain state. Two queries, in this order:**

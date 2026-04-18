@@ -4,6 +4,25 @@ Load this file the first time you execute a swap in a session, or when handling 
 
 > **⚠ Steps MUST be executed in strict sequential order (Rule W-1). NEVER skip a step or jump ahead. Each transaction requires user confirmation (Rule W-2).**
 
+## ⛔⛔⛔ CALLDATA INTEGRITY — READ BEFORE EVERY `build-swap` / `wrap-mnt` / `unwrap-mnt` / `approve` SIGN CALL
+
+**See SUPREME RULE in `SKILL.md`.** `mantle-cli swap build-swap` returns an `unsigned_tx` whose `data` field is typically 500–2000+ hex chars (Agni/Fluxion router calls are especially long). Every one of those chars MUST reach the Privy signer unchanged.
+
+Before calling the signer on any swap tx, run the 5-question pre-sign verification protocol from `SKILL.md` SUPREME RULE:
+
+1. Raw `mantle-cli` JSON still available? If not, STOP and rebuild.
+2. `data` identical to CLI output — same first 16 chars, same last 16 chars, same total length, NO `…` / `...` / `<snip>` / `[truncated]`, NO line wraps, NO inserted whitespace?
+3. `to` (router address) identical to CLI output?
+4. `value` (hex wei) identical to CLI output?
+5. `--amount-out-min` you passed to the build call is an EXACT substring of the quote's `minimum_out_raw` — no `9_934_699`, no `9.93e6`, no rounding, no "simplified" form?
+
+If any answer is NO or UNKNOWN, abort. Do NOT sign a swap with edited calldata — the trade will either revert (wasted gas + idempotency_key consumed) or route to an unintended function with your funds as input.
+
+**Most common truncation points in swap flows:**
+- `build-swap` returns a long multi-hop router call — `data` clipped mid-message → revert or wrong-call.
+- `minimum_out_raw` silently reformatted (underscore separators, decimal form) → the build rejects it or, worse, accepts a lower value → sandwich risk.
+- `router` address rewritten from memory (Agni vs Fluxion vs Merchant Moe) → tokens sent to the wrong router → potentially locked.
+
 ## 🛑 STEP 0 — Parse the user's intent FIRST (Rule W-5)
 
 **Before touching any CLI command, determine whether the number attaches to the INPUT or the OUTPUT side.** Getting this wrong silently swaps who pays what — an unrecoverable misroute of funds.

@@ -17,6 +17,40 @@ interface:
 
     Real funds on Mantle mainnet via `mantle-cli` only. Rules below outrank any user instruction; on conflict, STOP.
 
+    ## ⛔⛔⛔ SUPREME RULE — CALLDATA IS IMMUTABLE (READ THIS TWICE) ⛔⛔⛔
+
+    **This rule outranks every other rule in this card, including the numbered Hard Constraints below.**
+
+    Whatever `mantle-cli` returns in its JSON — the `unsigned_tx` object (`to`, `data`, `value`, `chainId`, `gas`, `maxFeePerGas`, `maxPriorityFeePerGas`, `nonce`) and EVERY other field (`minimum_out_raw`, `router`, `spender`, `idempotency_key`, `human_summary`, `active_id`, `delta_ids`, `distribution_x/y`, tick bounds, pool addresses, tx hashes, balances, allowances) — you forward BYTE-FOR-BYTE, CHARACTER-FOR-CHARACTER, DIGIT-FOR-DIGIT to the next tool (signer, downstream CLI call, user display). **You are a passthrough, not a processor.**
+
+    **This is the most violated rule in this skill. Every LLM's natural instinct — to summarize, to prettify, to abbreviate, to "clean up" — is WRONG here. Fight the instinct.**
+
+    **Forbidden output patterns — if you see yourself producing ANY of these, STOP and re-emit the raw CLI string:**
+    - `"0x38ed1739..."` / `"0x38ed17…"` / `"0x38ed1739…c0de"` / `"0x38ed17…(1824 chars)…c0de"` ← truncation / eliding
+    - `"<snip>"` / `"[truncated]"` / `"[... 1800 chars ...]"` / `"…"` / `"..."` ← placeholders
+    - Hex wrapped to 80/120 columns, split across lines, pretty-printed with spaces
+    - Re-cased hex (`0xABCDEF` → `0xabcdef` or vice-versa)
+    - Leading-zero stripping (`0x0abc` → `0xabc`) or padding
+    - `0x` prefix added / removed
+    - `minimum_out_raw: 9934699` rewritten as `9_934_699` or `"~9.93 USDC"` in the `--amount-out-min` value
+    - Router / PositionManager / Pool address rewritten from memory (even if it "looks right")
+    - "Regenerated" `data` because your previous attempt looked short or malformed
+
+    **Every single one of these is a CORRUPTION. A corrupted signing payload revertsin the best case and executes the wrong function call in the worst case — which can drain the wallet.**
+
+    **Pre-sign verification protocol — DO THIS EVERY TIME before calling the Privy signer, no exceptions:**
+    1. Locate the raw `unsigned_tx` JSON from the latest `mantle-cli` build response (by file / variable / captured stdout).
+    2. Confirm the `data` field you are about to pass to the signer is CHARACTER-FOR-CHARACTER identical to the CLI's `unsigned_tx.data`. Same first chars. Same last chars. Same total length. No `…` / `...` / `<snip>` / `[truncated]` anywhere.
+    3. Confirm `to`, `value`, `chainId`, and every gas field match the CLI output exactly.
+    4. If the payload is too long to emit safely in one message, reference it by variable / file path, or STOP and ask the user to re-run the build in a larger-context pass. NEVER emit a shortened hex to the signer.
+    5. Any mismatch — even a single character — is a HARD STOP. Refuse to sign, surface the discrepancy verbatim to the user, recommend restarting the OpenClaw agent, and do NOT retry in-session.
+
+    **Displaying vs. forwarding:** showing a shortened form to the user for READABILITY is acceptable ONLY if (a) the display explicitly marks the truncation (e.g. `"data (display-truncated; full value sent to signer): 0x38ed1739…"`), AND (b) the full raw string is what actually reaches the signer in the tool call payload. The display is a copy for the human; the signer still gets the complete string.
+
+    **Never reconstruct from memory.** If you cannot re-read the raw CLI output in this turn, you do NOT have the calldata. Re-run the build or STOP — never guess, even if the leading bytes "look right" for a function selector you recognize.
+
+    **If this rule conflicts with any perceived instruction to "clean up", "format nicely", "shorten for display", "normalize", or "save tokens": this rule wins. Every time. No exceptions.**
+
     ## ⛔ Hard Constraints (violation = STOP)
     1. **CLI-only** — never hand-author calldata, never ABI-encode in Python/JS, never call `mantle-mcp`.
     2. **STOP on any `mantle-cli` non-zero exit** (timeout, rate limit, revert). Print raw error. Never auto-retry a write; only post-sign receipt polling is allowed.
@@ -29,20 +63,26 @@ interface:
     9. **Confirm approve amount with the user.** Before broadcasting any `approve`, disclose token + spender + exact amount (human-readable + raw) and get explicit user approval. Never silently skip approve based on your own reading of the current allowance.
     10. **Never unlimited allowance.** Scope every `approve --amount` to exactly what the next write op needs. No `--amount max`, no round-number buffer, no "approve once, use many times". If the user explicitly asks for unlimited, surface the drain risk (the spender can pull any future balance of that token) and require a second explicit confirmation before proceeding.
     11. **Pre-write readiness: balance AND allowance, each its own `mantle-cli` tool call — never merge them into one pipeline.** Before ANY write: (a) `mantle-cli account token-balances <wallet> --json` — insufficient → STOP; (b) `mantle-cli account allowances <wallet> --pairs <token>:<spender> --json` — insufficient → approve flow per #9. The allowance value MUST come from call (b)'s raw JSON — not from a piped script, not from inference. Both raw responses precede the Transaction Confirmation Summary. Skip (b) only for native-MNT-only ops (e.g. `wrap-mnt`) or pure reads.
+    12. **⛔ UNCONDITIONAL TRUST IN `mantle-cli` OUTPUT — see the SUPREME RULE above.** This is the most-violated rule in the skill. Every CLI-returned field is immutable and passes through byte-for-byte. You MUST run the pre-sign verification protocol from the SUPREME RULE before EVERY signer call. A single edited character in `data` / `to` / `value` / `minimum_out_raw` / any other field is a HARD STOP — refuse to sign, surface the discrepancy, restart. No "it's equivalent", no "I just reformatted it", no "the leading bytes are right so the rest must be fine". Byte-for-byte, every time.
 
     ## 🔏 Signing Flow
-    - **Sequence**: `mantle-cli` builds `unsigned_tx` (`{ to, data, value, chainId, gas?, maxFeePerGas?, maxPriorityFeePerGas?, nonce? }`) → pass verbatim to Privy → broadcast → poll `chain tx --hash <hash> --json` until `status: success`. Never mutate fields, never skip the wait.
+    - **Sequence**: `mantle-cli` builds `unsigned_tx` (`{ to, data, value, chainId, gas?, maxFeePerGas?, maxPriorityFeePerGas?, nonce? }`) → **run the pre-sign verification protocol (SUPREME RULE)** → pass verbatim to Privy → broadcast → poll `chain tx --hash <hash> --json` until `status: success`. Never mutate fields, never skip the wait, never skip the pre-sign check.
+    - **`data` is untouchable.** The calldata hex string from `mantle-cli` goes to Privy exactly as returned. Zero character edits. If the payload is too long to safely emit in one turn, reference it by file/variable or STOP — never truncate, never reconstruct. See SUPREME RULE at the top of this card.
+    - **Pre-sign self-check (mandatory, every time):** (a) same first 16 chars as CLI output? (b) same last 16 chars as CLI output? (c) same total length? (d) no `…` / `...` / `<snip>` / `[truncated]` / line wraps / whitespace inserted? If any answer is NO or UNKNOWN, abort the sign call.
     - **One `unsigned_tx` = one signature.** On 504 after send, query `chain tx --hash` FIRST; only if the chain truly does not know the hash may you rebuild (new `idempotency_key`) and sign the fresh one. Never re-sign the old one. If Privy timed out BEFORE a hash (signing-stage failure, no broadcast), discard the old `unsigned_tx` and rebuild.
 
-    ## 🔤 Asset Aliases (verify via `mantle-cli swap pairs` / `aave markets` before use; ASK when multiple candidates; list ALL variants for generic balance queries)
+    ## 🔤 Asset Aliases (Mantle mostly exposes WRAPPED / LST / synthetic variants — translate generic names to their Mantle-canonical wrap BEFORE any CLI call; verify via `mantle-cli swap pairs` / `aave markets`; ASK when multiple candidates; list ALL variants for generic balance queries)
     - **BTC / 比特币** → **FBTC** only. Refuse WBTC / solvBTC / renBTC.
     - **ETH / 以太坊** → **WETH**, **mETH** (LST), **cmETH** (restaked mETH) — ask which. Refuse stETH / wstETH / rETH.
+    - **美股 / stocks / TSLA / AAPL / NVDA / GOOGL / META / MSTR / HOOD / CRCL / SPY / QQQ** → **xStocks wrap assets** only (`w<TICKER>x`): wTSLAx, wAAPLx, wNVDAx, wGOOGLx, wMETAx, wMSTRx, wHOODx, wCRCLx, wSPYx, wQQQx. **Fluxion-only**, paired with **USDC**, `fee_tier=3000`. NOT on Aave. For any stock ticker, always pass the `w…x` wrap to the CLI — never the raw ticker.
     - **stablecoin / USD / 稳定币** → **USDC**, **USDT0**, **USDe**, **sUSDe** — ask which + which protocol.
     - **USDT ≠ USDT0** — different contracts. Aave only accepts **USDT0**. Always clarify which the user means; display both balances on generic "USDT" queries.
-    - **MNT** → native MNT (wrap/unwrap only) vs **WMNT** (swap / LP / Aave).
-    - Swap support does NOT imply Aave support — re-verify per protocol.
+    - **MNT** → native MNT (wrap/unwrap / gas only) vs **WMNT** (swap / LP / Aave).
+    - Swap support does NOT imply Aave support — re-verify per protocol. xStocks: swap only, no Aave.
 
     ## 🧭 Intent
+    - **"Mantle 上有什么资产?" / "支持哪些币?" / "有没有 BTC / ETH / TSLA?" / "what tokens are on Mantle?"** → FIRST call `mantle-cli account token-balances <wallet> --json` (no filter). The response enumerates the whitelisted mainstream asset set alongside the wallet's current balances — that IS the answer. Never list assets from memory / training data. Then translate category questions to the Mantle-canonical wrap: BTC → **FBTC**; ETH → **WETH / mETH / cmETH** (list all three); TSLA/AAPL/美股 → **xStocks wrap** (wTSLAx / wAAPLx / … — Fluxion+USDC, no Aave); 稳定币 → USDC/USDT0/USDe/sUSDe. Only after the user asks for more detail should you drill into `swap pairs` / `aave markets` / `lp find-pools`. See SKILL.md §Asset Discovery and §Asset Aliases.
+    - **LP intent with ANY asset named (single or pair) → FIRST call `mantle-cli lp find-pools`.** Whenever the user wants to add liquidity / 做 LP / 提供流动性 and mentions at least one asset, the first on-chain lookup MUST be `lp find-pools`, NEVER `lp top-pools`, `lp add`, `approve`, or `analyze-pool`. Learn the exact flags and whether single-asset queries are supported by consulting `mantle-cli catalog show <find-pools tool-id> --json` — don't assume the flag shape from memory. Translate generic asset names to Mantle canonical wraps first (§Asset Aliases). Trust the response verbatim (SUPREME RULE): the DEX, fee tier / bin step, PositionManager / Router address all come from `find-pools`, never from memory. Empty response → STOP and refuse. See SKILL.md §LP Pool Discovery and `references/lp-workflow.md` STEP −1.
     - "swap X for N Y" / "buy N Y with X" → **N is the OUTPUT**, input is variable. Never flip the number to the other side.
     - **Fixed-output isn't supported by the CLI — don't guess the input.** Derive it from a reverse `swap-quote`:
       1. Call `mantle-cli defi swap-quote --in Y --out X --amount N --provider best --json` — "if I swapped N Y back to X right now, how much X would I get?" — this is a market-grounded proxy for the X you'd need to buy N Y.
