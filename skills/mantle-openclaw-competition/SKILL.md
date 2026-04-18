@@ -1,6 +1,6 @@
 ---
 name: mantle-openclaw-competition
-version: 0.1.16
+version: 0.1.17
 description: "Use for ANY on-chain DeFi operation on the Mantle network by OpenClaw in the asset accumulation competition — swapping, liquidity provision, Aave V3 lending, ERC-20 approvals, MNT wrap/unwrap, or portfolio/state reads. TRIGGER when the user: (a) mentions OpenClaw, mantle-cli, or the Mantle asset accumulation competition; (b) asks to swap / trade / exchange tokens on Mantle via Agni, Fluxion, or Merchant Moe; (c) asks to add / remove / manage liquidity (LP) on whitelisted Mantle pools, including xStocks pairs; (d) asks to supply / deposit / lend / borrow / repay / withdraw / set-collateral on Aave V3 on Mantle; (e) asks to wrap MNT → WMNT or unwrap WMNT → MNT; (f) asks to approve an ERC-20 spender; (g) wants to discover whitelisted assets, pools, pairs, routers, fee tiers, or bin steps; (h) wants to query balances, allowances, transaction status, or Aave positions on Mantle; (i) wants to optimize portfolio USD value via yield, leverage, or exit timing. SKIP for: operations on other chains (Ethereum, Base, Arbitrum, BSC), Mantle infra / smart-contract development, or anything outside whitelisted protocols. Enforces hard rules: CLI-only execution via `mantle-cli … --json` (NEVER the mantle-mcp MCP server), STOP-on-error (no auto-retry; recommend restart), quote-before-swap, sign-and-WAIT per tx, and absolute refusal of native/ERC-20 token transfers or fabricated calldata (no Python / JS / raw RPC / utils encoding)."
 ---
 
@@ -216,7 +216,7 @@ unsigned_tx: {
 
 ### Rule W-9: Pre-Execution Readiness Check (MANDATORY)
 
-**⛔ BOTH checks below are mandatory — balance AND allowance. Completing only the balance check and proceeding is a hard error. Do NOT stop halfway.**
+**⛔ Balance AND allowance are TWO separate `mantle-cli` tool calls — never merged into one pipeline. The allowance value MUST come from `mantle-cli account allowances --json`, not from a piped script or inference. Completing only the balance check is a hard error.**
 
 Before executing **ANY** write operation (swap, approve, lp add/remove, aave supply/borrow/repay/withdraw/set-collateral, wrap/unwrap), confirm the user's intent is feasible against actual on-chain state. Two queries, in this order:
 
@@ -226,6 +226,8 @@ Before executing **ANY** write operation (swap, approve, lp add/remove, aave sup
 These checks MUST occur BEFORE the Transaction Confirmation Summary (Rule W-2) — the summary presented to the user MUST reflect real on-chain state, not assumptions. Starting a write op without both queries is a hard error.
 
 **Skip conditions** (narrow): balance check is not required for pure read ops; allowance check is not required for native-MNT-only ops (e.g. `swap wrap-mnt`) or for protocols the user has no intent of touching. When in doubt, run both.
+
+> **Incident:** Agent piped `account token-balances` through `python3 -c "..."` which printed `USDC: 3.408142 Current allowance: 0.5`. The CLI only queried balances — the `0.5` did not come from `account allowances` and is unauditable. Correct fix: two separate `mantle-cli ... --json` tool calls.
 
 ## Available Tools
 
