@@ -1,6 +1,6 @@
 ---
 name: mantle-openclaw-competition
-version: 0.1.13
+version: 0.1.15
 description: "Use for ANY on-chain DeFi operation on the Mantle network by OpenClaw in the asset accumulation competition — swapping, liquidity provision, Aave V3 lending, ERC-20 approvals, MNT wrap/unwrap, or portfolio/state reads. TRIGGER when the user: (a) mentions OpenClaw, mantle-cli, or the Mantle asset accumulation competition; (b) asks to swap / trade / exchange tokens on Mantle via Agni, Fluxion, or Merchant Moe; (c) asks to add / remove / manage liquidity (LP) on whitelisted Mantle pools, including xStocks pairs; (d) asks to supply / deposit / lend / borrow / repay / withdraw / set-collateral on Aave V3 on Mantle; (e) asks to wrap MNT → WMNT or unwrap WMNT → MNT; (f) asks to approve an ERC-20 spender; (g) wants to discover whitelisted assets, pools, pairs, routers, fee tiers, or bin steps; (h) wants to query balances, allowances, transaction status, or Aave positions on Mantle; (i) wants to optimize portfolio USD value via yield, leverage, or exit timing. SKIP for: operations on other chains (Ethereum, Base, Arbitrum, BSC), Mantle infra / smart-contract development, or anything outside whitelisted protocols. Enforces hard rules: CLI-only execution via `mantle-cli … --json` (NEVER the mantle-mcp MCP server), STOP-on-error (no auto-retry; recommend restart), quote-before-swap, sign-and-WAIT per tx, and absolute refusal of native/ERC-20 token transfers or fabricated calldata (no Python / JS / raw RPC / utils encoding)."
 ---
 
@@ -79,6 +79,16 @@ USDT and USDT0 are **two different ERC-20 tokens** on Mantle (different contract
 - **When the user says "USDT", always clarify** — ask whether they mean USDT or USDT0 before executing any operation. Do not assume.
 - **CLI params must be exact** — `--in USDT` and `--in USDT0` point to different contracts. Using the wrong symbol causes failed txs, wrong pools, or fund loss.
 - **Always display both balances** when the user asks about USDT holdings or portfolio.
+
+## 🔤 Asset Alias Resolution
+
+Generic name → Mantle-whitelisted canonical token. Verify the candidate via `mantle-cli swap pairs --json` (swap/LP) or `aave markets --json` (lending) before use — swap support does NOT imply Aave support. Multiple candidates → **ASK**, never pick silently. Generic balance queries ("how much BTC/ETH?") → list ALL variants.
+
+- **BTC / 比特币** → **FBTC** (only). Refuse WBTC / solvBTC / renBTC.
+- **ETH / 以太坊** → **WETH**, **mETH** (LST), **cmETH** (restaked mETH) — ask which. Refuse stETH / wstETH / rETH.
+- **稳定币 / stablecoin / USD** → **USDC**, **USDT0**, **USDe**, **sUSDe** — ask which + which protocol.
+- **USDT** → clarify USDT vs USDT0 (§USDT ≠ USDT0).
+- **MNT** → native MNT (wrap/unwrap only) or WMNT (swap / LP / Aave).
 
 ## 🛡️ Slippage Protection Rules (Hard Constraint #6 — detailed)
 
@@ -245,6 +255,20 @@ These checks MUST occur BEFORE the Transaction Confirmation Summary (Rule W-2) �
 **Why?** `$mantle-defi-operator` produces execution-ready *plans* but does NOT enforce the safety constraints (STOP-on-error, sign-and-WAIT, user confirmation gates, CLI-only, no fabricated calldata) that are critical for real fund operations in the competition. Routing competition operations to `$mantle-defi-operator` bypasses these guardrails and risks duplicate broadcasts, stale allowances, and fund loss.
 
 If a non-competition Mantle DeFi request arrives (e.g. general protocol comparison, venue discovery without execution intent), delegate to `$mantle-defi-operator`.
+
+## Intent Routing — 自然语言 → Workflow
+
+Map the user's phrase (中/EN) to a CLI namespace BEFORE any call. Ask when ambiguous.
+
+- 兑换 / 交易 / 买 / 卖 / swap / trade → `swap` + `defi swap-quote` (§Swap)
+- 包装 / wrap / unwrap MNT → `swap wrap-mnt` / `unwrap-mnt` (§Swap)
+- **添加 / 提供流动性 / 做市 / add LP** → `lp top-pools → find-pools → defi analyze-pool → suggest-ticks → add` (§Add Liquidity, `references/lp-workflow.md`)
+- 移除流动性 / remove LP / collect fees → `lp positions / remove / collect-fees`
+- 存 / 借 / 还 / 取 (Aave) / supply / borrow / repay / withdraw → `aave <verb>` / `set-collateral` (§Aave)
+- 授权 / approve → `approve` (embedded per workflow)
+- 余额 / 仓位 / balance / positions → `account balances / allowances`, `aave positions`, `lp positions` (read-only)
+
+**Disambiguation:** "USDT" → clarify USDT vs USDT0 (§USDT ≠ USDT0). Generic "BTC / ETH / stable" → §Asset Alias. "提供流动性" with no pair → start at `lp top-pools`, NOT `lp add`. "存到 Aave / 转到 PositionManager" → function-call verb, NEVER ERC-20 transfer (Hard Constraint #3).
 
 ## Workflow: Swap (skeleton)
 

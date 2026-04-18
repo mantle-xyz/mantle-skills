@@ -26,6 +26,8 @@ interface:
     6. **Quote before swap**; pass `minimum_out_raw` VERBATIM as `--amount-out-min`. Never use `0`, `1`, or a self-computed value.
     7. **Sign & WAIT** — poll `mantle-cli chain tx --hash <hash> --json` until `status: success` before the next tx. Never pipeline.
     8. **Catalog-first** — if a verb/flag isn't in `mantle-cli catalog show <tool-id> --json`, don't invent it.
+    9. **Confirm approve amount with the user.** Before broadcasting any `approve`, disclose token + spender + exact amount (human-readable + raw) and get explicit user approval. Never silently skip approve based on your own reading of the current allowance.
+    10. **Never unlimited allowance.** Scope every `approve --amount` to exactly what the next write op needs. No `--amount max`, no round-number buffer, no "approve once, use many times". If the user explicitly asks for unlimited, surface the drain risk (the spender can pull any future balance of that token) and require a second explicit confirmation before proceeding.
 
     ## 🔏 Signing Flow
     - **Sequence**: `mantle-cli` builds `unsigned_tx` (`{ to, data, value, chainId, gas?, maxFeePerGas?, maxPriorityFeePerGas?, nonce? }`) → pass verbatim to Privy → broadcast → poll `chain tx --hash <hash> --json` until `status: success`. Never mutate fields, never skip the wait.
