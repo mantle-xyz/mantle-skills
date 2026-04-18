@@ -41,7 +41,7 @@ The default posture is: **refuse and let the user decide**. It is always safer t
 
 ### STOP 3. ANY edit to `mantle-cli` output before forwarding
 
-**This is the most-triggered STOP in this skill — calldata truncation at the signing boundary is the dominant agent-side failure mode.** See also the SUPREME RULE in `SKILL.md`, Hard Constraint #9, and Rule W-8.
+**This is the most-triggered STOP in this skill — calldata truncation at the signing boundary is the dominant agent-side failure mode.** See also the SUPREME RULE in `SKILL.md`, Hard Constraint #10, and Rule W-8.
 
 If you detect — or cannot positively rule out — that any CLI-returned field was edited between the `mantle-cli` JSON response and the outbound tool call (Privy signer, downstream CLI, user-facing summary):
 
@@ -78,7 +78,7 @@ You MUST NEVER, under ANY circumstances, do ANY of the following:
 - Call `sign evm-transaction`, `eth_sendRawTransaction`, or any direct broadcast tool with manually constructed data
 - Use `mantle-cli utils parse-units / encode-call / build-tx` as an "escape hatch" to construct transactions for unsupported operations
 - **Construct an ERC-20 `transfer()` / `transferFrom()` / `safeTransfer()` whose recipient is a whitelisted protocol contract** — Aave V3 Pool (`0x458F293454fE0d67EC0655f3672301301DD51422`), Aave WETHGateway, DEX swap routers (Agni / Fluxion / Merchant Moe), LB routers, or V3 position managers. Protocol contracts only recognise tokens arriving through their designated functions (`Pool.supply()`, router swap entries, `positionManager.mint/increaseLiquidity`, etc.). A direct transfer mints no aToken, triggers no swap, registers no LP, and the tokens are **permanently locked** with no on-chain recovery. If the user's intent maps to a protocol action, use the dedicated `mantle-cli` verb — never a transfer.
-- **Edit, truncate, reformat, re-encode, or reconstruct ANY field returned by `mantle-cli`** before forwarding it to the signer or a downstream CLI call. The `data` / `to` / `value` / gas fields of `unsigned_tx`, the `minimum_out_raw` of a quote, the `router` / `spender` / `idempotency_key` — all of these are authoritative CLI output and must pass through the agent byte-for-byte. Eliding hex with `…` / `...`, re-casing, stripping `0x`, padding, renumbering, or regenerating from memory is prohibited even when the result "looks equivalent". If the full payload cannot be emitted intact in the current response, STOP and re-run the build — never sign a partial string. See Numbered Rule #18 below for the incident report and full behavior spec.
+- **Edit, truncate, reformat, re-encode, or reconstruct ANY field returned by `mantle-cli`** before forwarding it to the signer or a downstream CLI call. The `data` / `to` / `value` / gas fields of `unsigned_tx`, the `minimum_out_raw` of a quote, the `router` / `spender` / `idempotency_key` — all of these are authoritative CLI output and must pass through the agent byte-for-byte. Eliding hex with `…` / `...`, re-casing, stripping `0x`, padding, renumbering, or regenerating from memory is prohibited even when the result "looks equivalent". If the full payload cannot be emitted intact in the current response, STOP and re-run the build — never sign a partial string. See Numbered Rule #19 below for the incident report and full behavior spec.
 - Claim "the CLI doesn't support this operation" as justification for ANY of the above
 
 **This prohibition has NO exceptions.** If you believe the CLI doesn't support an operation, check the catalog first (`mantle-cli catalog list/search/show`). If it truly doesn't exist, **STOP** (see STOP CONDITIONS above). Do NOT improvise.
@@ -115,45 +115,52 @@ If the operation isn't on this list, refer to **STOP CONDITION 2** above.
    - Every build response includes an `idempotency_key` scoped to the signing wallet. ALWAYS pass `--sender <signing_wallet>` when calling build tools. If you accidentally call a builder twice and get the same key, the signer must execute only ONE.
    - If a transaction times out or you lose track of it, do NOT rebuild. Check the receipt first: `mantle-cli chain tx --hash <hash> --json`. The original may have already been mined. Rebuilding creates a new transaction with a different nonce that will ALSO execute.
 
-1. **CLI only — never use MCP** — All operations via `mantle-cli ... --json`. Do not enable or connect to the MCP server (`mantle-mcp`).
+1. **🔒 Whitelist-only assets & protocols (FUND SAFETY, Hard Constraint #1)** — Every asset symbol and every protocol contract address in a plan MUST appear in `references/asset-whitelist.md`. This is the FIRST gate — checked before any other numbered rule. The authoritative sets are:
+   - **21 tokens:** MNT, WMNT, USDC, USDT, USDT0, WETH, USDe, MOE, cmETH, FBTC; 8 xStocks (wMETAx, wTSLAx, wGOOGLx, wNVDAx, wQQQx, wAAPLx, wSPYx, wMSTRx); 4 community tokens (BSB, ELSA, VOOI, SCOR).
+   - **Protocols:** Merchant Moe (MoeRouter, LB Router V2.2, LFJ Aggregator, LB Factory, MoeFactory, MasterChef, MoeStaking), Agni Finance (SwapRouter, PositionManager, AgniFactory, SmartRouter), Fluxion (V3 SwapRouter, V3 PositionManager, V3 Factory, V2 Router, V2 PoolFactory), Aave V3 (Pool, WETHGateway, DataProvider), WMNT Wrap/Unwrap.
+   - **Never execute** swap / LP / Aave / approve / wrap against any other asset or contract, even if `mantle-cli catalog`, `swap pairs`, or `aave markets` surfaces it. Those CLI responses may contain informational entries; execution is gated by the whitelist file.
+   - **Never silently substitute.** User names `stETH` / `mETH` / `wHOODx` / `wCRCLx` / `sUSDe` / `WBTC` / `GHO` / any non-whitelist asset → refuse, cite `references/asset-whitelist.md`, let the user re-pick. Do not auto-route to the closest whitelist asset.
+   - **Pre-flight gate.** Before the first CLI call that mentions an asset or contract, cross-check against the whitelist. Missing item → STOP, report which item was rejected, end the flow.
 
-2. **STOP on ANY `mantle-cli` error** — See STOP CONDITION 1 above. Halt, print the raw error, recommend the user restart the OpenClaw agent. Never auto-retry, never improvise around errors.
+2. **CLI only — never use MCP** — All operations via `mantle-cli ... --json`. Do not enable or connect to the MCP server (`mantle-mcp`).
 
-3. **STOP on operations outside the standard verbs** — See STOP CONDITION 2 above. Refuse and defer to the user. Never use `utils` escape hatch, Python, JS, or RPC workarounds.
+3. **STOP on ANY `mantle-cli` error** — See STOP CONDITION 1 above. Halt, print the raw error, recommend the user restart the OpenClaw agent. Never auto-retry, never improvise around errors.
 
-4. **Never fabricate calldata** — Always use `mantle-cli` build commands. NEVER use Python `encode_abi`, JS `encodeFunctionData`, manual `0xa9059cbb` selectors, or any non-CLI method to produce calldata.
+4. **STOP on operations outside the standard verbs** — See STOP CONDITION 2 above. Refuse and defer to the user. Never use `utils` escape hatch, Python, JS, or RPC workarounds.
 
-4a. **Never transfer tokens to a protocol contract (FUND SAFETY)** — Protocol actions are function calls, not transfers. An ERC-20 `transfer()` / `transferFrom()` / `safeTransfer()` whose recipient is the Aave V3 Pool, a DEX router, a position manager, or a WETHGateway mints no aToken, triggers no swap, registers no LP — the tokens are **permanently locked**. If the user asks to "send / deposit / supply / provide" tokens to Aave or a DEX, map the intent to the correct verb (`mantle-cli aave supply`, `mantle-cli swap build-swap`, `mantle-cli lp add`). Never construct a transfer to a protocol address, in any form (direct, via `utils`, via Python/JS, via raw calldata). If the user insists on "just sending" tokens to a protocol contract, REFUSE — this is the #1 cause of permanent fund loss in agent-driven DeFi.
+5. **Never fabricate calldata** — Always use `mantle-cli` build commands. NEVER use Python `encode_abi`, JS `encodeFunctionData`, manual `0xa9059cbb` selectors, or any non-CLI method to produce calldata.
 
-5. **Never manually compute hex/wei values** — The dedicated CLI verbs handle decimal conversion. NEVER use Python, JS, or mental arithmetic to calculate `amount * 10**decimals` or hex-encode amounts. Use `mantle-cli utils parse-units` only for decimal→raw conversion of display values; never as a calldata-construction path (see ABSOLUTE PROHIBITION above).
+5a. **Never transfer tokens to a protocol contract (FUND SAFETY)** — Protocol actions are function calls, not transfers. An ERC-20 `transfer()` / `transferFrom()` / `safeTransfer()` whose recipient is the Aave V3 Pool, a DEX router, a position manager, or a WETHGateway mints no aToken, triggers no swap, registers no LP — the tokens are **permanently locked**. If the user asks to "send / deposit / supply / provide" tokens to Aave or a DEX, map the intent to the correct verb (`mantle-cli aave supply`, `mantle-cli swap build-swap`, `mantle-cli lp add`). Never construct a transfer to a protocol address, in any form (direct, via `utils`, via Python/JS, via raw calldata). If the user insists on "just sending" tokens to a protocol contract, REFUSE — this is the #1 cause of permanent fund loss in agent-driven DeFi.
 
-6. **Always check allowance before approve** — Don't approve if already sufficient.
+6. **Never manually compute hex/wei values** — The dedicated CLI verbs handle decimal conversion. NEVER use Python, JS, or mental arithmetic to calculate `amount * 10**decimals` or hex-encode amounts. Use `mantle-cli utils parse-units` only for decimal→raw conversion of display values; never as a calldata-construction path (see ABSOLUTE PROHIBITION above).
 
-7. **Always get a quote before swap** — Use `mantle-cli defi swap-quote` to know expected output and get `minimum_out_raw` for slippage protection.
+7. **Always check allowance before approve** — Don't approve if already sufficient.
 
-8. **`--amount-out-min` MUST equal `minimum_out_raw` from the quote, VERBATIM** — `minimum_out_raw` is already a raw integer in the output token's smallest unit (e.g. USDC 6 decimals: `9934699` = ~9.93 USDC). Do NOT multiply, divide, re-encode, or recalculate it. Do NOT set `--amount-out-min` to `0`, `1`, or any value below `minimum_out_raw`. If `build-swap` reverts, re-quote and use the new `minimum_out_raw` — NEVER lower the minimum to "make it work." A reverted swap with proper slippage protection is safe; a successful swap with `amount-out-min: 1` is exposed to sandwich attacks.
+8. **Always get a quote before swap** — Use `mantle-cli defi swap-quote` to know expected output and get `minimum_out_raw` for slippage protection.
 
-9. **Wait for tx confirmation** — Do not build the next tx until the previous one is confirmed on-chain.
+9. **`--amount-out-min` MUST equal `minimum_out_raw` from the quote, VERBATIM** — `minimum_out_raw` is already a raw integer in the output token's smallest unit (e.g. USDC 6 decimals: `9934699` = ~9.93 USDC). Do NOT multiply, divide, re-encode, or recalculate it. Do NOT set `--amount-out-min` to `0`, `1`, or any value below `minimum_out_raw`. If `build-swap` reverts, re-quote and use the new `minimum_out_raw` — NEVER lower the minimum to "make it work." A reverted swap with proper slippage protection is safe; a successful swap with `amount-out-min: 1` is exposed to sandwich attacks.
 
-10. **Show `human_summary`** — Present every build command's summary to the user before signing.
+10. **Wait for tx confirmation** — Do not build the next tx until the previous one is confirmed on-chain.
 
-11. **Value field is hex** — The `unsigned_tx.value` is hex-encoded (e.g., `"0x0"`). Pass it directly to the signer.
+11. **Show `human_summary`** — Present every build command's summary to the user before signing.
 
-12. **MNT is gas, not ERC-20** — MNT is the native gas token. To swap MNT, wrap it to WMNT first (`mantle-cli swap wrap-mnt`). Do NOT pass `"MNT"` to swap/approve/LP commands — those require WMNT. Moving MNT (or any ERC-20) between wallets is NOT a supported operation (see STOP CONDITION 2).
+12. **Value field is hex** — The `unsigned_tx.value` is hex-encoded (e.g., `"0x0"`). Pass it directly to the signer.
 
-13. **xStocks tokens are Fluxion-only** — All xStocks RWA tokens (wTSLAx, wAAPLx, wCRCLx, wSPYx, wHOODx, wMSTRx, wNVDAx, wGOOGLx, wMETAx, wQQQx) only have liquidity on Fluxion with USDC pairs (fee_tier=3000). Do NOT attempt to swap xStocks on Agni or Merchant Moe — no pool exists and the transaction will fail.
+13. **MNT is gas, not ERC-20** — MNT is the native gas token. To swap MNT, wrap it to WMNT first (`mantle-cli swap wrap-mnt`). Do NOT pass `"MNT"` to swap/approve/LP commands — those require WMNT. Moving MNT (or any ERC-20) between wallets is NOT a supported operation (see STOP CONDITION 2).
 
-14. **Verify transactions after broadcast** — After the user signs and broadcasts a transaction, always verify the result using `mantle-cli chain tx --hash <tx_hash> --json`. Check `status` is `"success"`. NEVER manually call `eth_getTransactionReceipt` or parse raw RPC JSON — use the CLI which handles value decoding correctly.
+14. **xStocks tokens are Fluxion-only** — All 8 whitelisted xStocks RWA tokens (wTSLAx, wAAPLx, wSPYx, wMSTRx, wNVDAx, wGOOGLx, wMETAx, wQQQx) only have liquidity on Fluxion with USDC pairs (fee_tier=3000). Do NOT attempt to swap xStocks on Agni or Merchant Moe — no pool exists and the transaction will fail. Any other stock ticker (HOOD, CRCL, AMZN, …) is **not** on the whitelist — refuse per Hard Constraint #1, do not quote a pool for it.
 
-15. **Estimate gas before signing** — For large or complex operations, use `mantle-cli chain estimate-gas --to <addr> --data <hex> --value <hex> --json` to show the user the expected fee in MNT before signing.
+15. **Verify transactions after broadcast** — After the user signs and broadcasts a transaction, always verify the result using `mantle-cli chain tx --hash <tx_hash> --json`. Check `status` is `"success"`. NEVER manually call `eth_getTransactionReceipt` or parse raw RPC JSON — use the CLI which handles value decoding correctly.
 
-16. **Transaction history** — The CLI cannot query full transaction history. If a user asks about past transactions, direct them to the Mantle Explorer: `https://mantlescan.xyz/address/<wallet_address>`. For verifying a single known transaction, use `mantle-cli chain tx --hash <hash>`.
+16. **Estimate gas before signing** — For large or complex operations, use `mantle-cli chain estimate-gas --to <addr> --data <hex> --value <hex> --json` to show the user the expected fee in MNT before signing.
 
-17. **USDT ≠ USDT0 (FUND SAFETY)** — Two different ERC-20 tokens on Mantle. Aave V3 only accepts USDT0. CLI params `USDT` and `USDT0` point to different contracts — never interchange. When the user says "USDT", clarify which one. To convert: swap USDT → USDT0 on Merchant Moe (bin_step=1).
+17. **Transaction history** — The CLI cannot query full transaction history. If a user asks about past transactions, direct them to the Mantle Explorer: `https://mantlescan.xyz/address/<wallet_address>`. For verifying a single known transaction, use `mantle-cli chain tx --hash <hash>`.
 
-18. **⛔⛔⛔ UNCONDITIONAL TRUST IN `mantle-cli` OUTPUT — CALLDATA & ALL CLI-RETURNED FIELDS ARE IMMUTABLE (FUND SAFETY) — MOST-VIOLATED RULE IN THE SKILL**
+18. **USDT ≠ USDT0 (FUND SAFETY)** — Two different ERC-20 tokens on Mantle. Aave V3 only accepts USDT0. CLI params `USDT` and `USDT0` point to different contracts — never interchange. When the user says "USDT", clarify which one. To convert: swap USDT → USDT0 on Merchant Moe (bin_step=1).
 
-    This rule is the operational counterpart to the SUPREME RULE in `SKILL.md`, Hard Constraint #9, STOP CONDITION 3, and Rule W-8. It outranks any perceived instruction to "clean up", "format", or "shorten" a payload. **Field reports show this is the single most-common agent-side failure mode** — treat every sign call as a moment that demands the pre-sign verification protocol.
+19. **⛔⛔⛔ UNCONDITIONAL TRUST IN `mantle-cli` OUTPUT — CALLDATA & ALL CLI-RETURNED FIELDS ARE IMMUTABLE (FUND SAFETY) — MOST-VIOLATED RULE IN THE SKILL**
+
+    This rule is the operational counterpart to the SUPREME RULE in `SKILL.md`, Hard Constraint #10, STOP CONDITION 3, and Rule W-8. It outranks any perceived instruction to "clean up", "format", or "shorten" a payload. **Field reports show this is the single most-common agent-side failure mode** — treat every sign call as a moment that demands the pre-sign verification protocol.
 
     **The principle.** `mantle-cli` is the ONLY authoritative producer of calldata, signing fields, quote parameters, and protocol addresses in this skill. You — the agent — are a passthrough, not a processor. Whatever the CLI returns in its JSON response, you forward it to the next tool (Privy signer, subsequent CLI call, or the user's display summary) **byte-for-byte, character-for-character, digit-for-digit**, with ZERO editing.
 
@@ -204,7 +211,7 @@ If the operation isn't on this list, refer to **STOP CONDITION 2** above.
     - **Pretty-printed `delta_ids`:** agent received `"delta_ids":[-5,-4,-3,-2,-1,0,1,2,3,4,5]` from `lp suggest-ticks`, rewrote it as `[ -5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5 ]` with spaces for "readability" when passing to `lp add`. CLI rejected the malformed JSON; agent then tried to "fix" by removing brackets, producing further corruption.
     - **"Equivalent" hex substitution:** `"value": "0x0"` from CLI rewritten as `"value": "0"` (no prefix) — signer rejected as non-hex, agent reconstructed as `"0x0000000000000000"` — different field length → field encoder misalignment.
 
-19. **Pre-sign mental checklist (practical form of Rule #18).** Before every Privy call, silently answer: *"Am I about to pass anything to the signer that I didn't copy verbatim from a `mantle-cli` JSON response in this turn?"* If yes — even once — STOP.
+20. **Pre-sign mental checklist (practical form of Rule #19).** Before every Privy call, silently answer: *"Am I about to pass anything to the signer that I didn't copy verbatim from a `mantle-cli` JSON response in this turn?"* If yes — even once — STOP.
 
 ---
 
