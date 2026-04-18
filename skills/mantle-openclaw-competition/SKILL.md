@@ -1,6 +1,6 @@
 ---
 name: mantle-openclaw-competition
-version: 0.1.12
+version: 0.1.13
 description: "Use for ANY on-chain DeFi operation on the Mantle network by OpenClaw in the asset accumulation competition — swapping, liquidity provision, Aave V3 lending, ERC-20 approvals, MNT wrap/unwrap, or portfolio/state reads. TRIGGER when the user: (a) mentions OpenClaw, mantle-cli, or the Mantle asset accumulation competition; (b) asks to swap / trade / exchange tokens on Mantle via Agni, Fluxion, or Merchant Moe; (c) asks to add / remove / manage liquidity (LP) on whitelisted Mantle pools, including xStocks pairs; (d) asks to supply / deposit / lend / borrow / repay / withdraw / set-collateral on Aave V3 on Mantle; (e) asks to wrap MNT → WMNT or unwrap WMNT → MNT; (f) asks to approve an ERC-20 spender; (g) wants to discover whitelisted assets, pools, pairs, routers, fee tiers, or bin steps; (h) wants to query balances, allowances, transaction status, or Aave positions on Mantle; (i) wants to optimize portfolio USD value via yield, leverage, or exit timing. SKIP for: operations on other chains (Ethereum, Base, Arbitrum, BSC), Mantle infra / smart-contract development, or anything outside whitelisted protocols. Enforces hard rules: CLI-only execution via `mantle-cli … --json` (NEVER the mantle-mcp MCP server), STOP-on-error (no auto-retry; recommend restart), quote-before-swap, sign-and-WAIT per tx, and absolute refusal of native/ERC-20 token transfers or fabricated calldata (no Python / JS / raw RPC / utils encoding)."
 ---
 
@@ -140,7 +140,75 @@ Proceed? (yes/no)
 - **Minimum 2-second gap** between consecutive `mantle-cli` calls. Never fire CLI commands in rapid succession.
 - **No parallel CLI calls** — wait for the previous command's response before issuing the next.
 - **After any write tx is confirmed**, wait at least **5 seconds** before the next write command to allow on-chain state (balances, allowances, positions) to settle.
-- **If an RPC timeout or rate-limit error occurs**, wait **30 seconds**, then retry **once**. If it fails again, follow STOP CONDITION 1.
+- **On ANY `mantle-cli` non-zero exit (including RPC timeout / rate-limit)**: STOP immediately per STOP CONDITION 1. Do NOT auto-retry write commands (`approve`, `swap build-swap`, `wrap-mnt`, `unwrap-mnt`, `lp add/remove/collect-fees`, `aave supply/borrow/repay/withdraw/set-collateral`) — re-running a build or sign step after a timeout risks a duplicate broadcast with stale state.
+- **Post-sign receipt polling is the ONLY permitted retry path** — if the tx was already signed and broadcast (you have a hash), you MAY retry `mantle-cli chain tx --hash <hash> --json` until you get a deterministic `status: success | reverted`. Rebuilding / re-signing is governed by Rule W-8 only.
+
+### Rule W-4: Post-Operation Balance Verification (MANDATORY)
+
+After **any** write tx confirms (`status: success`), ALWAYS run `mantle-cli account balances <wallet> --json` to fetch actual on-chain balances (full-whitelist coverage per Rule W-7). **NEVER report, display, or infer balance changes from your own calculation** — only show what the CLI returns. Fabricated or estimated balances are prohibited.
+
+### Rule W-5: Swap Direction Disambiguation ⚠️
+
+When the user says "use **X** to get **N Y**", "swap **X** for **N Y**", or "buy **N Y** with **X**":
+- **N** is the **output** quantity (Y tokens to receive) — NOT the input amount.
+- **❌ Wrong:** "use MNT to get 10 USDC" → interpreted as "swap 10 MNT → USDC"
+- **✅ Correct:** "use MNT to get 10 USDC" → "swap MNT → 10 USDC (output fixed at 10)"
+- **✅ Converse:** "swap 10 MNT for USDC" → input = 10 MNT (output variable). The number attaches to the side it's adjacent to — never flip it.
+
+If the CLI does not support fixed-output swaps, **inform the user and ask for the input amount instead**. Never silently swap the roles of input and output.
+
+### Rule W-6: Allowance Disclosure & Approve Confirmation
+
+After every `allowances` check, display the **current allowance (raw + human-readable), spender address, and the required amount** for the planned operation to the user BEFORE deciding to approve or skip. If `approve` is required, present the exact spender address and approval amount in the Transaction Confirmation Summary (Rule W-2) for explicit user approval. Do NOT silently approve (max or otherwise), and do NOT silently skip approve based on your own reading of the allowance.
+
+### Rule W-7: Full-Whitelist Balance Query
+
+When querying balances **without a specific asset filter**, you MUST return **all whitelisted assets** — never omit any. Procedure:
+
+1. Run `mantle-cli account balances <wallet> --json` without token filters.
+2. Cross-check the response against the whitelisted token list from `mantle-cli catalog list --json` (or `mantle-cli swap pairs --json`).
+3. For any whitelisted asset missing from step 1's output, query it explicitly and merge the result.
+
+Silently omitting any whitelisted asset (e.g., MOE) from a balance report is a hard error — never present an incomplete portfolio.
+
+### Rule W-8: Signing Flow Integrity 🔐
+
+**Canonical path:** `mantle-cli` build → complete `unsigned_tx` → Privy API sign → wait for on-chain receipt. No shortcuts, no alternatives.
+
+**`unsigned_tx` MUST carry the full parameter set returned by `mantle-cli`:**
+
+```ts
+unsigned_tx: {
+  to: string;                     // required
+  data: string;                   // required
+  value: string;                  // required
+  chainId: number;                // required
+  gas?: string;                   // suggested gas limit
+  maxFeePerGas?: string;          // EIP-1559: baseFee × 2 + tip, hex wei
+  maxPriorityFeePerGas?: string;  // EIP-1559 tip, hex wei
+  nonce?: number;                 // only when explicitly overridden (e.g. after mantle_getNonce)
+};
+```
+
+- **Never mutate, strip, or re-encode** any field returned by `mantle-cli`. Pass `unsigned_tx` to Privy **verbatim**.
+- **Never hand-assemble `unsigned_tx`** from your own values — the CLI is the sole producer. Fabricating `to` / `data` / `value` / gas params is the same violation as Hard Constraint #4 (no fabricated calldata).
+
+**One unsigned_tx = one signature. No exceptions.**
+
+- After signing, WAIT for the receipt (`mantle-cli chain tx --hash <hash> --json`) before any further action.
+- **On 504 / timeout / network error:** do NOT re-sign. First query the chain for the receipt — if the tx is already mined (any status), resume from there; only if it is truly absent from the chain may you rebuild via `mantle-cli` (new `idempotency_key`) and sign the **new** `unsigned_tx`. Re-signing the old `unsigned_tx` risks duplicate broadcast and nonce collision.
+- **If Privy timed out before returning a tx hash** (signing-stage failure, no broadcast): there is nothing to query on-chain. Rebuild via `mantle-cli` with a new `idempotency_key` and sign the fresh `unsigned_tx`. Discard the old one.
+
+### Rule W-9: Pre-Execution Readiness Check (MANDATORY)
+
+Before executing **ANY** write operation (swap, approve, lp add/remove, aave supply/borrow/repay/withdraw/set-collateral, wrap/unwrap), confirm the user's intent is feasible against actual on-chain state. Two queries, in this order:
+
+1. **Balance check** — `mantle-cli account token-balances <wallet> --json`. Verify `balance(input_token) ≥ planned input amount` (for wrap/unwrap: native MNT for wrap, WMNT for unwrap). If insufficient → **STOP**, report the actual balance to the user, do NOT proceed.
+2. **Allowance check** — `mantle-cli account allowances <wallet> --pairs <token>:<spender> --json`. Verify `allowance(input_token, spender) ≥ planned input amount`. If insufficient → route to the approve flow (Rule W-6). Do NOT silently skip.
+
+These checks MUST occur BEFORE the Transaction Confirmation Summary (Rule W-2) — the summary presented to the user MUST reflect real on-chain state, not assumptions. Starting a write op without both queries is a hard error.
+
+**Skip conditions** (narrow): balance check is not required for pure read ops; allowance check is not required for native-MNT-only ops (e.g. `swap wrap-mnt`) or for protocols the user has no intent of touching. When in doubt, run both.
 
 ## Available Tools
 

@@ -4,6 +4,61 @@ Load this file the first time you execute a swap in a session, or when handling 
 
 > **⚠ Steps MUST be executed in strict sequential order (Rule W-1). NEVER skip a step or jump ahead. Each transaction requires user confirmation (Rule W-2).**
 
+## 🛑 STEP 0 — Parse the user's intent FIRST (Rule W-5)
+
+**Before touching any CLI command, determine whether the number attaches to the INPUT or the OUTPUT side.** Getting this wrong silently swaps who pays what — an unrecoverable misroute of funds.
+
+| User phrasing | Input | Output | Mode |
+|---|---|---|---|
+| "swap **10 MNT** for USDC" | **10 MNT (fixed)** | variable USDC | fixed-input |
+| "swap MNT for **10 USDC**" / "swap me **10 USDC** using MNT" | variable MNT | **10 USDC (fixed)** | fixed-output |
+| "buy **10 USDC** with MNT" / "pay with MNT, give me **10 USDC**" | variable MNT | **10 USDC (fixed)** | fixed-output |
+
+**Rule:** the numeric quantity attaches to whichever token it is **directly adjacent to** in the sentence — never flip it. The rule is language-agnostic: the same logic applies to English, Chinese, or any other phrasing. Translate the user's request into the canonical form `swap <input_token> for <output_token>` with the number on the side where the user placed it.
+
+### Incident (2026-04): agent misread "swap MNT for 0.5 USDC"
+
+- User intent: **output = 0.5 USDC** (fixed-output, variable MNT input)
+- Agent action: `mantle-cli swap wrap-mnt --amount 0.5` (treated 0.5 as MNT input) ❌
+- Correct action: reverse-quote to find MNT needed for 0.5 USDC output, or ask the user for the MNT input amount. Do NOT wrap 0.5 MNT.
+
+### Handling fixed-output requests
+
+`mantle-cli swap build-swap` is **fixed-input** (`--amount` is the input amount; `--amount-out-min` is a slippage floor, not a target). For fixed-output requests:
+
+1. **Reverse-quote** with `mantle-cli defi swap-quote --in X --out Y --exact-out <N> --json` IF the CLI supports `--exact-out`. Verify via `mantle-cli catalog show mantle_swapQuote --json` before using.
+2. If `--exact-out` is not supported, **STOP and ask the user for the input amount.** Do NOT silently convert the output quantity into an input quantity. Do NOT guess.
+3. Never start `wrap-mnt`, `approve`, or `build-swap` until the direction is resolved and the user has confirmed the input amount (via Rule W-2).
+
+## 🛑 STEP 0.5 — Pre-Execution Readiness Check (Rule W-9)
+
+**The readiness check is per-operation, not per-workflow.** Every `mantle-cli` write op (`wrap-mnt`, `unwrap-mnt`, `approve`, `build-swap`) needs the checks that are actually applicable to it. Allowance does NOT apply to native-MNT operations (no ERC-20 allowance on the native asset) or to unwrap (burns WMNT held by the caller).
+
+**Operation matrix:**
+
+| Write op | Balance check | Allowance check |
+|---|---|---|
+| `swap wrap-mnt --amount N` | native MNT ≥ N (+ gas headroom) via `account token-balances` | **N/A** — native asset, no allowance |
+| `swap unwrap-mnt --amount N` | WMNT ≥ N via `account token-balances` | **N/A** — caller burns own WMNT |
+| `approve --token X --spender <router>` | **N/A** — no funds move | **N/A** — this IS the allowance fix |
+| `swap build-swap --in X --amount N --sender <wallet>` | `X` balance ≥ N via `account token-balances` | `X:<router>` allowance ≥ N via `account allowances` |
+
+Queries (run BEFORE the Transaction Confirmation Summary so the summary reflects real on-chain state):
+
+- **Balance** — `mantle-cli account token-balances <wallet> --json`. Insufficient → **STOP**, tell the user the actual balance, do NOT proceed.
+- **Allowance** — `mantle-cli account allowances <wallet> --pairs <input_token>:<router> --json`. Insufficient → route to the approve flow (Rule W-6). Do NOT silently skip.
+
+Skipping an applicable check is a hard error. Running a check that is marked N/A is wasted effort, not a violation.
+
+### MNT → Token ordering note
+
+On the MNT → Token path the router is not known until the WMNT quote in Step 2, so the pre-`wrap-mnt` check CANNOT include a WMNT:router allowance check — the router does not exist yet. Split the readiness gate in two:
+
+1. **Before `wrap-mnt`**: native MNT balance check only (per the matrix above).
+2. **After the Step 2 quote, before `approve` / `build-swap`**: WMNT balance ≥ wrapped amount AND WMNT:`<router from quote>` allowance ≥ amount.
+
+Do not invent a router address to satisfy the gate, and do not skip the second check after wrapping.
+
 ## Pre-condition
 
 You have the input token in your wallet. For MNT, wrap to WMNT first (see below).
@@ -66,18 +121,31 @@ You have the input token in your wallet. For MNT, wrap to WMNT first (see below)
 
 MNT is the native gas token. Wrap first, then swap WMNT.
 
+> **⛔ Before Step 1, verify Step 0 (direction parsing) is resolved.** If the user's request is fixed-output (e.g. "swap MNT for 0.5 USDC"), you do NOT yet know how much MNT to wrap — reverse-quote or ask the user for the input first. Wrapping a guessed amount is an unrecoverable error.
+>
+> **⛔ STEP 0.5 is split on this path** (see "MNT → Token ordering note" above): native-MNT balance check BEFORE Step 1's `wrap-mnt`; WMNT balance + WMNT:`<router>` allowance check AFTER Step 2's quote, BEFORE Step 4's `approve` / Step 5's `build-swap`. Do not invent a router to run the allowance check before the quote.
+
 ```
-1. ⚠️ USER CONFIRMATION — present wrap details (amount of MNT to wrap)
+0a. mantle-cli account token-balances <wallet> --json
+    → Verify native MNT balance ≥ (wrap amount + gas headroom). Insufficient → STOP.
+    ↓ MUST complete before Step 1
+
+1. ⚠️ USER CONFIRMATION — present wrap details (amount of MNT to wrap — this is the INPUT amount, resolved in Step 0)
    mantle-cli swap wrap-mnt --amount <n> --json   → sign & WAIT
    ↓ MUST confirm tx success before Step 2
 2. mantle-cli defi swap-quote --in WMNT --out X --amount <n> --json
+   → Capture `router` and `minimum_out_raw` from the response.
    ↓ MUST complete before Step 3
-3. mantle-cli account allowances <wallet> --pairs WMNT:<router> --json
+3. mantle-cli account token-balances <wallet> --json
+   → Verify WMNT balance ≥ <n>. Then:
+   mantle-cli account allowances <wallet> --pairs WMNT:<router> --json
+   → Verify allowance ≥ <n>. Insufficient → continue to Step 4. Sufficient → skip to Step 5.
    ↓ MUST complete before Step 4
-4. IF insufficient: ⚠️ USER CONFIRMATION → mantle-cli approve ...  → sign & WAIT
+4. IF insufficient: ⚠️ USER CONFIRMATION → mantle-cli approve --token WMNT --spender <router> --amount <n> --json → sign & WAIT
    ↓ MUST confirm tx success before Step 5
 5. ⚠️ USER CONFIRMATION — present full Transaction Confirmation Summary
-   mantle-cli swap build-swap ...                  → sign & WAIT
+   mantle-cli swap build-swap --in WMNT --out X --amount <n> --recipient <wallet> --amount-out-min <minimum_out_raw> --sender <wallet> --json
+   → sign & WAIT
 ```
 
 ## Token → MNT

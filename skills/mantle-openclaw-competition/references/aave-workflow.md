@@ -6,6 +6,24 @@ Pool address: `0x458F293454fE0d67EC0655f3672301301DD51422` (verify with `mantle-
 
 > Reserve assets are gated by Aave — discover the live list via `mantle-cli catalog show aave-supply --json` or the Aave V3 Mantle dashboard. Note: only **USDT0** is supported — NOT USDT. Convert USDT → USDT0 on Merchant Moe (bin_step=1) before supplying.
 
+> **⚠ Steps MUST be executed in strict sequential order (Rule W-1). NEVER skip a step or jump ahead. Each transaction requires user confirmation (Rule W-2).**
+
+## 🛑 STEP 0.5 — Pre-Execution Readiness Check (Rule W-9)
+
+**Before ANY write op (supply / borrow / repay / withdraw / set-collateral / approve), verify the user's intent is feasible against actual on-chain state. Two queries, in this order:**
+
+1. **Balance** — `mantle-cli account token-balances <wallet> --json`.
+   - `supply` / `repay`: verify `balance(asset) ≥ amount`.
+   - `withdraw`: verify `aToken balance ≥ amount` (withdrawing the underlying burns aTokens).
+   - `borrow` / `set-collateral`: no balance check needed.
+   - Insufficient → **STOP**, report the actual balance, do NOT proceed.
+2. **Allowance** — `mantle-cli account allowances <wallet> --pairs <asset>:0x458F293454fE0d67EC0655f3672301301DD51422 --json` (Pool is the spender).
+   - Required for `supply` and `repay`.
+   - Not applicable for `withdraw` / `borrow` / `set-collateral`.
+   - Insufficient → route to the approve flow (Rule W-6). Do NOT silently skip.
+
+Run BOTH checks (where applicable) BEFORE the Transaction Confirmation Summary so it reflects real on-chain state. Skipping either is a hard error.
+
 ## ⚠ CRITICAL: `supply` is a function call, NOT a token transfer
 
 `mantle-cli aave supply` invokes `Pool.supply(asset, amount, on_behalf_of, referral)`. The Pool then pulls tokens from the wallet via `transferFrom` AND mints aTokens that represent the deposit. **The aToken balance is the only on-chain record that can be redeemed via `withdraw`.**
