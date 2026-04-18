@@ -61,7 +61,7 @@ Each catalog entry includes `category` (`query` / `analyze` / `execute`), `auth`
 
 Full rationale, incident reports, and the numbered detail list live in `references/safety-prohibitions.md`. The eight non-negotiables:
 
-1. **CLI only, one command per tool call** — never enable `mantle-mcp`; every command ends in `--json`. Each `mantle-cli` invocation MUST be its own isolated tool call. **Shell pipelines, command chaining, and post-processors are PROHIBITED** in `mantle-cli` calls — no `|`, no `&&` / `;` / `||`, no `python3 -c` / `jq` / `awk` / `sed` / `grep`. Parse JSON in the agent's own reasoning, not in the shell. Piping CLI output through a script is indistinguishable from fabricating data: the raw response becomes unauditable, and the script can silently do RPC, inject constants, or hallucinate fields.
+1. **CLI only** — never enable `mantle-mcp`; every command ends in `--json`.
 2. **🛑 STOP on ANY `mantle-cli` error** — never auto-retry, never improvise. Print the raw error to the user verbatim, halt the workflow, and **recommend the user restart the OpenClaw agent** before continuing. Continuing past an unhandled error risks duplicate broadcasts, stale allowances, and fund loss.
 3. **🛑 Refuse anything beyond the standard CLI verbs** — execute operations MUST be expressed via `swap / approve / lp / aave`. **Token transfers (native MNT and ERC-20) are NOT supported — refuse.** If a request can't map to one of the allowed verbs, **STOP and tell the user**. NEVER improvise with Python, JS, RPC calls, or `utils` calldata construction. The user accepting risk is NOT sufficient — the prohibition is absolute.
    - **Protocol actions are function calls, NOT transfers.** `aave supply / borrow / repay / withdraw`, `swap build-swap`, and `lp add / remove` invoke specific functions on the target contract that mint aTokens, route the trade, or register liquidity. Sending tokens directly to the Aave V3 Pool (`0x458F293454fE0d67EC0655f3672301301DD51422`), a DEX router, a position manager, or a WETHGateway via ERC-20 `transfer()` / `transferFrom()` does NOT trigger those functions — the tokens are **permanently locked** with no on-chain path to recover. If a user says "supply / deposit / lend X to Aave" or "send X to Aave", use `mantle-cli aave supply` — never model it as an ERC-20 transfer to the Pool address.
@@ -216,18 +216,18 @@ unsigned_tx: {
 
 ### Rule W-9: Pre-Execution Readiness Check (MANDATORY)
 
-**⛔ TWO separate `mantle-cli` tool calls are mandatory — balance AND allowance. Completing only the balance check and proceeding is a hard error. Do NOT stop halfway. Do NOT fuse the two calls into a single bash pipeline (no `|`, no `&&`, no `python3 -c` / `jq` / `awk` post-processor) — fused calls are indistinguishable from skipping the allowance check because the raw `account allowances` JSON is never visible. See Hard Constraint #1.**
+**⛔ Balance AND allowance are TWO separate `mantle-cli` tool calls — never merged into one pipeline. The allowance value MUST come from `mantle-cli account allowances --json`, not from a piped script or inference. Completing only the balance check is a hard error.**
 
-Before executing **ANY** write operation (swap, approve, lp add/remove, aave supply/borrow/repay/withdraw/set-collateral, wrap/unwrap), confirm the user's intent is feasible against actual on-chain state. Two queries, in this order, each as its own isolated `mantle-cli ... --json` call:
+Before executing **ANY** write operation (swap, approve, lp add/remove, aave supply/borrow/repay/withdraw/set-collateral, wrap/unwrap), confirm the user's intent is feasible against actual on-chain state. Two queries, in this order:
 
 1. **Balance check** — `mantle-cli account token-balances <wallet> --json`. Verify `balance(input_token) ≥ planned input amount` (for wrap/unwrap: native MNT for wrap, WMNT for unwrap). If insufficient → **STOP**, report the actual balance to the user, do NOT proceed.
-2. **Allowance check** — `mantle-cli account allowances <wallet> --pairs <token>:<spender> --json`. Verify `allowance(input_token, spender) ≥ planned input amount`. If insufficient → route to the approve flow (Rule W-6). Do NOT silently skip. The allowance value MUST come from this call's raw JSON — never from a shell post-processor, a prior turn, or inference.
+2. **Allowance check** — `mantle-cli account allowances <wallet> --pairs <token>:<spender> --json`. Verify `allowance(input_token, spender) ≥ planned input amount`. If insufficient → route to the approve flow (Rule W-6). Do NOT silently skip.
 
 These checks MUST occur BEFORE the Transaction Confirmation Summary (Rule W-2) — the summary presented to the user MUST reflect real on-chain state, not assumptions. Starting a write op without both queries is a hard error.
 
 **Skip conditions** (narrow): balance check is not required for pure read ops; allowance check is not required for native-MNT-only ops (e.g. `swap wrap-mnt`) or for protocols the user has no intent of touching. When in doubt, run both.
 
-> **Incident:** Agent ran `mantle-cli account token-balances <wallet> --tokens 0x... 2>&1 | python3 -c "import ..."`, and the piped Python script produced `USDC: 3.408142 Current allowance: 0.5`. The CLI command only queried balances — the "0.5" allowance value did not come from `account allowances` and is unauditable (the script could have fabricated, cached, or done raw RPC). **This is a Hard Constraint #1 violation AND a Rule W-9 violation at the same time.** Correct behavior: two separate `mantle-cli ... --json` tool calls, parse each response's JSON in the agent's own reasoning, no pipes.
+> **Incident:** Agent piped `account token-balances` through `python3 -c "..."` which printed `USDC: 3.408142 Current allowance: 0.5`. The CLI only queried balances — the `0.5` did not come from `account allowances` and is unauditable. Correct fix: two separate `mantle-cli ... --json` tool calls.
 
 ## Available Tools
 
