@@ -4,6 +4,35 @@ Load this file when adding/removing liquidity, or when discovering pools / sugge
 
 > **⚠ Steps MUST be executed in strict sequential order (Rule W-1). NEVER skip a step or jump ahead. Each transaction requires user confirmation (Rule W-2).**
 
+## ⛔⛔⛔ CALLDATA INTEGRITY — READ BEFORE EVERY `lp add` / `lp remove` / `lp collect-fees` / `approve` SIGN CALL
+
+**See SUPREME RULE in `SKILL.md`.** `lp add` (V3 `mint` / LB `addLiquidity`) is one of the longest calldata paths in the skill — delta_ids arrays, distribution_x/y arrays, tick bounds, and deadline params produce `data` strings that routinely exceed 2000 hex chars. Every single one of those chars MUST reach the Privy signer unchanged.
+
+Before calling the signer on any LP tx, run the 5-question pre-sign verification protocol from `SKILL.md` SUPREME RULE:
+
+1. Raw `mantle-cli` JSON still available? If not, STOP and rebuild.
+2. `data` identical to CLI output — same first 16 chars, same last 16 chars, same total length, NO `…` / `...` / `<snip>` / `[truncated]`, NO line wraps, NO inserted whitespace?
+3. `to` (PositionManager for V3 / LB Router for Merchant Moe) identical to CLI output? NEVER rewrite this address from memory.
+4. `value` (hex wei — usually `0x0` for non-native LP, non-zero for WMNT wraps) identical to CLI output?
+5. Array params you passed to the build (`delta_ids`, `distribution_x/y`, tick bounds, `active_id`, `bin_step`) are EXACT values from `lp find-pools` / `lp suggest-ticks` — NOT derived, reformatted, or re-sorted?
+
+If any answer is NO or UNKNOWN, abort. A corrupted LP sign call can mint a position at wildly wrong ticks (100% impermanent loss), send tokens to a wrong router (permanent lock), or cancel the deadline and revert.
+
+**Most common truncation points in LP flows:**
+- Long `delta_ids` / `distribution_x/y` JSON arrays serialized with pretty-print or truncated mid-array → wrong position shape.
+- Tick bounds (`tickLower`, `tickUpper`) re-encoded from an int to a wider display form → revert.
+- PositionManager address rewritten from memory (different per DEX) → tokens sent to wrong contract, locked.
+
+## 🛑 STEP −1 — Always start with `lp find-pools` when ANY asset is specified
+
+If the user expresses an LP intent and names **any** asset — a full pair (A + B) or just a single asset (X) — the FIRST on-chain lookup MUST be `mantle-cli lp find-pools`. Do NOT proceed to `analyze-pool`, `suggest-ticks`, `approve`, or `lp add` without the find-pools output in hand. This rule applies every session, every intent, without exception.
+
+- **Learn the subcommand from the CLI**, not from memory. Run `mantle-cli catalog show <find-pools tool-id> --json` (tool-id from `catalog list`) to retrieve the current flag names and see whether single-asset queries are accepted directly or require enumeration.
+- **Translate generic asset names first** (§Asset Alias: BTC→FBTC, ETH→mETH/cmETH/WETH, TSLA→wTSLAx, …) before passing to the CLI.
+- **Trust the response verbatim** (SUPREME RULE). DEX, fee tier / bin step, PositionManager / Router address, TVL, APR — all come from `find-pools`. Never fabricate them from memory.
+- **Empty response → STOP.** Tell the user no whitelisted pool was found. Never fall through to `lp top-pools` to "find something to LP" — the user asked about a specific asset; either offer the discovered pools or refuse.
+- Skipping this step is a Hard Constraint #4 violation (fabricated routing) and a Rule W-1 violation (skipping a step).
+
 ## 🛑 STEP 0.5 — Pre-Execution Readiness Check (Rule W-9)
 
 **Before ANY write op (add / remove / collect-fees / approve), verify the user's intent is feasible. Two queries, in this order:**

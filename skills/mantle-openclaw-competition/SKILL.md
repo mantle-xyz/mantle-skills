@@ -1,10 +1,65 @@
 ---
 name: mantle-openclaw-competition
-version: 0.1.17
+version: 0.1.23
 description: "Use for ANY on-chain DeFi operation on the Mantle network by OpenClaw in the asset accumulation competition — swapping, liquidity provision, Aave V3 lending, ERC-20 approvals, MNT wrap/unwrap, or portfolio/state reads. TRIGGER when the user: (a) mentions OpenClaw, mantle-cli, or the Mantle asset accumulation competition; (b) asks to swap / trade / exchange tokens on Mantle via Agni, Fluxion, or Merchant Moe; (c) asks to add / remove / manage liquidity (LP) on whitelisted Mantle pools, including xStocks pairs; (d) asks to supply / deposit / lend / borrow / repay / withdraw / set-collateral on Aave V3 on Mantle; (e) asks to wrap MNT → WMNT or unwrap WMNT → MNT; (f) asks to approve an ERC-20 spender; (g) wants to discover whitelisted assets, pools, pairs, routers, fee tiers, or bin steps; (h) wants to query balances, allowances, transaction status, or Aave positions on Mantle; (i) wants to optimize portfolio USD value via yield, leverage, or exit timing. SKIP for: operations on other chains (Ethereum, Base, Arbitrum, BSC), Mantle infra / smart-contract development, or anything outside whitelisted protocols. Enforces hard rules: CLI-only execution via `mantle-cli … --json` (NEVER the mantle-mcp MCP server), STOP-on-error (no auto-retry; recommend restart), quote-before-swap, sign-and-WAIT per tx, and absolute refusal of native/ERC-20 token transfers or fabricated calldata (no Python / JS / raw RPC / utils encoding)."
 ---
 
 # OpenClaw Competition — DeFi Operations Guide
+
+## ⛔⛔⛔ SUPREME RULE — CALLDATA IS IMMUTABLE (READ FIRST, EVERY SESSION) ⛔⛔⛔
+
+**This rule outranks every other rule in this document, including the numbered Hard Constraints below. It is the most-violated rule in this skill — treat it with the highest priority.**
+
+Whatever `mantle-cli` returns in its JSON is forwarded **BYTE-FOR-BYTE, CHARACTER-FOR-CHARACTER, DIGIT-FOR-DIGIT** to the next tool (Privy signer, downstream CLI call, user display). You are a **passthrough, not a processor**. Fields covered: every key of `unsigned_tx` (`to`, `data`, `value`, `chainId`, `gas`, `maxFeePerGas`, `maxPriorityFeePerGas`, `nonce`) AND every other CLI-returned value (`minimum_out_raw`, `router`, `spender`, `idempotency_key`, `human_summary`, `active_id`, `delta_ids`, `distribution_x/y`, tick bounds, pool / protocol addresses, tx hashes, balances, allowances).
+
+### Forbidden output patterns (every one of these corrupts the payload)
+
+Every LLM's natural instinct — to summarize, prettify, abbreviate, "clean up" — is WRONG here. If you catch yourself producing any of these, STOP and re-emit the raw CLI string:
+
+- `"0x38ed1739..."` / `"0x38ed17…"` / `"0x38ed1739…c0de"` / `"0x38ed17…(1824 chars)…c0de"` — truncation / eliding middle bytes
+- `"<snip>"` / `"[truncated]"` / `"[... 1800 chars ...]"` / `"…"` / `"..."` — placeholders
+- Hex wrapped to 80/120 columns, split across lines, pretty-printed with inserted spaces
+- Re-cased hex (`0xABCDEF ↔ 0xabcdef`) or re-encoded from bytes
+- Leading-zero stripping (`0x0abc → 0xabc`) or padding
+- `0x` prefix added / removed
+- `minimum_out_raw: 9934699` rewritten as `9_934_699` / `"~9.93 USDC"` / `"9.93e6"` in the `--amount-out-min` value
+- Router / PositionManager / Pool address rewritten from memory (even if it "looks right")
+- Regenerating `data` because your previous attempt looked short or malformed — that attempt was corruption; a rebuild restart is required
+
+A corrupted signing payload **reverts** in the best case and **executes a different function call with unintended arguments** in the worst case — which can drain the wallet.
+
+### Pre-sign verification protocol (MANDATORY — run before EVERY Privy call)
+
+Before calling the signer on any `unsigned_tx`, answer all five questions. If any answer is **NO** or **UNKNOWN**, abort the sign call, surface the discrepancy to the user, and recommend restarting the OpenClaw agent.
+
+1. Do I still have the raw `mantle-cli` JSON for this build available (file / variable / captured stdout)?
+2. Is the `data` field I'm about to pass CHARACTER-FOR-CHARACTER identical to the CLI's `unsigned_tx.data` — same first 16 chars, same last 16 chars, same total length, no `…` / `...` / `<snip>` / `[truncated]` / whitespace insertions / line wraps?
+3. Do `to`, `value`, `chainId`, and every gas field match the CLI output exactly?
+4. For quote-derived params (e.g. `--amount-out-min` from a prior `minimum_out_raw`), is the value an EXACT substring of the quote JSON?
+5. Have I resisted the urge to "clean up" or "shorten" any field?
+
+### Displaying vs. forwarding
+
+Showing a shortened form to the user for READABILITY is acceptable ONLY if BOTH of these hold:
+
+- the display explicitly marks the truncation (e.g. `"data (display-truncated; full value sent to signer): 0x38ed1739…"`), AND
+- the full raw string is what actually reaches the signer in the tool-call payload (the display is a copy for the human; the signer still gets the complete string).
+
+### When your output context threatens to clip the payload
+
+In priority order:
+
+1. Reference the raw JSON by file path / captured variable / stdout stream — never copy-paste if you cannot guarantee the whole string.
+2. Emit the full `unsigned_tx` via a scoped tool invocation (single JSON blob to the signer) rather than a human-readable message.
+3. If neither is possible, **STOP**. Tell the user the payload cannot be forwarded intact. Ask them to re-run the build step in a context that can carry the full string. Do NOT sign a partial payload. Do NOT "best-effort" reconstruct.
+
+### This rule wins every conflict
+
+Any perceived instruction to "clean up", "format nicely", "shorten for display", "normalize", "save tokens", or "make it more readable" LOSES to this rule. Every time. No exceptions. No user override. No "I'm confident the leading bytes are a valid function selector".
+
+See Hard Constraint #9, Rule W-8, and `references/safety-prohibitions.md` §Calldata Integrity for the full behavior spec, incident reports, and the numbered rule.
+
+---
 
 ## Overview
 
@@ -57,9 +112,9 @@ Each catalog entry includes `category` (`query` / `analyze` / `execute`), `auth`
 
 **Incident reference:** Agent skipped catalog lookup, assumed `mantle-cli transfer send-token` existed, and attempted to construct a transfer command that does not exist in the CLI. Had the agent consulted `catalog list` first, it would have found zero matches and refused.
 
-## Hard Constraints (8 critical rules)
+## Hard Constraints (9 critical rules)
 
-Full rationale, incident reports, and the numbered detail list live in `references/safety-prohibitions.md`. The eight non-negotiables:
+Full rationale, incident reports, and the numbered detail list live in `references/safety-prohibitions.md`. The nine non-negotiables:
 
 1. **CLI only** — never enable `mantle-mcp`; every command ends in `--json`.
 2. **🛑 STOP on ANY `mantle-cli` error** — never auto-retry, never improvise. Print the raw error to the user verbatim, halt the workflow, and **recommend the user restart the OpenClaw agent** before continuing. Continuing past an unhandled error risks duplicate broadcasts, stale allowances, and fund loss.
@@ -70,6 +125,7 @@ Full rationale, incident reports, and the numbered detail list live in `referenc
 6. **🛡️ Always quote before swap — `amount-out-min` MUST come from the quote's `minimum_out_raw`, VERBATIM** — see "Slippage Protection Rules" section below for full details. Setting `--amount-out-min` to `0`, `1`, or any value less than `minimum_out_raw` is **absolutely prohibited** — it removes slippage protection and exposes the user to sandwich attacks and fund loss.
 7. **"sign & WAIT"** — verify each tx (`status: success`) before building the next. Do NOT pipeline unsigned transactions.
 8. **🔍 Catalog-first — ALWAYS consult the catalog before ANY operation** — run `mantle-cli catalog list --json` at session start and `mantle-cli catalog show <tool-id> --json` before each operation. No catalog lookup → no execution. See "Catalog-first constraint" section above for full rules.
+9. **⛔⛔⛔ UNCONDITIONAL TRUST IN `mantle-cli` OUTPUT — CALLDATA IS IMMUTABLE. See the SUPREME RULE at the top of this document.** This is the most-violated rule in the skill. Every CLI-returned value (`unsigned_tx.data`, `unsigned_tx.to`, `unsigned_tx.value`, gas fields, `minimum_out_raw`, `router`, `spender`, `idempotency_key`, `active_id`, tick bounds, pool addresses, balances, allowances, tx hashes, `human_summary`) is forwarded to the signer / next tool byte-for-byte, character-for-character. **You MUST run the pre-sign verification protocol (SUPREME RULE → "Pre-sign verification protocol") before EVERY signer call.** Any edit — truncation, re-casing, leading-zero stripping, `0x` toggling, wrapping, placeholder `…`, "regeneration" from memory, silently reformatting a raw integer into `9_934_699` / `"~9.93 USDC"` — is a HARD STOP: refuse to sign, surface the discrepancy, restart. Displaying a shortened form to the user is acceptable ONLY if the display marks the truncation AND the full string still reaches the signer. See SUPREME RULE, Rule W-8, and `references/safety-prohibitions.md` §Calldata Integrity.
 
 ## ⚠ USDT ≠ USDT0
 
@@ -82,13 +138,21 @@ USDT and USDT0 are **two different ERC-20 tokens** on Mantle (different contract
 
 ## 🔤 Asset Alias Resolution
 
-Generic name → Mantle-whitelisted canonical token. Verify the candidate via `mantle-cli swap pairs --json` (swap/LP) or `aave markets --json` (lending) before use — swap support does NOT imply Aave support. Multiple candidates → **ASK**, never pick silently. Generic balance queries ("how much BTC/ETH?") → list ALL variants.
+Generic name → Mantle-whitelisted canonical token. Mantle mostly exposes **wrapped / liquid-staked / synthetic variants**, not the "raw" asset — so a generic mention of BTC/ETH/a US stock ALWAYS maps to a Mantle-native wrap. Verify the candidate via `mantle-cli swap pairs --json` (swap/LP) or `aave markets --json` (lending) before use — swap support does NOT imply Aave support. Multiple candidates → **ASK**, never pick silently. Generic balance queries ("how much BTC/ETH?") → list ALL variants.
 
-- **BTC / 比特币** → **FBTC** (only). Refuse WBTC / solvBTC / renBTC.
-- **ETH / 以太坊** → **WETH**, **mETH** (LST), **cmETH** (restaked mETH) — ask which. Refuse stETH / wstETH / rETH.
-- **稳定币 / stablecoin / USD** → **USDC**, **USDT0**, **USDe**, **sUSDe** — ask which + which protocol.
-- **USDT** → clarify USDT vs USDT0 (§USDT ≠ USDT0).
-- **MNT** → native MNT (wrap/unwrap only) or WMNT (swap / LP / Aave).
+- **BTC / 比特币 / bitcoin** → **FBTC** (the only Mantle-whitelisted BTC wrap). Refuse WBTC / solvBTC / renBTC — not on Mantle's whitelist.
+- **ETH / 以太坊 / ether** → Mantle exposes **WETH** (wrapped ETH), **mETH** (Mantle LST), and **cmETH** (restaked mETH). ASK which one — they have different yield and risk profiles. Refuse stETH / wstETH / rETH — not whitelisted on Mantle.
+- **US 股票 / stocks / 美股 / TSLA / AAPL / NVDA / etc.** → **xStocks wrap assets only** (prefix `w`, suffix `x`). The canonical mapping is:
+  - TSLA → **wTSLAx**, AAPL → **wAAPLx**, NVDA → **wNVDAx**, GOOGL → **wGOOGLx**, META → **wMETAx**, MSTR → **wMSTRx**, HOOD → **wHOODx**, CRCL → **wCRCLx**, SPY → **wSPYx**, QQQ → **wQQQx**.
+  - xStocks have liquidity on **Fluxion only**, paired with **USDC**, `fee_tier=3000`. Refuse to quote / swap them on Agni or Merchant Moe — no pool exists (Safety Rule #13).
+  - Not on Aave V3 whitelist — refuse supply/borrow requests for xStocks.
+  - If the user names a stock not in the list above, run `mantle-cli swap pairs --json` and check for a `w<TICKER>x` entry before refusing; if absent → STOP and tell the user it's not whitelisted.
+- **稳定币 / stablecoin / USD / 美元稳定币** → **USDC**, **USDT0**, **USDe**, **sUSDe** — ask which + which protocol. Aave only accepts **USDC** and **USDT0** among stables.
+- **USDT** → clarify USDT vs USDT0 (§USDT ≠ USDT0). Aave requires **USDT0**.
+- **MNT** → native MNT (wrap/unwrap / gas only) vs **WMNT** (swap / LP / Aave — all ERC-20 paths).
+- **股票 / 美股 / RWA as a category** → always xStocks wrap assets (see above). Never an unwrapped stock ticker — Mantle has no unwrapped US equity on-chain.
+
+**Rule of thumb.** If the user says a well-known off-chain asset name (BTC, ETH, TSLA, AAPL…), translate it to its Mantle-native wrap BEFORE any `swap-quote` / `pairs` / `aave markets` call. Never pass the generic ticker (`BTC`, `ETH`, `TSLA`) to the CLI — the CLI expects the canonical symbol (`FBTC`, `WETH` / `mETH` / `cmETH`, `wTSLAx`).
 
 ## 🛡️ Slippage Protection Rules (Hard Constraint #6 — detailed)
 
@@ -188,7 +252,9 @@ Silently omitting any whitelisted asset (e.g., MOE) from a balance report is a h
 
 ### Rule W-8: Signing Flow Integrity 🔐
 
-**Canonical path:** `mantle-cli` build → complete `unsigned_tx` → Privy API sign → wait for on-chain receipt. No shortcuts, no alternatives.
+**See the SUPREME RULE at the top of this document.** This section is the operational form of that rule for the signing step. Every sign call MUST be preceded by the 5-question pre-sign verification protocol from the SUPREME RULE.
+
+**Canonical path:** `mantle-cli` build → complete `unsigned_tx` → **pre-sign verification protocol** → Privy API sign → wait for on-chain receipt. No shortcuts, no alternatives.
 
 **`unsigned_tx` MUST carry the full parameter set returned by `mantle-cli`:**
 
@@ -207,6 +273,13 @@ unsigned_tx: {
 
 - **Never mutate, strip, or re-encode** any field returned by `mantle-cli`. Pass `unsigned_tx` to Privy **verbatim**.
 - **Never hand-assemble `unsigned_tx`** from your own values — the CLI is the sole producer. Fabricating `to` / `data` / `value` / gas params is the same violation as Hard Constraint #4 (no fabricated calldata).
+- **⛔ ZERO CALLDATA EDITING (Hard Constraint #9).** The `data` field is often a multi-hundred or multi-thousand char hex string. Forward it to Privy **byte-for-byte, character-for-character**, exactly as `mantle-cli` produced it. NEVER:
+  - truncate, shorten, or abbreviate (`"0x38ed17…"`, `"0x38ed1739...c0de"`, `"<snip>"`, `"[truncated]"`, `"…"`) — these corrupt the payload and will either revert or, worse, execute the wrong call;
+  - pretty-print, reformat, wrap to a line width, split across lines, or insert whitespace;
+  - re-encode, re-hex, lowercase/uppercase-normalize, strip leading zeros, or drop the `0x` prefix;
+  - reconstruct or "fill in" bytes from memory / inference — if your display context would clip the string, read it back from the raw CLI JSON (by file path or captured variable) or abort and ask the user to re-run. Never guess the missing part.
+  - Same discipline applies to `to`, `value`, `chainId`, `gas`, `maxFeePerGas`, `maxPriorityFeePerGas`, and `nonce` — every integer and hex value goes through untouched.
+- **Displaying a shortened `data` to the user for readability is OK ONLY if the full raw string is still what reaches the signer.** Mark any truncation in the display (`"data (display-truncated; full value sent to signer): 0x38ed1739…"`) and keep the original string in the tool call payload unchanged.
 
 **One unsigned_tx = one signature. No exceptions.**
 
@@ -271,13 +344,64 @@ Map the user's phrase (中/EN) to a CLI namespace BEFORE any call. Ask when ambi
 
 - 兑换 / 交易 / 买 / 卖 / swap / trade → `swap` + `defi swap-quote` (§Swap)
 - 包装 / wrap / unwrap MNT → `swap wrap-mnt` / `unwrap-mnt` (§Swap)
-- **添加 / 提供流动性 / 做市 / add LP** → `lp top-pools → find-pools → defi analyze-pool → suggest-ticks → add` (§Add Liquidity, `references/lp-workflow.md`)
+- **添加 / 提供流动性 / 做市 / add LP** → `lp top-pools → find-pools → defi analyze-pool → suggest-ticks → add` (§Add Liquidity, `references/lp-workflow.md`) — **if ANY asset is named (single or pair), ALWAYS start with `mantle-cli lp find-pools` before anything else. See §LP Pool Discovery below.**
 - 移除流动性 / remove LP / collect fees → `lp positions / remove / collect-fees`
 - 存 / 借 / 还 / 取 (Aave) / supply / borrow / repay / withdraw → `aave <verb>` / `set-collateral` (§Aave)
 - 授权 / approve → `approve` (embedded per workflow)
 - 余额 / 仓位 / balance / positions → `account balances / allowances`, `aave positions`, `lp positions` (read-only)
+- **查资产 / 支持什么币 / 有哪些主流资产 / what tokens are on Mantle / available assets** → `account token-balances <wallet> --json` (no filter) first — see §Asset Discovery below.
 
 **Disambiguation:** "USDT" → clarify USDT vs USDT0 (§USDT ≠ USDT0). Generic "BTC / ETH / stable" → §Asset Alias. "提供流动性" with no pair → start at `lp top-pools`, NOT `lp add`. "存到 Aave / 转到 PositionManager" → function-call verb, NEVER ERC-20 transfer (Hard Constraint #3).
+
+## Asset Discovery — "Mantle 上有什么资产?" (short tutorial)
+
+**Trigger phrases (中/EN):** "Mantle 上有哪些主流资产?", "支持什么币?", "有什么资产可以用?", "what tokens does Mantle support?", "what assets are available on Mantle?", "list supported tokens", or any open-ended question about the Mantle asset set with no specific token in mind. Also covers category questions ("有没有 BTC?", "支持美股吗?", "can I trade ETH?") — same flow, then narrow to the canonical wrap.
+
+**⛔ Do NOT answer from memory.** Do not list hard-coded tokens from prior knowledge, training data, or a previous session. The whitelisted asset set is owned by `mantle-cli`.
+
+**Step-by-step:**
+
+1. **First call:** `mantle-cli account token-balances <wallet> --json` **with no token filter.**
+   - This returns the full whitelisted mainstream asset set for the competition wallet — including zero-balance entries for tokens the wallet doesn't currently hold — so one CLI call doubles as (a) "what does Mantle support?" and (b) "what do I currently hold?".
+2. **Translate generic category names to their Mantle-canonical wrap BEFORE presenting.** Mantle exposes wrapped / LST / synthetic variants, not the raw asset. Use §Asset Alias Resolution:
+   - **BTC / 比特币** → **FBTC** (only Mantle BTC wrap — no WBTC/solvBTC/renBTC).
+   - **ETH / 以太坊** → **WETH** / **mETH** (LST) / **cmETH** (restaked mETH) — list all three on a generic ETH query.
+   - **美股 / stocks / TSLA / AAPL / NVDA / …** → **xStocks wrap assets** (`w<TICKER>x`): wTSLAx, wAAPLx, wNVDAx, wGOOGLx, wMETAx, wMSTRx, wHOODx, wCRCLx, wSPYx, wQQQx. Fluxion-only, paired with USDC (fee_tier=3000). Not on Aave.
+   - **稳定币 / USD** → USDC, USDT0, USDe, sUSDe — clarify which. USDT ≠ USDT0.
+   - **MNT** → native MNT (gas, wrap/unwrap only) vs WMNT (ERC-20 for swap / LP / Aave).
+3. **Present the result verbatim** to the user — symbol, balance (human-readable), USD value if the response includes it. Per Rule W-4, NEVER fabricate or estimate numbers; only show what the CLI returned. When answering a category question ("有 BTC 吗?"), reply with the canonical wrap ("Mantle 上的 BTC 曝光通过 **FBTC**，你当前余额 X …") rather than a yes/no.
+4. **Cross-check for completeness (Rule W-7).** Make sure every whitelisted variant for the category is listed (FBTC; WETH + mETH + cmETH; USDC + USDT0 + USDe + sUSDe; USDT vs USDT0; the full xStocks set when asked about stocks). If any whitelisted asset is missing from step 1's response, query it explicitly and merge.
+5. **Drill-down (only if the user asks for more detail):**
+   - "Where can I swap X?" → `mantle-cli swap pairs --json` (xStocks: Fluxion-only).
+   - "Can I lend/borrow X on Aave?" → `mantle-cli aave markets --json` — xStocks are NOT on Aave; refuse that path.
+   - "What pools exist for A/B?" → `mantle-cli lp find-pools --token-a A --token-b B --json`.
+   - Swap support does NOT imply Aave support — always re-verify per protocol.
+6. If the user uses a ticker you can't resolve (some obscure stock, LST, or stablecoin), run `mantle-cli swap pairs --json` and `aave markets --json`; if no `w<TICKER>x` / canonical entry exists → STOP and tell the user it's not whitelisted.
+
+**Worked examples:**
+
+- User: "Mantle 上都支持什么主流资产？"
+  → `account token-balances --json` once, reply with the full list (MNT / WMNT / WETH / mETH / cmETH / FBTC / USDC / USDT / USDT0 / USDe / sUSDe / MOE / wTSLAx / wAAPLx / …), each with the wallet's current balance, grouped by category (native, ETH-family, BTC, stables, stocks, DeFi). Flag USDT vs USDT0.
+- User: "有没有 BTC 可以用?"
+  → `account token-balances --json`, then reply: "Mantle 上的 BTC 曝光通过 **FBTC**（唯一白名单 BTC 封装），你当前持仓 X FBTC." Do NOT list WBTC / solvBTC.
+- User: "可以交易 ETH 吗?"
+  → `account token-balances --json`, then reply with all three ETH-family wraps (WETH / mETH / cmETH), each balance, and ask which one the user wants to trade.
+- User: "支持美股吗? 比如 TSLA"
+  → `account token-balances --json`, then reply: "支持 xStocks 系列（wTSLAx, wAAPLx, wNVDAx, wGOOGLx, wMETAx, wMSTRx, wHOODx, wCRCLx, wSPYx, wQQQx），TSLA 对应 **wTSLAx**，只在 **Fluxion** 与 USDC 配对交易（fee_tier=3000），不在 Aave 白名单里。你当前 wTSLAx 余额 X."
+
+## LP Pool Discovery — "我要给 A/B 提供流动性" / "用 X 做 LP" (short tutorial)
+
+**Trigger phrases (中/EN):** "add liquidity", "provide LP", "LP for A/B", "做 LP", "提供流动性", "加池子", "用 USDC 做市", "给 FBTC/USDC 做市", or any LP-add intent — whether the user names a full pair (A/B) or just a single asset (X).
+
+**⛔ Mandatory first call — `mantle-cli lp find-pools` (applies to BOTH single-asset and pair intents).**
+
+1. **Before any other LP action** (`analyze-pool`, `suggest-ticks`, `approve`, `lp add`), call `mantle-cli lp find-pools` via `mantle-cli`. Do NOT skip it, even if the user named a full pair.
+2. **Learn the subcommand from the CLI itself**, not from memory. Run `mantle-cli catalog show <find-pools tool-id> --json` (the tool-id comes from `catalog list`) to get the exact flags, accepted token params, and whether single-asset queries are supported directly. Don't assume the flag shape from a previous session.
+3. **Trust the response verbatim** (per the SUPREME RULE). The DEX(es), fee tier / bin step, PositionManager / Router address, and TVL/APR all come from `find-pools`. Never fabricate them from memory.
+4. **Empty result → STOP.** Tell the user no whitelisted pool was found; suggest a supported alternative if one exists (e.g. swap one side to a common quote first). Never fall through to `lp add` or pick a pool from memory.
+5. **Translate generic asset names first** (§Asset Alias — BTC→FBTC, ETH→mETH/cmETH/WETH, TSLA→wTSLAx, etc.) before passing them to the CLI.
+
+After `find-pools` succeeds: `defi analyze-pool` → `suggest-ticks` (V3) or derive LB params from the pool state → `approve` both tokens → `lp add`. This ordering is enforced by Rule W-1.
 
 ## Workflow: Swap (skeleton)
 
@@ -369,10 +493,10 @@ V3 (Agni / Fluxion) takes `--fee-tier`, `--tick-lower`, `--tick-upper`. LB (Merc
 
 | File | Load when |
 |------|-----------|
-| `references/swap-workflow.md` | First swap of the session, or handling timeout / retry / wrap-mnt |
-| `references/lp-workflow.md` | Adding / removing liquidity, or suggesting tick ranges |
-| `references/aave-workflow.md` | Any Aave operation, or troubleshooting collateral / Isolation Mode |
-| `references/safety-prohibitions.md` | A `mantle-cli` error occurred, the user requested something outside standard verbs, or you need the full STOP protocol + numbered rule list + incident reports |
+| `references/swap-workflow.md` | First swap of the session, or handling timeout / retry / wrap-mnt (also contains the swap-specific calldata integrity banner) |
+| `references/lp-workflow.md` | Adding / removing liquidity, or suggesting tick ranges (also contains the LP-specific calldata integrity banner) |
+| `references/aave-workflow.md` | Any Aave operation, or troubleshooting collateral / Isolation Mode (also contains the Aave-specific calldata integrity banner) |
+| `references/safety-prohibitions.md` | A `mantle-cli` error occurred, the user requested something outside standard verbs, **or you are about to sign a tx and want to re-read the pre-sign verification protocol (STOP CONDITION 3 + Rule #18)** |
 
 For full CLI documentation and the live whitelisted asset/protocol list: `mantle-cli catalog list --json` and `mantle-cli catalog show <tool-id> --json`.
 
