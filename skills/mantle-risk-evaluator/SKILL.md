@@ -1,6 +1,6 @@
 ---
 name: mantle-risk-evaluator
-version: 0.1.11
+version: 0.1.17
 description: "Use when a Mantle state-changing intent needs pre-execution slippage, liquidity, address-safety, allowance-scope, or gas/deadline checks."
 ---
 

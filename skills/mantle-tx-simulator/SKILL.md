@@ -1,6 +1,6 @@
 ---
 name: mantle-tx-simulator
-version: 0.1.11
+version: 0.1.17
 description: "Use when a Mantle transaction needs pre-signing simulation evidence, state-diff review, revert analysis, or a WYSIWYS explanation before execution."
 ---
 

@@ -1,6 +1,6 @@
 ---
 name: mantle-readonly-debugger
-version: 0.1.11
+version: 0.1.17
 description: "Use when Mantle read-path requests fail, quotes revert, balances disagree, or RPC behavior is inconsistent and needs structured root-cause triage."
 ---
 
