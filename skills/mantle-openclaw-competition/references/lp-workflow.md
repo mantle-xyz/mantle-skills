@@ -25,12 +25,12 @@ If any answer is NO or UNKNOWN, abort. A corrupted LP sign call can mint a posit
 
 ## 🛑 STEP −1 — Always start with `lp find-pools` when ANY asset is specified
 
-If the user expresses an LP intent and names **any** asset — a full pair (A + B) or just a single asset (X) — the FIRST on-chain lookup MUST be `mantle-cli lp find-pools`. Do NOT proceed to `analyze-pool`, `suggest-ticks`, `approve`, or `lp add` without the find-pools output in hand. This rule applies every session, every intent, without exception.
+If the user expresses an LP intent and names **any** asset — a full pair (A + B) or just a single asset (X) — the FIRST on-chain lookup MUST be `mantle-cli lp find-pools`. Do NOT proceed to `lp analyze`, `suggest-ticks`, `approve`, or `lp add` without the find-pools output in hand. This rule applies every session, every intent, without exception.
 
 - **Learn the subcommand from the CLI**, not from memory. Run `mantle-cli catalog show <find-pools tool-id> --json` (tool-id from `catalog list`) to retrieve the current flag names and see whether single-asset queries are accepted directly or require enumeration.
 - **Translate generic asset names first** (§Asset Alias: BTC→FBTC, ETH→mETH/cmETH/WETH, TSLA→wTSLAx, …) before passing to the CLI.
 - **Trust the response verbatim** (SUPREME RULE). DEX, fee tier / bin step, PositionManager / Router address, TVL, APR — all come from `find-pools`. Never fabricate them from memory.
-- **Empty response → STOP.** Tell the user no whitelisted pool was found. Never fall through to `lp top-pools` to "find something to LP" — the user asked about a specific asset; either offer the discovered pools or refuse.
+- **Empty response → STOP.** Tell the user no whitelisted pool was found — the user asked about a specific asset; either offer the discovered pools or refuse. Never fall back to scanning unrelated pools to "find something to LP".
 - Skipping this step is a Hard Constraint #4 violation (fabricated routing) and a Rule W-1 violation (skipping a step).
 
 ## 🛑 STEP 0.5 — Pre-Execution Readiness Check (Rule W-9)
@@ -45,16 +45,11 @@ Run BOTH checks BEFORE the Transaction Confirmation Summary so it reflects real 
 ## Pool Discovery & Analysis (run BEFORE adding LP)
 
 ```
-0. mantle-cli lp top-pools --sort-by apr --min-tvl 10000 --json
-   → Discover the BEST pools across ALL DEXes (no token pair needed)
-   → Use when user asks "best LP" or "where to provide liquidity"
-   ↓ MUST complete before Step 1
-
 1. mantle-cli lp find-pools --token-a WMNT --token-b USDC --json
    → Discover all available pools for a specific pair across Agni, Fluxion, Merchant Moe
    ↓ MUST complete before Step 2
 
-2. mantle-cli defi analyze-pool --token-a WMNT --token-b USDC --fee-tier 3000 --provider agni --investment 1000 --json
+2. mantle-cli lp analyze --token-a WMNT --token-b USDC --fee-tier 3000 --provider agni --investment-usd 1000 --json
    → Get fee APR, multi-range comparison, risk assessment, investment projections
    ↓ MUST complete before Step 3
 
@@ -164,14 +159,6 @@ Use `mantle-cli lp remove` and `mantle-cli lp collect-fees` — see `mantle-cli 
 
 ## Parameter Reference
 
-### `lp top-pools`
-
-| Param | Required | Description |
-|-------|----------|-------------|
-| `--sort-by` | Optional | Sort key: `apr`, `tvl`, `volume` (default: `apr`) |
-| `--min-tvl` | Optional | Minimum TVL filter in USD (e.g. `10000`) |
-| `--json` | ✅ | Machine-parseable output |
-
 ### `lp find-pools`
 
 | Param | Required | Description |
@@ -180,15 +167,16 @@ Use `mantle-cli lp remove` and `mantle-cli lp collect-fees` — see `mantle-cli 
 | `--token-b` | ✅ | Second token symbol |
 | `--json` | ✅ | Machine-parseable output |
 
-### `defi analyze-pool`
+### `lp analyze`
 
 | Param | Required | Description |
 |-------|----------|-------------|
-| `--token-a` | ✅ | First token symbol |
-| `--token-b` | ✅ | Second token symbol |
-| `--fee-tier` | ✅ | Fee tier (e.g. `3000`, `10000`) — for V3 pools |
-| `--provider` | ✅ | DEX provider (`agni`, `fluxion`, `merchant_moe`) |
-| `--investment` | Optional | Investment amount in USD for projection |
+| `--token-a` | ✅* | First token symbol (\*or use `--pool`) |
+| `--token-b` | ✅* | Second token symbol (\*or use `--pool`) |
+| `--fee-tier` | ✅* | V3 fee tier, e.g. `3000`, `10000` (\*or use `--pool`) |
+| `--provider` | ✅ | DEX provider (`agni` or `fluxion`) — default `agni` |
+| `--pool` | Optional | Pool contract address (alternative to token-a/token-b/fee-tier) |
+| `--investment-usd` | Optional | USD amount to project returns for (default: `1000`) |
 | `--json` | ✅ | Machine-parseable output |
 
 ### `lp suggest-ticks`

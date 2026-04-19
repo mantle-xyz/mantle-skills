@@ -2,11 +2,11 @@
   "version": "0.1.24",
   "algorithm": "sha256",
   "files": {
-    "SKILL.md": "3a2a1ecb27dc17def9df1a801ba6e38243ace2204f1c1cb11a0f66847438d42c",
-    "agents/openai.yaml": "237096a3840929d8d4b5d72f4a5576bf561624348b0b410810996a0e44d3f805",
+    "SKILL.md": "198280bf377fb16e0cdf48e7637ec4d897b35b494cdc5bdc45305034c98e9009",
+    "agents/openai.yaml": "a441493601712393b31b20ebad62b5749b5833df819f58f09778764082a0d3a4",
     "references/aave-workflow.md": "c71a4fbc2b9ae932a58994becdbdd795647e1b18a2e4da8f9bb2911bf44d14f0",
     "references/asset-whitelist.md": "78ea275dc9dee80af10f0bd58f76409315dec482ea097d1f4d3d119d8a73e917",
-    "references/lp-workflow.md": "172e9d2531f7b5d9f923c68ceea9c49a0a672a9f1fe2a980c3f72bc1e0cae3a4",
+    "references/lp-workflow.md": "a230aca71b0b89064b524b6b4bdc09afcd29f240b43cfe860677c1355f4bb123",
     "references/safety-prohibitions.md": "2cba45fce4ae37641dcaa866cc103330ce2590c839d987d8bdbb2e808c41fac2",
     "references/swap-workflow.md": "f40bc8401073f3302768fcea11e651f3f53b90c0598543f986944fcacc242ee5"
   }
