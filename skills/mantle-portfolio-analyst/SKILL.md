@@ -1,6 +1,6 @@
 ---
 name: mantle-portfolio-analyst
-version: 0.1.11
+version: 0.1.12
 description: "Use when a Mantle task needs wallet balances, token holdings, DeFi positions (Aave, LP), allowance exposure, or unlimited-approval review before a DeFi or security decision."
 ---
 
@@ -22,24 +22,37 @@ Build deterministic, read-only wallet analysis on Mantle. Enumerate balances, De
    - `mantle-cli registry validate <address> --json`
    - `mantle-cli chain info --json`
    - `mantle-cli chain status --json`
-3. Determine analysis scope:
-   - token list from user input or `mantle://registry/tokens`
-   - spender list from user input or `mantle://registry/protocols`
+3. Determine analysis scope **without pre-resolving a default token/spender list**:
+   - Tokens:
+     - If the user named specific tokens → remember that subset for step 5's `--tokens` flag.
+     - Otherwise → **do NOT build a token list**. Leave scope empty so step 5 calls the CLI without `--tokens` and inherits the CLI's maintained whitelist (same contract as openclaw Rule W-7).
+   - Spenders:
+     - If the user named specific spenders → remember those `token:spender` pairs for step 9.
+     - Otherwise → plan to discover spenders from `mantle://registry/protocols` at step 9 only. Do NOT synthesize a hardcoded default pair list here.
+   - Hardcoded defaults like `MNT,WMNT,USDC,USDT,USDT0,USDe,WETH,mETH` drift out of sync with the on-chain whitelist and silently drop tokens. Never inline them into this skill.
 4. **[MANDATORY]** Fetch native balance with `mantle-cli account balance <address> --json`.
-5. **[MANDATORY]** Fetch ERC-20 balances with `mantle-cli account token-balances <address> --tokens <list> --json`.
-   - This step MUST query ALL tokens from the scope determined in step 3. Do NOT skip this step even if the native balance is small or zero.
-   - You MUST wait for the tool result before proceeding. If the result contains `partial: true`, note which tokens had errors but still proceed with the successful results.
+5. **[MANDATORY]** Fetch ERC-20 balances. Command choice depends on scope:
+   - **Default (no user-supplied token scope):** `mantle-cli account token-balances <address> --json` — **omit `--tokens` entirely**. The CLI returns its full maintained whitelist; this is the only correct way to get complete coverage.
+   - **Scoped (user named specific tokens):** `mantle-cli account token-balances <address> --tokens <user_named_list> --json`. Only pass tokens the user explicitly mentioned.
+   - ⛔ **NEVER invent or inline a `--tokens` value** (e.g. `MNT,WMNT,USDC,USDT,USDT0,USDe,WETH,mETH`). If you are about to type `--tokens` without the user having named those tokens in this turn, STOP and re-issue the command without `--tokens`.
+   - You MUST wait for the tool result before proceeding. If the result contains `partial: true`, note which tokens errored and continue with the successful subset.
+   - Do NOT skip this step even if the native balance is small or zero.
 6. **[MANDATORY]** Fetch Aave V3 positions with `mantle-cli aave positions --user <address> --json`.
    - This returns aggregate account data (total collateral/debt USD, health factor) and per-reserve supplied/borrowed amounts.
    - aToken balances are **positive assets** (collateral), debtToken balances are **liabilities** (debt).
    - Include health_status in the report. Flag `at_risk` or `liquidatable` positions prominently.
-7. **[MANDATORY]** Fetch V3 LP positions with `mantle-cli lp positions --owner <address> --json`.
+7. **[MANDATORY — DO NOT SKIP]** Fetch V3 LP positions with `mantle-cli lp positions --owner <address> --json`.
    - Returns positions across Agni and Fluxion DEXes with tick ranges, liquidity, and in-range status.
    - Include as LP assets in the portfolio.
-8. **[MANDATORY]** Fetch Merchant Moe LB positions with `mantle-cli lp lb-positions --owner <address> --json`.
+   - ⛔ Silently omitting the V3 LP call is a hard error, regardless of whether prior steps returned zero balances. An empty result is a valid answer; a missing call is not.
+8. **[MANDATORY — DO NOT SKIP]** Fetch Merchant Moe LB positions with `mantle-cli lp lb-positions --owner <address> --json`.
    - Returns LB bin positions with user share percentage and estimated token amounts.
    - Include as LP assets in the portfolio.
+   - ⛔ Same rule as step 7: the call itself is mandatory. `total_positions: 0` is an acceptable result, but no call at all is a hard error.
 9. **[MANDATORY]** Fetch token-spender allowances with `mantle-cli account allowances <owner> --pairs <token:spender,...> --json`.
+   - If the user named specific `token:spender` pairs, pass exactly those.
+   - Otherwise, build the pair list from `mantle://registry/protocols` crossed with the tokens returned in step 5 — do NOT hardcode a default pair set inline in this skill.
+   - If no known spenders can be discovered, report allowance coverage as partial instead of inventing pairs.
 10. If a token's metadata is missing, use `mantle-cli token info <token> --json` for that token and keep missing fields as `unknown` when unresolved.
 11. Classify approval risk using these rules:
    - `low`: allowance is zero, or tightly bounded and clearly below wallet balance/expected use.
@@ -59,18 +72,21 @@ Build deterministic, read-only wallet analysis on Mantle. Enumerate balances, De
      - If `ltv_bps` > 0, flag as **collateral warning** — the user has deposited tokens but they are NOT counting toward borrowing capacity. This can cause borrow failures. Suggest checking `set-collateral`.
    - If `mantle-cli lp lb-positions` returns positions, note the `coverage: "known_pairs_only"` and `scan_radius` limitations. Explicitly state that positions in distant bins or unlisted pairs are NOT checked.
    - If `mantle-cli lp lb-positions` returns `total_positions: 0`, do NOT conclude the wallet has no LB exposure — only state that no positions were found within the scan range.
-13. **Self-check before report**: Before writing the report, verify that ALL of the following tool calls have been made and returned results. If any is missing, go back and execute it NOW:
+13. **Self-check before report (HARD GATE)**: You MUST NOT render the report if any of the six MANDATORY tool calls below is absent from this turn's transcript. If any checkbox is unchecked, go back and execute it NOW before writing a single character of the report.
    - [ ] `mantle-cli account balance` (step 4)
-   - [ ] `mantle-cli account token-balances` (step 5)
+   - [ ] `mantle-cli account token-balances` (step 5) — verify the call did **not** carry an inline-fabricated `--tokens` list
    - [ ] `mantle-cli aave positions` (step 6)
-   - [ ] `mantle-cli lp positions` (step 7)
-   - [ ] `mantle-cli lp lb-positions` (step 8)
+   - [ ] `mantle-cli lp positions` (step 7)  ← commonly skipped, double-check
+   - [ ] `mantle-cli lp lb-positions` (step 8)  ← commonly skipped, double-check
    - [ ] `mantle-cli account allowances` (step 9)
+   Delivering a report that omits any of the V3 LP / LB / allowance sections because the underlying call was not made is a hard error.
 14. Return a formatted report with findings, confidence, and explicit coverage/partial gaps.
 
 ## Guardrails
 
-- **NEVER skip ERC-20 token balance queries (step 5).** This is the most common execution failure. The token-balances call must happen before Aave/LP queries and must cover all tokens from the scope. A report missing the Token Balances section is incomplete and MUST NOT be returned.
+- **HARD RULE — Token scope: never fabricate a `--tokens` list.** The CLI maintains its own whitelist. Pass `--tokens` **only** when the user explicitly named a subset in the current request. In every other case call `mantle-cli account token-balances <address> --json` with no filter — the CLI returns the authoritative whitelist. Hardcoded defaults (e.g. `MNT,WMNT,USDC,USDT,USDT0,USDe,WETH,mETH`) silently drift out of sync and drop tokens; they are a hard error. Same principle applies to `--pairs` on `account allowances`.
+- **HARD RULE — All six read calls are mandatory.** Steps 4, 5, 6, 7, 8, 9 MUST each produce a tool call every run. Commonly skipped in practice: `mantle-cli lp positions` (step 7) and `mantle-cli lp lb-positions` (step 8). A report missing the V3 LP or LB LP section because the call was not made is a hard error. Empty result is fine; missing call is not.
+- **NEVER skip ERC-20 token balance queries (step 5).** This is the most common execution failure. The token-balances call must happen before Aave/LP queries and must cover the full CLI whitelist (no `--tokens`) unless the user scoped to specific tokens.
 - Use `mantle-cli` read-only commands only for this skill (`mantle-cli account balance`, `mantle-cli account token-balances`, `mantle-cli account allowances`, `mantle-cli aave positions`, `mantle-cli aave markets`, `mantle-cli lp positions`, `mantle-cli lp lb-positions`, `mantle-cli token info`, chain/address validation helpers). Do NOT enable or connect to the MCP server.
 - Stay read-only; do not construct or send transactions.
 - Do not reference direct JSON-RPC calls (`eth_*`) as if they are callable tools in this workflow.
